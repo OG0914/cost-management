@@ -30,8 +30,8 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// API 路由（后续阶段添加）
-// app.use('/api/auth', require('./routes/authRoutes'));
+// API 路由
+app.use('/api/auth', require('./routes/authRoutes'));
 // app.use('/api/cost', require('./routes/costRoutes'));
 // app.use('/api/material', require('./routes/materialRoutes'));
 // app.use('/api/process', require('./routes/processRoutes'));

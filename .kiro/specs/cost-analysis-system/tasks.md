@@ -40,12 +40,17 @@
 
 ## 阶段 2：用户认证与权限系统
 
-- [ ] 5. 实现用户认证后端
+- [x] 5. 实现用户认证后端
+
+
   - 创建 backend/models/User.js 用户数据模型
   - 创建 backend/controllers/authController.js 认证控制器
   - 创建 backend/routes/authRoutes.js 认证路由
   - 创建 backend/middleware/roleCheck.js 角色权限检查中间件
   - _需求: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 1.10_
+
+
+
 
 - [ ] 6. 实现用户认证前端
   - 创建 frontend/src/views/Login.vue 登录页面
