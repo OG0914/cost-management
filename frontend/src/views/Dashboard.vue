@@ -20,10 +20,21 @@
         <el-alert
           title="系统提示"
           type="info"
-          description="阶段 2 开发完成！用户认证系统已就绪。"
+          description="阶段 3 开发中！基础数据管理模块已就绪。"
           :closable="false"
           show-icon
         />
+
+        <el-divider />
+
+        <div class="quick-links">
+          <h3>快速导航</h3>
+          <el-space wrap>
+            <el-button type="primary" @click="$router.push('/regulations')" v-if="authStore.isAdmin">法规管理</el-button>
+            <el-button type="primary" @click="$router.push('/models')" v-if="authStore.isAdmin">型号管理</el-button>
+            <el-button type="success" @click="$router.push('/materials')">原料管理</el-button>
+          </el-space>
+        </div>
       </div>
     </el-card>
   </div>

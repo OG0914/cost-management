@@ -63,12 +63,18 @@
 
 ## 阶段 3：基础数据管理模块
 
-- [ ] 7. 实现法规与型号管理
+- [x] 7. 实现法规与型号管理
+
+
+
   - 创建 backend/models/Regulation.js 和 Model.js
   - 创建 backend/controllers/regulationController.js 和 modelController.js
   - 创建对应的路由文件
   - 创建前端管理页面
   - _需求: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8_
+
+
+
 
 - [ ] 8. 实现原料管理模块
   - 创建 backend/models/Material.js 原料数据模型

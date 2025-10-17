@@ -32,9 +32,11 @@ app.get('/api/health', (req, res) => {
 
 // API 路由
 app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/regulations', require('./routes/regulationRoutes'));
+app.use('/api/models', require('./routes/modelRoutes'));
+app.use('/api/materials', require('./routes/materialRoutes'));
 // app.use('/api/cost', require('./routes/costRoutes'));
-// app.use('/api/material', require('./routes/materialRoutes'));
-// app.use('/api/process', require('./routes/processRoutes'));
+// app.use('/api/processes', require('./routes/processRoutes'));
 // app.use('/api/packaging', require('./routes/packagingRoutes'));
 // app.use('/api/report', require('./routes/reportRoutes'));
 // app.use('/api/dashboard', require('./routes/dashboardRoutes'));

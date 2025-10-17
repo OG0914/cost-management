@@ -19,6 +19,24 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/regulations',
+    name: 'RegulationManage',
+    component: () => import('../views/regulation/RegulationManage.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/models',
+    name: 'ModelManage',
+    component: () => import('../views/model/ModelManage.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/materials',
+    name: 'MaterialManage',
+    component: () => import('../views/material/MaterialManage.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/home',
     name: 'Home',
     component: () => import('../views/Home.vue'),
