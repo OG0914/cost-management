@@ -43,6 +43,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/packaging',
+    name: 'PackagingManage',
+    component: () => import('../views/packaging/PackagingManage.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/home',
     name: 'Home',
     component: () => import('../views/Home.vue'),

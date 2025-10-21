@@ -21,9 +21,11 @@ class Material {
   static findByModelId(modelId) {
     const db = dbManager.getDatabase();
     const stmt = db.prepare(`
-      SELECT * FROM materials
-      WHERE model_id = ?
-      ORDER BY created_at DESC
+      SELECT m.*, mo.model_name
+      FROM materials m
+      LEFT JOIN models mo ON m.model_id = mo.id
+      WHERE m.model_id = ?
+      ORDER BY m.created_at DESC
     `);
     return stmt.all(modelId);
   }

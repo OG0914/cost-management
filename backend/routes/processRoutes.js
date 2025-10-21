@@ -15,6 +15,7 @@ router.use(verifyToken);
 router.get('/packaging-configs', processController.getAllPackagingConfigs);
 router.get('/packaging-configs/model/:modelId', processController.getPackagingConfigsByModel);
 router.get('/packaging-configs/:id', processController.getPackagingConfigDetail);
+router.get('/packaging-configs/:id/full', processController.getPackagingConfigFullDetail);
 router.post('/packaging-configs', checkRole('admin', 'producer'), processController.createPackagingConfig);
 router.put('/packaging-configs/:id', checkRole('admin', 'producer'), processController.updatePackagingConfig);
 router.delete('/packaging-configs/:id', checkRole('admin', 'producer'), processController.deletePackagingConfig);
@@ -24,5 +25,11 @@ router.get('/process-configs/:packagingConfigId', processController.getProcessCo
 router.post('/process-configs', checkRole('admin', 'producer'), processController.createProcessConfig);
 router.put('/process-configs/:id', checkRole('admin', 'producer'), processController.updateProcessConfig);
 router.delete('/process-configs/:id', checkRole('admin', 'producer'), processController.deleteProcessConfig);
+
+// 包材配置路由
+router.get('/packaging-materials/:packagingConfigId', processController.getPackagingMaterials);
+router.post('/packaging-materials', checkRole('admin', 'producer', 'purchaser'), processController.createPackagingMaterial);
+router.put('/packaging-materials/:id', checkRole('admin', 'producer', 'purchaser'), processController.updatePackagingMaterial);
+router.delete('/packaging-materials/:id', checkRole('admin', 'producer', 'purchaser'), processController.deletePackagingMaterial);
 
 module.exports = router;

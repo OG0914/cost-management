@@ -23,9 +23,11 @@ class PackagingConfig {
   static findByModelId(modelId) {
     const db = dbManager.getDatabase();
     const stmt = db.prepare(`
-      SELECT * FROM packaging_configs
-      WHERE model_id = ? AND is_active = 1
-      ORDER BY created_at DESC
+      SELECT pc.*, m.model_name
+      FROM packaging_configs pc
+      LEFT JOIN models m ON pc.model_id = m.id
+      WHERE pc.model_id = ? AND pc.is_active = 1
+      ORDER BY pc.created_at DESC
     `);
     return stmt.all(modelId);
   }
@@ -97,6 +99,33 @@ class PackagingConfig {
       ORDER BY sort_order, id
     `);
     config.processes = processStmt.all(id);
+
+    return config;
+  }
+
+  // 获取包装配置及其工序和包材列表
+  static findWithDetails(id) {
+    const db = dbManager.getDatabase();
+    
+    // 获取包装配置
+    const config = this.findById(id);
+    if (!config) return null;
+
+    // 获取工序列表
+    const processStmt = db.prepare(`
+      SELECT * FROM process_configs
+      WHERE packaging_config_id = ? AND is_active = 1
+      ORDER BY sort_order, id
+    `);
+    config.processes = processStmt.all(id);
+
+    // 获取包材列表
+    const materialStmt = db.prepare(`
+      SELECT * FROM packaging_materials
+      WHERE packaging_config_id = ? AND is_active = 1
+      ORDER BY sort_order, id
+    `);
+    config.materials = materialStmt.all(id);
 
     return config;
   }

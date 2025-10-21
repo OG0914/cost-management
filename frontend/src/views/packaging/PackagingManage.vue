@@ -1,5 +1,5 @@
 <template>
-  <div class="process-management">
+  <div class="packaging-management">
     <!-- 返回按钮 -->
     <div class="page-header">
       <el-button @click="goBack" class="back-button">
@@ -11,7 +11,7 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>工序管理</span>
+          <span>包材管理</span>
           <el-button type="primary" @click="showCreateDialog" v-if="canEdit">
             <el-icon><Plus /></el-icon>
             新增包装配置
@@ -50,9 +50,9 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="工序总价" width="130" align="right">
+        <el-table-column label="包材总价" width="130" align="right">
           <template #default="{ row }">
-            <span class="price-info">¥{{ (row.process_total_price || 0).toFixed(4) }}</span>
+            <span class="price-info">¥{{ (row.material_total_price || 0).toFixed(4) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100" align="center">
@@ -63,9 +63,9 @@
           </template>
         </el-table-column>
         <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column label="操作" width="350" fixed="right">
+        <el-table-column label="操作" width="300" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" type="success" @click="viewProcesses(row)">查看</el-button>
+            <el-button size="small" type="success" @click="viewMaterials(row)">查看</el-button>
             <el-button size="small" type="primary" @click="editConfig(row)" v-if="canEdit">编辑</el-button>
             <el-button size="small" type="warning" @click="copyConfig(row)" v-if="canEdit">复制</el-button>
             <el-button size="small" type="danger" @click="deleteConfig(row)" v-if="canEdit">删除</el-button>
@@ -78,7 +78,7 @@
     <el-dialog
       v-model="dialogVisible"
       :title="isEdit ? '编辑包装配置' : '新增包装配置'"
-      width="700px"
+      width="800px"
     >
       <el-form :model="form" ref="formRef" label-width="120px">
         <el-form-item label="型号" required>
@@ -127,21 +127,33 @@
         </el-form-item>
 
         <el-divider content-position="left">
-          工序列表
-          <el-button size="small" type="primary" @click="addProcess" style="margin-left: 10px">
+          包材列表
+          <el-button size="small" type="primary" @click="addMaterial" style="margin-left: 10px">
             <el-icon><Plus /></el-icon>
-            添加工序
+            添加包材
           </el-button>
         </el-divider>
 
-        <el-table :data="form.processes" border style="margin-bottom: 20px">
+        <el-table :data="form.materials" border style="margin-bottom: 20px" show-summary :summary-method="getSummaries">
           <el-table-column label="序号" width="60" type="index" />
-          <el-table-column label="工序名称" min-width="200">
+          <el-table-column label="包材名称" min-width="150">
             <template #default="{ row }">
-              <el-input v-model="row.process_name" placeholder="请输入工序名称" size="small" />
+              <el-input v-model="row.material_name" placeholder="请输入包材名称" size="small" />
             </template>
           </el-table-column>
-          <el-table-column label="单价" width="150">
+          <el-table-column label="基本用量" width="120">
+            <template #default="{ row }">
+              <el-input-number 
+                v-model="row.basic_usage" 
+                :min="0" 
+                :precision="4" 
+                :step="0.01" 
+                size="small"
+                style="width: 100%"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column label="单价" width="120">
             <template #default="{ row }">
               <el-input-number 
                 v-model="row.unit_price" 
@@ -153,9 +165,26 @@
               />
             </template>
           </el-table-column>
+          <el-table-column label="小计" width="120" align="right">
+            <template #default="{ row }">
+              <span class="subtotal-text">¥{{ (row.basic_usage && row.basic_usage !== 0 ? ((row.unit_price || 0) / row.basic_usage) : 0).toFixed(4) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="外箱材积(m³)" width="130">
+            <template #default="{ row }">
+              <el-input-number 
+                v-model="row.carton_volume" 
+                :min="0" 
+                :precision="4" 
+                :step="0.001" 
+                size="small"
+                style="width: 100%"
+              />
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="80">
             <template #default="{ $index }">
-              <el-button size="small" type="danger" @click="removeProcess($index)">删除</el-button>
+              <el-button size="small" type="danger" @click="removeMaterial($index)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -167,8 +196,8 @@
       </template>
     </el-dialog>
 
-    <!-- 查看工序对话框 -->
-    <el-dialog v-model="processDialogVisible" title="工序列表" width="600px">
+    <!-- 查看包材对话框 -->
+    <el-dialog v-model="materialDialogVisible" title="包材列表" width="700px">
       <div class="mb-4">
         <p class="text-lg font-bold">{{ currentConfig?.model_name }} - {{ currentConfig?.config_name }}</p>
         <p class="text-gray-600">
@@ -178,22 +207,34 @@
         </p>
       </div>
       
-      <el-table :data="currentProcesses" border>
+      <el-table :data="currentMaterials" border show-summary :summary-method="getViewSummaries">
         <el-table-column label="序号" width="60" type="index" />
-        <el-table-column prop="process_name" label="工序名称" />
-        <el-table-column prop="unit_price" label="单价" width="120">
+        <el-table-column prop="material_name" label="包材名称" min-width="150" />
+        <el-table-column prop="basic_usage" label="基本用量" width="100">
+          <template #default="{ row }">
+            {{ row.basic_usage.toFixed(4) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="unit_price" label="单价" width="100">
           <template #default="{ row }">
             ¥{{ row.unit_price.toFixed(4) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="小计" width="120" align="right">
+          <template #default="{ row }">
+            <span class="subtotal-text">¥{{ (row.basic_usage !== 0 ? (row.unit_price / row.basic_usage) : 0).toFixed(4) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="carton_volume" label="外箱材积(m³)" width="120">
+          <template #default="{ row }">
+            {{ row.carton_volume ? row.carton_volume.toFixed(4) : '-' }}
           </template>
         </el-table-column>
       </el-table>
 
       <div class="mt-4 text-right">
-        <p class="text-sm text-gray-600 mb-2">
-          工序小计: ¥{{ currentProcesses.reduce((sum, p) => sum + p.unit_price, 0).toFixed(4) }}
-        </p>
         <p class="text-lg font-bold">
-          工序总价（含系数1.56）: <span class="text-blue-600">¥{{ totalProcessPrice.toFixed(4) }}</span>
+          包材总价: <span class="text-blue-600">¥{{ totalMaterialPrice.toFixed(4) }}</span>
         </p>
       </div>
     </el-dialog>
@@ -205,8 +246,8 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, ArrowLeft } from '@element-plus/icons-vue';
-import request from '../utils/request';
-import { useAuthStore } from '../store/auth';
+import request from '../../utils/request';
+import { useAuthStore } from '../../store/auth';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -217,7 +258,7 @@ const goBack = () => {
 };
 
 // 权限检查
-const canEdit = computed(() => authStore.isAdmin || authStore.isProducer);
+const canEdit = computed(() => authStore.isAdmin || authStore.isProducer || authStore.isPurchaser);
 
 // 数据
 const models = ref([]);
@@ -227,7 +268,7 @@ const loading = ref(false);
 
 // 对话框
 const dialogVisible = ref(false);
-const processDialogVisible = ref(false);
+const materialDialogVisible = ref(false);
 const isEdit = ref(false);
 const formRef = ref(null);
 
@@ -240,18 +281,65 @@ const form = reactive({
   bags_per_box: 10,
   boxes_per_carton: 24,
   is_active: 1,
-  processes: []
+  materials: []
 });
 
 // 当前查看的配置
 const currentConfig = ref(null);
-const currentProcesses = ref([]);
+const currentMaterials = ref([]);
 
-// 工序总价（总数 * 1.56）
-const totalProcessPrice = computed(() => {
-  const sum = currentProcesses.value.reduce((total, p) => total + p.unit_price, 0);
-  return sum * 1.56;
+// 包材总价（小计之和：单价÷基本用量）
+const totalMaterialPrice = computed(() => {
+  return currentMaterials.value.reduce((total, m) => {
+    return total + (m.basic_usage !== 0 ? m.unit_price / m.basic_usage : 0);
+  }, 0);
 });
+
+// 编辑表单的合计方法
+const getSummaries = (param) => {
+  const { columns, data } = param;
+  const sums = [];
+  columns.forEach((column, index) => {
+    if (index === 0) {
+      sums[index] = '合计';
+      return;
+    }
+    if (index === 4) { // 小计列
+      const values = data.map(item => {
+        const usage = item.basic_usage || 0;
+        const price = item.unit_price || 0;
+        return usage !== 0 ? price / usage : 0;
+      });
+      const total = values.reduce((prev, curr) => prev + curr, 0);
+      sums[index] = `¥${total.toFixed(4)}`;
+    } else {
+      sums[index] = '';
+    }
+  });
+  return sums;
+};
+
+// 查看对话框的合计方法
+const getViewSummaries = (param) => {
+  const { columns, data } = param;
+  const sums = [];
+  columns.forEach((column, index) => {
+    if (index === 0) {
+      sums[index] = '合计';
+      return;
+    }
+    if (index === 4) { // 小计列
+      const values = data.map(item => {
+        return item.basic_usage !== 0 ? item.unit_price / item.basic_usage : 0;
+      });
+      const total = values.reduce((prev, curr) => prev + curr, 0);
+      sums[index] = `¥${total.toFixed(4)}`;
+    } else {
+      sums[index] = '';
+    }
+  });
+  return sums;
+};
 
 // 加载型号列表
 const loadModels = async () => {
@@ -277,11 +365,6 @@ const loadPackagingConfigs = async () => {
     
     if (response.success) {
       packagingConfigs.value = response.data;
-      // 调试：打印第一条数据
-      if (response.data.length > 0) {
-        console.log('第一条配置数据:', response.data[0]);
-        console.log('工序总价:', response.data[0].process_total_price);
-      }
     }
   } catch (error) {
     ElMessage.error('加载包装配置失败');
@@ -302,7 +385,7 @@ const editConfig = async (row) => {
   isEdit.value = true;
   
   try {
-    const response = await request.get(`/processes/packaging-configs/${row.id}`);
+    const response = await request.get(`/processes/packaging-configs/${row.id}/full`);
     
     if (response.success) {
       const data = response.data;
@@ -313,7 +396,7 @@ const editConfig = async (row) => {
       form.bags_per_box = data.bags_per_box;
       form.boxes_per_carton = data.boxes_per_carton;
       form.is_active = data.is_active;
-      form.processes = data.processes || [];
+      form.materials = data.materials || [];
       
       dialogVisible.value = true;
     }
@@ -327,7 +410,7 @@ const copyConfig = async (row) => {
   isEdit.value = false;
   
   try {
-    const response = await request.get(`/processes/packaging-configs/${row.id}`);
+    const response = await request.get(`/processes/packaging-configs/${row.id}/full`);
     
     if (response.success) {
       const data = response.data;
@@ -345,18 +428,19 @@ const copyConfig = async (row) => {
         copyName = `${data.config_name} - 副本${counter}`;
       }
       
-      form.id = null; // 清空ID，表示新建
+      form.id = null;
       form.model_id = data.model_id;
       form.config_name = copyName;
       form.pc_per_bag = data.pc_per_bag;
       form.bags_per_box = data.bags_per_box;
       form.boxes_per_carton = data.boxes_per_carton;
       form.is_active = 1;
-      // 复制工序列表
-      form.processes = (data.processes || []).map(p => ({
-        process_name: p.process_name,
-        unit_price: p.unit_price,
-        sort_order: p.sort_order
+      form.materials = (data.materials || []).map(m => ({
+        material_name: m.material_name,
+        basic_usage: m.basic_usage,
+        unit_price: m.unit_price,
+        carton_volume: m.carton_volume,
+        sort_order: m.sort_order
       }));
       
       dialogVisible.value = true;
@@ -367,15 +451,15 @@ const copyConfig = async (row) => {
   }
 };
 
-// 查看工序
-const viewProcesses = async (row) => {
+// 查看包材
+const viewMaterials = async (row) => {
   try {
-    const response = await request.get(`/processes/packaging-configs/${row.id}`);
+    const response = await request.get(`/processes/packaging-configs/${row.id}/full`);
     
     if (response.success) {
       currentConfig.value = response.data;
-      currentProcesses.value = response.data.processes || [];
-      processDialogVisible.value = true;
+      currentMaterials.value = response.data.materials || [];
+      materialDialogVisible.value = true;
     }
   } catch (error) {
     // 错误已在拦截器处理
@@ -401,21 +485,23 @@ const deleteConfig = async (row) => {
   }
 };
 
-// 添加工序
-const addProcess = () => {
-  form.processes.push({
-    process_name: '',
+// 添加包材
+const addMaterial = () => {
+  form.materials.push({
+    material_name: '',
+    basic_usage: 0,
     unit_price: 0,
-    sort_order: form.processes.length
+    carton_volume: null,
+    sort_order: form.materials.length
   });
 };
 
-// 删除工序
-const removeProcess = (index) => {
-  form.processes.splice(index, 1);
+// 删除包材
+const removeMaterial = (index) => {
+  form.materials.splice(index, 1);
   // 重新排序
-  form.processes.forEach((p, i) => {
-    p.sort_order = i;
+  form.materials.forEach((m, i) => {
+    m.sort_order = i;
   });
 };
 
@@ -444,7 +530,7 @@ const submitForm = async () => {
       bags_per_box: form.bags_per_box,
       boxes_per_carton: form.boxes_per_carton,
       is_active: form.is_active,
-      processes: form.processes
+      materials: form.materials
     };
     
     if (isEdit.value) {
@@ -473,7 +559,7 @@ const resetForm = () => {
   form.bags_per_box = 10;
   form.boxes_per_carton = 24;
   form.is_active = 1;
-  form.processes = [];
+  form.materials = [];
 };
 
 onMounted(() => {
@@ -483,7 +569,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.process-management {
+.packaging-management {
   padding: 20px;
 }
 
@@ -516,8 +602,45 @@ onMounted(() => {
   font-size: 14px;
 }
 
+.subtotal-text {
+  color: #67C23A;
+  font-weight: 500;
+}
+
 .status-tag {
   min-width: 48px;
   text-align: center;
+}
+
+.mb-4 {
+  margin-bottom: 16px;
+}
+
+.mt-4 {
+  margin-top: 16px;
+}
+
+.text-lg {
+  font-size: 18px;
+}
+
+.text-sm {
+  font-size: 14px;
+}
+
+.font-bold {
+  font-weight: 600;
+}
+
+.text-gray-600 {
+  color: #606266;
+}
+
+.text-blue-600 {
+  color: #409EFF;
+}
+
+.text-right {
+  text-align: right;
 }
 </style>
