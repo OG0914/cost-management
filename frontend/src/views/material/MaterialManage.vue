@@ -1,5 +1,13 @@
 <template>
   <div class="material-manage">
+    <!-- 返回按钮 -->
+    <div class="page-header">
+      <el-button @click="goBack" class="back-button">
+        <el-icon><ArrowLeft /></el-icon>
+        返回上一级
+      </el-button>
+    </div>
+
     <el-card>
       <template #header>
         <div class="card-header">
@@ -35,16 +43,12 @@
 
       <!-- 数据表格 -->
       <el-table :data="materials" border stripe>
-        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="item_no" label="品号" width="120" />
         <el-table-column prop="name" label="原料名称" />
         <el-table-column prop="unit" label="单位" width="100" />
-        <el-table-column prop="price" label="单价" width="120">
-          <template #default="{ row }">
-            {{ row.price }} {{ row.currency }}
-          </template>
-        </el-table-column>
+        <el-table-column prop="price" label="单价" width="120" />
+        <el-table-column prop="currency" label="币别" width="100" />
         <el-table-column prop="model_name" label="绑定型号" width="150" />
-        <el-table-column prop="usage_amount" label="用量" width="100" />
         <el-table-column prop="updated_at" label="更新时间" width="180" />
         <el-table-column label="操作" width="200" v-if="canEdit">
           <template #default="{ row }">
@@ -62,6 +66,9 @@
       width="500px"
     >
       <el-form :model="form" label-width="100px">
+        <el-form-item label="品号" required>
+          <el-input v-model="form.item_no" placeholder="请输入品号（如：MAT001）" />
+        </el-form-item>
         <el-form-item label="原料名称" required>
           <el-input v-model="form.name" placeholder="请输入原料名称" />
         </el-form-item>
@@ -79,7 +86,13 @@
           </el-select>
         </el-form-item>
         <el-form-item label="绑定型号">
-          <el-select v-model="form.model_id" clearable placeholder="可选" style="width: 100%">
+          <el-select 
+            v-model="form.model_id" 
+            clearable 
+            filterable
+            placeholder="可选，输入关键字搜索" 
+            style="width: 100%"
+          >
             <el-option
               v-for="model in models"
               :key="model.id"
@@ -87,9 +100,6 @@
               :value="model.id"
             />
           </el-select>
-        </el-form-item>
-        <el-form-item label="用量">
-          <el-input-number v-model="form.usage_amount" :precision="2" :min="0" style="width: 100%" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -102,12 +112,19 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Upload, Download } from '@element-plus/icons-vue'
+import { Plus, Upload, Download, ArrowLeft } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 
+const router = useRouter()
 const authStore = useAuthStore()
+
+// 返回上一级
+const goBack = () => {
+  router.push('/dashboard')
+}
 
 const materials = ref([])
 const models = ref([])
@@ -118,6 +135,7 @@ const loading = ref(false)
 
 const form = reactive({
   id: null,
+  item_no: '',
   name: '',
   unit: '',
   price: 0,
@@ -158,6 +176,7 @@ const handleAdd = () => {
   isEdit.value = false
   dialogTitle.value = '新增原料'
   form.id = null
+  form.item_no = ''
   form.name = ''
   form.unit = ''
   form.price = 0
@@ -172,6 +191,7 @@ const handleEdit = (row) => {
   isEdit.value = true
   dialogTitle.value = '编辑原料'
   form.id = row.id
+  form.item_no = row.item_no
   form.name = row.name
   form.unit = row.unit
   form.price = row.price
@@ -183,8 +203,8 @@ const handleEdit = (row) => {
 
 // 提交
 const handleSubmit = async () => {
-  if (!form.name || !form.unit || !form.price) {
-    ElMessage.warning('请填写必填项')
+  if (!form.item_no || !form.name || !form.unit || !form.price) {
+    ElMessage.warning('请填写品号、原料名称、单位和单价')
     return
   }
 
@@ -295,6 +315,14 @@ onMounted(() => {
 <style scoped>
 .material-manage {
   padding: 20px;
+}
+
+.page-header {
+  margin-bottom: 16px;
+}
+
+.back-button {
+  font-size: 14px;
 }
 
 .card-header {

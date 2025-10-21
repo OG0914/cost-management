@@ -7,7 +7,7 @@ const XLSX = require('xlsx');
 class ExcelParser {
   /**
    * 解析原料 Excel
-   * 期望列：原料名称、单位、单价、币别
+   * 期望列：品号、原料名称、单位、单价、币别
    */
   static parseMaterialExcel(filePath) {
     try {
@@ -26,6 +26,10 @@ class ExcelParser {
         const rowNum = index + 2; // Excel 行号（从 2 开始，因为第 1 行是表头）
         
         // 验证必填字段
+        if (!row['品号'] && !row['item_no']) {
+          errors.push(`第 ${rowNum} 行：缺少品号`);
+          return;
+        }
         if (!row['原料名称'] && !row['name']) {
           errors.push(`第 ${rowNum} 行：缺少原料名称`);
           return;
@@ -40,6 +44,7 @@ class ExcelParser {
         }
         
         const material = {
+          item_no: String(row['品号'] || row['item_no']).trim(),
           name: row['原料名称'] || row['name'],
           unit: row['单位'] || row['unit'],
           price: parseFloat(row['单价'] || row['price']),

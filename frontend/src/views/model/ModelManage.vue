@@ -1,5 +1,13 @@
 <template>
   <div class="model-manage">
+    <!-- 返回按钮 -->
+    <div class="page-header">
+      <el-button @click="goBack" class="back-button">
+        <el-icon><ArrowLeft /></el-icon>
+        返回上一级
+      </el-button>
+    </div>
+
     <el-card>
       <template #header>
         <div class="card-header">
@@ -17,9 +25,9 @@
         <el-table-column prop="regulation_name" label="法规类别" width="150" />
         <el-table-column prop="model_name" label="型号名称" />
         <el-table-column prop="remark" label="备注" />
-        <el-table-column prop="is_active" label="状态" width="100">
+        <el-table-column prop="is_active" label="状态" width="100" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.is_active ? 'success' : 'danger'">
+            <el-tag :type="row.is_active ? 'success' : 'danger'" class="status-tag">
               {{ row.is_active ? '激活' : '禁用' }}
             </el-tag>
           </template>
@@ -42,7 +50,12 @@
     >
       <el-form :model="form" label-width="100px">
         <el-form-item label="法规类别" required>
-          <el-select v-model="form.regulation_id" placeholder="请选择法规类别" style="width: 100%">
+          <el-select 
+            v-model="form.regulation_id" 
+            filterable
+            placeholder="请选择法规类别，可输入关键字搜索" 
+            style="width: 100%"
+          >
             <el-option
               v-for="reg in regulations"
               :key="reg.id"
@@ -82,12 +95,19 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, ArrowLeft } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 
+const router = useRouter()
 const authStore = useAuthStore()
+
+// 返回上一级
+const goBack = () => {
+  router.push('/dashboard')
+}
 
 const models = ref([])
 const regulations = ref([])
@@ -211,9 +231,22 @@ onMounted(() => {
   padding: 20px;
 }
 
+.page-header {
+  margin-bottom: 16px;
+}
+
+.back-button {
+  font-size: 14px;
+}
+
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.status-tag {
+  min-width: 48px;
+  text-align: center;
 }
 </style>

@@ -38,14 +38,14 @@ class Material {
   // 创建原料
   static create(data) {
     const db = dbManager.getDatabase();
-    const { name, unit, price, currency, model_id, usage_amount } = data;
+    const { item_no, name, unit, price, currency, model_id, usage_amount } = data;
     
     const stmt = db.prepare(`
-      INSERT INTO materials (name, unit, price, currency, model_id, usage_amount)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO materials (item_no, name, unit, price, currency, model_id, usage_amount)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     
-    const result = stmt.run(name, unit, price, currency || 'CNY', model_id || null, usage_amount || null);
+    const result = stmt.run(item_no, name, unit, price, currency || 'CNY', model_id || null, usage_amount || null);
     return result.lastInsertRowid;
   }
 
@@ -53,13 +53,14 @@ class Material {
   static batchCreate(materials) {
     const db = dbManager.getDatabase();
     const stmt = db.prepare(`
-      INSERT INTO materials (name, unit, price, currency, model_id, usage_amount)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO materials (item_no, name, unit, price, currency, model_id, usage_amount)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     
     const insertMany = db.transaction((items) => {
       for (const item of items) {
         stmt.run(
+          item.item_no,
           item.name,
           item.unit,
           item.price,
@@ -76,7 +77,7 @@ class Material {
   // 更新原料
   static update(id, data) {
     const db = dbManager.getDatabase();
-    const { name, unit, price, currency, model_id, usage_amount } = data;
+    const { item_no, name, unit, price, currency, model_id, usage_amount } = data;
     
     // 记录价格历史
     const oldMaterial = this.findById(id);
@@ -86,11 +87,11 @@ class Material {
     
     const stmt = db.prepare(`
       UPDATE materials
-      SET name = ?, unit = ?, price = ?, currency = ?, model_id = ?, usage_amount = ?, updated_at = CURRENT_TIMESTAMP
+      SET item_no = ?, name = ?, unit = ?, price = ?, currency = ?, model_id = ?, usage_amount = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `);
     
-    return stmt.run(name, unit, price, currency, model_id, usage_amount, id);
+    return stmt.run(item_no, name, unit, price, currency, model_id, usage_amount, id);
   }
 
   // 删除原料
@@ -100,7 +101,14 @@ class Material {
     return stmt.run(id);
   }
 
-  // 根据名称查找原料（用于导入时更新）
+  // 根据品号查找原料（用于导入时更新）
+  static findByItemNo(itemNo) {
+    const db = dbManager.getDatabase();
+    const stmt = db.prepare('SELECT * FROM materials WHERE item_no = ?');
+    return stmt.get(itemNo);
+  }
+
+  // 根据名称查找原料
   static findByName(name) {
     const db = dbManager.getDatabase();
     const stmt = db.prepare('SELECT * FROM materials WHERE name = ?');

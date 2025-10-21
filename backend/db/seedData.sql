@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS models (
 -- 原料表
 CREATE TABLE IF NOT EXISTS materials (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_no TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
   unit TEXT NOT NULL,
   price REAL NOT NULL,
@@ -162,6 +163,7 @@ INSERT OR IGNORE INTO users (username, password, role, real_name, email) VALUES
 -- 创建索引以提高查询性能
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_models_regulation_id ON models(regulation_id);
+CREATE INDEX IF NOT EXISTS idx_materials_item_no ON materials(item_no);
 CREATE INDEX IF NOT EXISTS idx_materials_model_id ON materials(model_id);
 CREATE INDEX IF NOT EXISTS idx_processes_model_id ON processes(model_id);
 CREATE INDEX IF NOT EXISTS idx_packaging_model_id ON packaging(model_id);

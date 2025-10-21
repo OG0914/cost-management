@@ -10,6 +10,7 @@ class ExcelGenerator {
    */
   static generateMaterialExcel(materials) {
     const data = materials.map(m => ({
+      '品号': m.item_no,
       '原料名称': m.name,
       '单位': m.unit,
       '单价': m.price,
@@ -48,6 +49,7 @@ class ExcelGenerator {
   static generateMaterialTemplate() {
     const data = [
       {
+        '品号': 'MAT001',
         '原料名称': '示例原料',
         '单位': 'kg',
         '单价': 10.5,
