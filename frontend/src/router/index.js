@@ -37,6 +37,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/processes',
+    name: 'ProcessManagement',
+    component: () => import('../views/ProcessManagement.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/home',
     name: 'Home',
     component: () => import('../views/Home.vue'),

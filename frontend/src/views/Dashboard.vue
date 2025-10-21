@@ -33,6 +33,7 @@
             <el-button type="primary" @click="$router.push('/regulations')" v-if="authStore.isAdmin">法规管理</el-button>
             <el-button type="primary" @click="$router.push('/models')" v-if="authStore.isAdmin">型号管理</el-button>
             <el-button type="success" @click="$router.push('/materials')">原料管理</el-button>
+            <el-button type="warning" @click="$router.push('/processes')">工序管理</el-button>
           </el-space>
         </div>
       </div>
