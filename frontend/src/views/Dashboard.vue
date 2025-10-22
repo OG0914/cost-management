@@ -35,6 +35,7 @@
             <el-button type="success" @click="$router.push('/materials')">原料管理</el-button>
             <el-button type="warning" @click="$router.push('/processes')">工序管理</el-button>
             <el-button type="info" @click="$router.push('/packaging')">包材管理</el-button>
+            <el-button type="danger" @click="$router.push('/users')" v-if="authStore.isAdmin">用户管理</el-button>
           </el-space>
         </div>
       </div>

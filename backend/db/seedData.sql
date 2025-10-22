@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS processes (
   FOREIGN KEY (model_id) REFERENCES models(id)
 );
 
--- 包材表
+-- 包材表（旧表，保留用于兼容）
 CREATE TABLE IF NOT EXISTS packaging (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
@@ -69,6 +69,49 @@ CREATE TABLE IF NOT EXISTS packaging (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (model_id) REFERENCES models(id)
+);
+
+-- 包装配置表（型号+包装方式的固定组合）
+CREATE TABLE IF NOT EXISTS packaging_configs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  model_id INTEGER NOT NULL,
+  config_name TEXT NOT NULL,
+  pc_per_bag INTEGER NOT NULL,
+  bags_per_box INTEGER NOT NULL,
+  boxes_per_carton INTEGER NOT NULL,
+  is_active BOOLEAN DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (model_id) REFERENCES models(id),
+  UNIQUE(model_id, config_name)
+);
+
+-- 工序配置表（每个包装配置对应的工序列表）
+CREATE TABLE IF NOT EXISTS process_configs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  packaging_config_id INTEGER NOT NULL,
+  process_name TEXT NOT NULL,
+  unit_price REAL NOT NULL,
+  sort_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (packaging_config_id) REFERENCES packaging_configs(id) ON DELETE CASCADE
+);
+
+-- 包材配置表（与包装配置关联的包材明细）
+CREATE TABLE IF NOT EXISTS packaging_materials (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  packaging_config_id INTEGER NOT NULL,
+  material_name TEXT NOT NULL,
+  basic_usage REAL NOT NULL,
+  unit_price REAL NOT NULL,
+  carton_volume REAL,
+  sort_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (packaging_config_id) REFERENCES packaging_configs(id) ON DELETE CASCADE
 );
 
 -- 报价单主表
@@ -167,6 +210,9 @@ CREATE INDEX IF NOT EXISTS idx_materials_item_no ON materials(item_no);
 CREATE INDEX IF NOT EXISTS idx_materials_model_id ON materials(model_id);
 CREATE INDEX IF NOT EXISTS idx_processes_model_id ON processes(model_id);
 CREATE INDEX IF NOT EXISTS idx_packaging_model_id ON packaging(model_id);
+CREATE INDEX IF NOT EXISTS idx_packaging_configs_model_id ON packaging_configs(model_id);
+CREATE INDEX IF NOT EXISTS idx_process_configs_packaging_config_id ON process_configs(packaging_config_id);
+CREATE INDEX IF NOT EXISTS idx_packaging_materials_config_id ON packaging_materials(packaging_config_id);
 CREATE INDEX IF NOT EXISTS idx_quotations_status ON quotations(status);
 CREATE INDEX IF NOT EXISTS idx_quotations_created_by ON quotations(created_by);
 CREATE INDEX IF NOT EXISTS idx_quotation_items_quotation_id ON quotation_items(quotation_id);

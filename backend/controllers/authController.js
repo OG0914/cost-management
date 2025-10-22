@@ -154,9 +154,91 @@ const changePassword = async (req, res, next) => {
   }
 };
 
+// 获取所有用户（管理员）
+const getAllUsers = (req, res, next) => {
+  try {
+    const users = User.findAll();
+    
+    // 不返回密码字段
+    const usersWithoutPassword = users.map(user => {
+      const { password, ...userWithoutPassword } = user;
+      return userWithoutPassword;
+    });
+
+    res.json(success(usersWithoutPassword));
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 更新用户信息（管理员）
+const updateUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { real_name, email, role } = req.body;
+
+    // 验证角色是否合法
+    const validRoles = ['admin', 'purchaser', 'producer', 'reviewer', 'salesperson', 'readonly'];
+    if (role && !validRoles.includes(role)) {
+      return res.status(400).json(error('无效的角色类型', 400));
+    }
+
+    User.update(id, { real_name, email, role });
+
+    res.json(success(null, '用户信息更新成功'));
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 删除用户（管理员）
+const deleteUser = (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // 不能删除管理员账号
+    const user = User.findById(id);
+    if (user && user.username === 'admin') {
+      return res.status(400).json(error('不能删除管理员账号', 400));
+    }
+
+    User.delete(id);
+
+    res.json(success(null, '用户删除成功'));
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 重置用户密码（管理员）
+const resetUserPassword = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+
+    if (!newPassword) {
+      return res.status(400).json(error('新密码不能为空', 400));
+    }
+
+    // 加密新密码
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // 更新密码
+    User.updatePassword(id, hashedPassword);
+
+    res.json(success(null, '密码重置成功'));
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   login,
   register,
   getCurrentUser,
-  changePassword
+  changePassword,
+  getAllUsers,
+  updateUser,
+  deleteUser,
+  resetUserPassword
 };
