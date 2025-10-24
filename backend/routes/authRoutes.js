@@ -21,5 +21,6 @@ router.get('/users', verifyToken, checkRole('admin'), authController.getAllUsers
 router.put('/users/:id', verifyToken, checkRole('admin'), authController.updateUser);
 router.delete('/users/:id', verifyToken, checkRole('admin'), authController.deleteUser);
 router.post('/users/:id/reset-password', verifyToken, checkRole('admin'), authController.resetUserPassword);
+router.patch('/users/:id/toggle-status', verifyToken, checkRole('admin'), authController.toggleUserStatus);
 
 module.exports = router;

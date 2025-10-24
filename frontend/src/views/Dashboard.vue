@@ -29,14 +29,37 @@
 
         <div class="quick-links">
           <h3>快速导航</h3>
-          <el-space wrap>
-            <el-button type="primary" @click="$router.push('/regulations')" v-if="authStore.isAdmin">法规管理</el-button>
-            <el-button type="primary" @click="$router.push('/models')" v-if="authStore.isAdmin">型号管理</el-button>
-            <el-button type="success" @click="$router.push('/materials')">原料管理</el-button>
-            <el-button type="warning" @click="$router.push('/processes')">工序管理</el-button>
-            <el-button type="info" @click="$router.push('/packaging')">包材管理</el-button>
-            <el-button type="danger" @click="$router.push('/users')" v-if="authStore.isAdmin">用户管理</el-button>
-          </el-space>
+          
+          <div class="nav-section">
+            <h4>基础数据管理</h4>
+            <el-space wrap>
+              <el-button type="primary" @click="$router.push('/regulations')" v-if="authStore.isAdmin">法规管理</el-button>
+              <el-button type="primary" @click="$router.push('/models')" v-if="authStore.isAdmin">型号管理</el-button>
+              <el-button type="success" @click="$router.push('/materials')">原料管理</el-button>
+              <el-button type="warning" @click="$router.push('/processes')">工序管理</el-button>
+              <el-button type="info" @click="$router.push('/packaging')">包材管理</el-button>
+            </el-space>
+          </div>
+
+          <el-divider />
+
+          <div class="nav-section">
+            <h4>报价单管理</h4>
+            <el-space wrap>
+              <el-button type="primary" icon="Plus" @click="$router.push('/cost/add')">新增报价单</el-button>
+              <el-button type="success" icon="Document" @click="$router.push('/cost/records')">报价单记录</el-button>
+            </el-space>
+          </div>
+
+          <el-divider />
+
+          <div class="nav-section">
+            <h4>系统管理</h4>
+            <el-space wrap>
+              <el-button type="danger" @click="$router.push('/users')" v-if="authStore.isAdmin">用户管理</el-button>
+              <el-button type="primary" @click="$router.push('/config')">系统配置</el-button>
+            </el-space>
+          </div>
         </div>
       </div>
     </el-card>
@@ -46,6 +69,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, Document } from '@element-plus/icons-vue'
 import { useAuthStore } from '../store/auth'
 
 const router = useRouter()
@@ -95,5 +119,25 @@ const handleLogout = async () => {
 
 .content {
   padding: 20px 0;
+}
+
+.quick-links {
+  margin-top: 20px;
+}
+
+.quick-links h3 {
+  margin-bottom: 20px;
+  color: #303133;
+}
+
+.nav-section {
+  margin: 10px 0;
+}
+
+.nav-section h4 {
+  margin-bottom: 10px;
+  color: #606266;
+  font-size: 14px;
+  font-weight: 500;
 }
 </style>

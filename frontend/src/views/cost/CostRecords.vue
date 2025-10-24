@@ -1,0 +1,245 @@
+<template>
+  <div class="cost-records-container">
+    <el-card class="header-card">
+      <div class="header-content">
+        <div class="header-left">
+          <el-button icon="ArrowLeft" @click="goBack">返回</el-button>
+          <h2>报价单记录</h2>
+        </div>
+        <el-button type="primary" icon="Plus" @click="goToAdd">新增报价单</el-button>
+      </div>
+    </el-card>
+
+    <el-card>
+      <!-- 搜索筛选 -->
+      <el-form :inline="true" :model="searchForm" class="search-form">
+        <el-form-item label="客户名称">
+          <el-input v-model="searchForm.customer_name" placeholder="请输入客户名称" clearable />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+            <el-option label="草稿" value="draft" />
+            <el-option label="已提交" value="submitted" />
+            <el-option label="已审核" value="approved" />
+            <el-option label="已退回" value="rejected" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="loadQuotations">查询</el-button>
+          <el-button @click="resetSearch">重置</el-button>
+        </el-form-item>
+      </el-form>
+
+      <!-- 数据表格 -->
+      <el-table :data="quotations" border v-loading="loading">
+        <el-table-column prop="quotation_no" label="报价单编号" width="180" />
+        <el-table-column prop="customer_name" label="客户名称" width="150" />
+        <el-table-column prop="customer_region" label="客户地区" width="100" />
+        <el-table-column prop="model_name" label="型号" width="120" />
+        <el-table-column prop="quantity" label="数量" width="100" />
+        <el-table-column prop="final_price" label="最终价格" width="120">
+          <template #default="{ row }">
+            {{ row.final_price?.toFixed(2) }} {{ row.currency }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="getStatusType(row.status)">
+              {{ getStatusText(row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="creator_name" label="创建人" width="100" />
+        <el-table-column prop="created_at" label="创建时间" width="180" />
+        <el-table-column label="操作" width="200" fixed="right">
+          <template #default="{ row }">
+            <el-button size="small" @click="viewDetail(row.id)">查看</el-button>
+            <el-button size="small" type="primary" @click="editQuotation(row.id)" v-if="row.status === 'draft'">
+              编辑
+            </el-button>
+            <el-button size="small" type="danger" @click="deleteQuotation(row.id)" v-if="row.status === 'draft'">
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页 -->
+      <el-pagination
+        v-model:current-page="pagination.page"
+        v-model:page-size="pagination.pageSize"
+        :total="pagination.total"
+        :page-sizes="[10, 20, 50, 100]"
+        layout="total, sizes, prev, pager, next, jumper"
+        @size-change="loadQuotations"
+        @current-change="loadQuotations"
+        class="pagination"
+      />
+    </el-card>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowLeft, Plus } from '@element-plus/icons-vue'
+import request from '@/utils/request'
+
+const router = useRouter()
+
+const searchForm = reactive({
+  customer_name: '',
+  status: ''
+})
+
+const quotations = ref([])
+const loading = ref(false)
+
+const pagination = reactive({
+  page: 1,
+  pageSize: 20,
+  total: 0
+})
+
+// 加载报价单列表
+const loadQuotations = async () => {
+  loading.value = true
+  try {
+    const params = {
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      ...searchForm
+    }
+
+    const res = await request.get('/cost/quotations', { params })
+    
+    if (res.success) {
+      quotations.value = res.data
+      pagination.total = res.pagination.total
+    }
+  } catch (error) {
+    console.error('加载报价单列表失败:', error)
+    ElMessage.error('加载报价单列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 重置搜索
+const resetSearch = () => {
+  searchForm.customer_name = ''
+  searchForm.status = ''
+  pagination.page = 1
+  loadQuotations()
+}
+
+// 获取状态类型
+const getStatusType = (status) => {
+  const typeMap = {
+    draft: 'info',
+    submitted: 'warning',
+    approved: 'success',
+    rejected: 'danger'
+  }
+  return typeMap[status] || 'info'
+}
+
+// 获取状态文本
+const getStatusText = (status) => {
+  const textMap = {
+    draft: '草稿',
+    submitted: '已提交',
+    approved: '已审核',
+    rejected: '已退回'
+  }
+  return textMap[status] || status
+}
+
+// 返回
+const goBack = () => {
+  router.push('/dashboard')
+}
+
+// 新增报价单
+const goToAdd = () => {
+  router.push('/cost/add')
+}
+
+// 查看详情
+const viewDetail = (id) => {
+  ElMessage.info('查看详情功能待实现')
+  // router.push(`/cost/detail/${id}`)
+}
+
+// 编辑报价单
+const editQuotation = (id) => {
+  ElMessage.info('编辑功能待实现')
+  // router.push(`/cost/edit/${id}`)
+}
+
+// 删除报价单
+const deleteQuotation = async (id) => {
+  try {
+    await ElMessageBox.confirm('确定要删除这个报价单吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+
+    const res = await request.delete(`/cost/quotations/${id}`)
+    
+    if (res.success) {
+      ElMessage.success('删除成功')
+      loadQuotations()
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败')
+    }
+  }
+}
+
+onMounted(() => {
+  loadQuotations()
+})
+</script>
+
+<style scoped>
+.cost-records-container {
+  padding: 20px;
+}
+
+.header-card {
+  margin-bottom: 20px;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.header-left h2 {
+  margin: 0;
+  font-size: 24px;
+  color: #303133;
+}
+
+.search-form {
+  margin-bottom: 20px;
+}
+
+.pagination {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+</style>

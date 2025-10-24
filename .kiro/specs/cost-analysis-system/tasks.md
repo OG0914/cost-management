@@ -17,7 +17,7 @@
 
   - _需求: 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 9.1, 12.1_
 
-- [ ] 3. 搭建后端基础架构
+- [x] 3. 搭建后端基础架构
 
   - 创建 backend/server.js 作为 Express 服务器入口
   - 创建 backend/middleware/auth.js 实现 JWT 认证中间件
@@ -26,7 +26,7 @@
   - 创建 backend/utils/response.js 实现统一响应格式
   - _需求: 1.1, 1.2, 1.3_
 
-- [ ] 4. 搭建前端基础架构
+- [x] 4. 搭建前端基础架构
   - 创建 frontend/src/main.js 作为 Vue 应用入口
   - 配置 frontend/src/router/index.js 路由系统
   - 配置 Pinia 状态管理
@@ -63,7 +63,7 @@
   - 创建前端管理页面
   - _需求: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8_
 
-- [ ] 8. 实现原料管理模块
+- [x] 8. 实现原料管理模块
 
   - 创建 backend/models/Material.js 原料数据模型
   - 创建 backend/controllers/materialController.js 原料控制器
@@ -73,7 +73,7 @@
   - 创建 frontend/src/components/ExcelUpload.vue Excel 上传组件
   - _需求: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 11.1-11.7_
 
-- [ ] 9. 实现工序管理模块
+- [x] 9. 实现工序管理模块
 
   - 创建 backend/models/Process.js 工序数据模型
   - 创建 backend/controllers/processController.js 工序控制器
@@ -81,7 +81,7 @@
   - 创建 frontend/src/views/process/ProcessManage.vue 工序管理页面
   - _需求: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9_
 
-- [ ] 10. 实现包材管理模块
+- [x] 10. 实现包材管理模块
 
   - 创建 backend/models/Packaging.js 包材数据模型
   - 创建 backend/controllers/packagingController.js 包材控制器
@@ -98,7 +98,10 @@
 
 ## 阶段 4：核心成本计算引擎
 
-- [ ] 12. 实现成本计算工具类
+- [x] 12. 实现成本计算工具类
+
+
+
 
   - 创建 backend/utils/costCalculator.js 成本计算核心类
   - 实现 calculateBaseCost 方法
@@ -109,7 +112,10 @@
   - 实现 generateProfitTiers 方法
   - _需求: 6.6, 6.7, 6.8, 6.9, 6.10_
 
-- [ ] 13. 实现系统配置管理
+- [x] 13. 实现系统配置管理
+
+
+
 
   - 创建 backend/models/SystemConfig.js 系统配置模型
   - 创建 backend/controllers/configController.js 配置控制器
@@ -117,13 +123,19 @@
   - 创建前端系统配置页面
   - _需求: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 9.8, 9.9_
 
-- [ ] 14. 实现报价单数据模型
+- [x] 14. 实现报价单数据模型
+
+
+
 
   - 创建 backend/models/Quotation.js 报价单主表模型
   - 创建 backend/models/QuotationItem.js 报价单明细模型
   - _需求: 6.1-6.14_
 
-- [ ] 15. 实现报价单控制器
+
+
+
+- [x] 15. 实现报价单控制器
   - 创建 backend/controllers/costController.js 成本报价控制器
   - 实现 createQuotation 方法
   - 实现 getModelStandardData 方法
@@ -137,7 +149,10 @@
 
 ## 阶段 5：报价单前端界面
 
-- [ ] 16. 实现报价单创建页面
+- [x] 16. 实现报价单创建页面
+
+
+
 
   - 创建 frontend/src/views/cost/CostAdd.vue 新增报价单页面
   - 实现法规类别和型号选择器

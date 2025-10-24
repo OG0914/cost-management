@@ -36,11 +36,11 @@ app.use('/api/regulations', require('./routes/regulationRoutes'));
 app.use('/api/models', require('./routes/modelRoutes'));
 app.use('/api/materials', require('./routes/materialRoutes'));
 app.use('/api/processes', require('./routes/processRoutes'));
-// app.use('/api/cost', require('./routes/costRoutes'));
+app.use('/api/config', require('./routes/configRoutes'));
+app.use('/api/cost', require('./routes/costRoutes'));
 // app.use('/api/packaging', require('./routes/packagingRoutes'));
 // app.use('/api/report', require('./routes/reportRoutes'));
 // app.use('/api/dashboard', require('./routes/dashboardRoutes'));
-// app.use('/api/config', require('./routes/configRoutes'));
 
 // 404 处理
 app.use((req, res) => {

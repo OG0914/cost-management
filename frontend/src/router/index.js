@@ -55,6 +55,24 @@ const routes = [
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   {
+    path: '/config',
+    name: 'SystemConfig',
+    component: () => import('../views/SystemConfig.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/cost/add',
+    name: 'CostAdd',
+    component: () => import('../views/cost/CostAdd.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/cost/records',
+    name: 'CostRecords',
+    component: () => import('../views/cost/CostRecords.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/home',
     name: 'Home',
     component: () => import('../views/Home.vue'),

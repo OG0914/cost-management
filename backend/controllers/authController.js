@@ -23,6 +23,11 @@ const login = async (req, res, next) => {
       return res.status(401).json(error('用户名或密码错误', 401));
     }
 
+    // 检查用户是否被禁用
+    if (user.is_active === 0 || user.is_active === false) {
+      return res.status(403).json(error('该账号已被禁用，请联系管理员', 403));
+    }
+
     // 验证密码
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
@@ -175,7 +180,18 @@ const getAllUsers = (req, res, next) => {
 const updateUser = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { real_name, email, role } = req.body;
+    const { real_name, email, role, is_active } = req.body;
+
+    // 检查用户是否存在
+    const user = User.findById(id);
+    if (!user) {
+      return res.status(404).json(error('用户不存在', 404));
+    }
+
+    // 不能禁用管理员账号
+    if (user.username === 'admin' && is_active === false) {
+      return res.status(400).json(error('不能禁用管理员账号', 400));
+    }
 
     // 验证角色是否合法
     const validRoles = ['admin', 'purchaser', 'producer', 'reviewer', 'salesperson', 'readonly'];
@@ -183,7 +199,7 @@ const updateUser = async (req, res, next) => {
       return res.status(400).json(error('无效的角色类型', 400));
     }
 
-    User.update(id, { real_name, email, role });
+    User.update(id, { real_name, email, role, is_active });
 
     res.json(success(null, '用户信息更新成功'));
   } catch (err) {
@@ -198,14 +214,29 @@ const deleteUser = (req, res, next) => {
 
     // 不能删除管理员账号
     const user = User.findById(id);
-    if (user && user.username === 'admin') {
+    if (!user) {
+      return res.status(404).json(error('用户不存在', 404));
+    }
+    
+    if (user.username === 'admin') {
       return res.status(400).json(error('不能删除管理员账号', 400));
     }
 
-    User.delete(id);
+    // 管理员删除用户时，自动处理关联的报价单
+    // 1. 删除用户创建的所有报价单
+    // 2. 将用户审核的报价单的 reviewed_by 设置为 NULL
+    const result = User.deleteWithRelations(id);
+    
+    if (!result.success) {
+      return res.status(500).json(error('删除用户失败', 500));
+    }
 
-    res.json(success(null, '用户删除成功'));
+    res.json(success({
+      deletedQuotations: result.deletedQuotations,
+      updatedQuotations: result.updatedQuotations
+    }, `用户删除成功。已删除 ${result.deletedQuotations} 个报价单，更新 ${result.updatedQuotations} 个审核记录。`));
   } catch (err) {
+    console.error('删除用户失败:', err);
     next(err);
   }
 };
@@ -232,6 +263,33 @@ const resetUserPassword = async (req, res, next) => {
   }
 };
 
+// 禁用/启用用户（管理员）
+const toggleUserStatus = (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { is_active } = req.body;
+
+    // 检查用户是否存在
+    const user = User.findById(id);
+    if (!user) {
+      return res.status(404).json(error('用户不存在', 404));
+    }
+
+    // 不能禁用管理员账号
+    if (user.username === 'admin' && is_active === false) {
+      return res.status(400).json(error('不能禁用管理员账号', 400));
+    }
+
+    // 更新用户状态
+    User.update(id, { is_active });
+
+    const statusText = is_active ? '启用' : '禁用';
+    res.json(success(null, `用户${statusText}成功`));
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   login,
   register,
@@ -240,5 +298,6 @@ module.exports = {
   getAllUsers,
   updateUser,
   deleteUser,
-  resetUserPassword
+  resetUserPassword,
+  toggleUserStatus
 };
