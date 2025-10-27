@@ -20,7 +20,7 @@
         <el-alert
           title="系统提示"
           type="info"
-          description="阶段 3 开发中！基础数据管理模块已就绪。"
+          description="阶段 5 开发中！基础数据管理模块已就绪。"
           :closable="false"
           show-icon
         />

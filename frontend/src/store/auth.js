@@ -4,11 +4,12 @@
 
 import { defineStore } from 'pinia'
 import request from '../utils/request'
+import { getToken, setToken, getUser, setUser, clearAuth } from '../utils/auth'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    token: localStorage.getItem('token') || null,
-    user: JSON.parse(localStorage.getItem('user') || 'null')
+    token: getToken(),
+    user: getUser()
   }),
 
   getters: {
@@ -47,8 +48,8 @@ export const useAuthStore = defineStore('auth', {
           this.user = response.data.user
 
           // 保存到 localStorage
-          localStorage.setItem('token', response.data.token)
-          localStorage.setItem('user', JSON.stringify(response.data.user))
+          setToken(response.data.token)
+          setUser(response.data.user)
 
           return response.data
         } else {
@@ -63,8 +64,7 @@ export const useAuthStore = defineStore('auth', {
     logout() {
       this.token = null
       this.user = null
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
+      clearAuth()
       
       // 跳转到登录页
       if (window.location.pathname !== '/login') {
@@ -78,7 +78,7 @@ export const useAuthStore = defineStore('auth', {
         const response = await request.get('/auth/me')
         if (response.success) {
           this.user = response.data
-          localStorage.setItem('user', JSON.stringify(response.data))
+          setUser(response.data)
           return response.data
         }
       } catch (error) {

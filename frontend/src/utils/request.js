@@ -5,6 +5,7 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '../router'
+import { getToken, clearAuth } from './auth'
 
 // 创建 axios 实例
 const request = axios.create({
@@ -16,7 +17,7 @@ const request = axios.create({
 request.interceptors.request.use(
   config => {
     // 从 localStorage 获取 token
-    const token = localStorage.getItem('token')
+    const token = getToken()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -44,8 +45,7 @@ request.interceptors.response.use(
         case 401:
           ElMessage.error('登录已过期，请重新登录')
           // 清除所有认证信息
-          localStorage.removeItem('token')
-          localStorage.removeItem('user')
+          clearAuth()
           // 跳转到登录页
           if (router.currentRoute.value.path !== '/login') {
             router.push('/login')
