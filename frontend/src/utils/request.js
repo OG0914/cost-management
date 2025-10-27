@@ -4,6 +4,7 @@
 
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import router from '../router'
 
 // 创建 axios 实例
 const request = axios.create({
@@ -41,10 +42,14 @@ request.interceptors.response.use(
 
       switch (status) {
         case 401:
-          ElMessage.error('未授权，请先登录')
-          // 清除 token 并跳转到登录页
+          ElMessage.error('登录已过期，请重新登录')
+          // 清除所有认证信息
           localStorage.removeItem('token')
-          // router.push('/login') // 后续阶段实现
+          localStorage.removeItem('user')
+          // 跳转到登录页
+          if (router.currentRoute.value.path !== '/login') {
+            router.push('/login')
+          }
           break
         case 403:
           ElMessage.error('您没有权限执行此操作')

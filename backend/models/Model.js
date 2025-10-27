@@ -53,6 +53,18 @@ class Model {
     return stmt.get(id);
   }
 
+  // 根据型号名称查找
+  static findByName(modelName) {
+    const db = dbManager.getDatabase();
+    const stmt = db.prepare(`
+      SELECT m.*, r.name as regulation_name
+      FROM models m
+      LEFT JOIN regulations r ON m.regulation_id = r.id
+      WHERE m.model_name = ?
+    `);
+    return stmt.get(modelName);
+  }
+
   // 创建型号
   static create(data) {
     const db = dbManager.getDatabase();

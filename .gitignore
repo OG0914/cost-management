@@ -11,6 +11,8 @@ frontend/node_modules/
 # Database
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
 
 # Build output
 frontend/dist/
@@ -30,3 +32,8 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Temporary test files
+test-*.js
+diagnose.js
+LOGIN-INFO.md

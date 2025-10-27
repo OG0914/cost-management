@@ -12,10 +12,16 @@
       <template #header>
         <div class="card-header">
           <span>工序管理</span>
-          <el-button type="primary" @click="showCreateDialog" v-if="canEdit">
-            <el-icon><Plus /></el-icon>
-            新增包装配置
-          </el-button>
+          <el-space v-if="canEdit">
+            <el-button type="info" @click="handleExport">
+              <el-icon><Download /></el-icon>
+              导出Excel
+            </el-button>
+            <el-button type="primary" @click="showCreateDialog">
+              <el-icon><Plus /></el-icon>
+              新增包装配置
+            </el-button>
+          </el-space>
         </div>
       </template>
 
@@ -39,8 +45,14 @@
       </div>
 
       <!-- 包装配置列表 -->
-      <el-table :data="packagingConfigs" border stripe v-loading="loading">
-        <el-table-column prop="id" label="ID" width="80" />
+      <el-table 
+        :data="packagingConfigs" 
+        border 
+        stripe 
+        v-loading="loading"
+        @selection-change="handleSelectionChange"
+      >
+        <el-table-column type="selection" width="55" />
         <el-table-column prop="model_name" label="型号" width="120" />
         <el-table-column prop="config_name" label="配置名称" width="150" />
         <el-table-column label="包装方式" min-width="250">
@@ -204,7 +216,7 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, ArrowLeft } from '@element-plus/icons-vue';
+import { Plus, ArrowLeft, Download } from '@element-plus/icons-vue';
 import request from '../utils/request';
 import { useAuthStore } from '../store/auth';
 
@@ -222,6 +234,7 @@ const canEdit = computed(() => authStore.isAdmin || authStore.isProducer);
 // 数据
 const models = ref([]);
 const packagingConfigs = ref([]);
+const selectedConfigs = ref([]);
 const selectedModelId = ref(null);
 const loading = ref(false);
 
@@ -474,6 +487,39 @@ const resetForm = () => {
   form.boxes_per_carton = 24;
   form.is_active = 1;
   form.processes = [];
+};
+
+// 选择变化
+const handleSelectionChange = (selection) => {
+  selectedConfigs.value = selection;
+};
+
+// 导出
+const handleExport = async () => {
+  if (selectedConfigs.value.length === 0) {
+    ElMessage.warning('请先选择要导出的数据');
+    return;
+  }
+
+  try {
+    const ids = selectedConfigs.value.map(item => item.id);
+    const response = await request.post('/processes/process-configs/export/excel', 
+      { ids },
+      { responseType: 'blob' }
+    );
+    
+    const url = window.URL.createObjectURL(new Blob([response]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `工序清单_${Date.now()}.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    ElMessage.success('导出成功');
+  } catch (error) {
+    ElMessage.error('导出失败');
+  }
 };
 
 onMounted(() => {

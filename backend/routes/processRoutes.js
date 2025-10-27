@@ -4,9 +4,33 @@
 
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
 const processController = require('../controllers/processController');
 const { verifyToken } = require('../middleware/auth');
 const { checkRole } = require('../middleware/roleCheck');
+
+// 配置文件上传
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, '../uploads'));
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext !== '.xlsx' && ext !== '.xls') {
+      return cb(new Error('只支持 Excel 文件'));
+    }
+    cb(null, true);
+  }
+});
 
 // 所有路由都需要认证
 router.use(verifyToken);
@@ -31,5 +55,11 @@ router.get('/packaging-materials/:packagingConfigId', processController.getPacka
 router.post('/packaging-materials', checkRole('admin', 'producer', 'purchaser'), processController.createPackagingMaterial);
 router.put('/packaging-materials/:id', checkRole('admin', 'producer', 'purchaser'), processController.updatePackagingMaterial);
 router.delete('/packaging-materials/:id', checkRole('admin', 'producer', 'purchaser'), processController.deletePackagingMaterial);
+
+// 工序 Excel 导出
+router.post('/process-configs/export/excel', checkRole('admin', 'producer'), processController.exportProcesses);
+
+// 包材 Excel 导出
+router.post('/packaging-materials/export/excel', checkRole('admin', 'producer', 'purchaser'), processController.exportPackagingMaterials);
 
 module.exports = router;

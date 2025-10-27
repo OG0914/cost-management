@@ -51,7 +51,7 @@ router.delete('/:id', isPurchaser, materialController.deleteMaterial);
 
 // Excel 导入导出
 router.post('/import', isPurchaser, upload.single('file'), materialController.importMaterials);
-router.get('/export/excel', isPurchaser, materialController.exportMaterials);
+router.post('/export/excel', isPurchaser, materialController.exportMaterials);
 router.get('/template/download', isPurchaser, materialController.downloadTemplate);
 
 module.exports = router;

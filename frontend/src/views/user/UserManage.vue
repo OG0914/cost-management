@@ -21,7 +21,6 @@
 
       <!-- 用户列表 -->
       <el-table :data="users" border stripe v-loading="loading">
-        <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="username" label="用户名" min-width="120" />
         <el-table-column prop="real_name" label="真实姓名" min-width="120" />
         <el-table-column prop="role" label="角色" width="110">

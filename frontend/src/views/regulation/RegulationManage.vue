@@ -21,7 +21,6 @@
 
       <!-- 数据表格 -->
       <el-table :data="regulations" border stripe>
-        <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="name" label="法规名称" />
         <el-table-column prop="description" label="描述" />
         <el-table-column prop="is_active" label="状态" width="100" align="center">

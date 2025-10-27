@@ -42,7 +42,8 @@
       </template>
 
       <!-- 数据表格 -->
-      <el-table :data="materials" border stripe>
+      <el-table :data="materials" border stripe @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" />
         <el-table-column prop="item_no" label="品号" width="120" />
         <el-table-column prop="name" label="原料名称" />
         <el-table-column prop="unit" label="单位" width="100" />
@@ -127,6 +128,7 @@ const goBack = () => {
 }
 
 const materials = ref([])
+const selectedMaterials = ref([])
 const models = ref([])
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增原料')
@@ -264,12 +266,24 @@ const handleFileChange = async (file) => {
   }
 }
 
+// 选择变化
+const handleSelectionChange = (selection) => {
+  selectedMaterials.value = selection
+}
+
 // 导出
 const handleExport = async () => {
+  if (selectedMaterials.value.length === 0) {
+    ElMessage.warning('请先选择要导出的数据')
+    return
+  }
+
   try {
-    const response = await request.get('/materials/export/excel', {
-      responseType: 'blob'
-    })
+    const ids = selectedMaterials.value.map(item => item.id)
+    const response = await request.post('/materials/export/excel', 
+      { ids },
+      { responseType: 'blob' }
+    )
     
     const url = window.URL.createObjectURL(new Blob([response]))
     const link = document.createElement('a')

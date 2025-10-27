@@ -21,7 +21,6 @@
 
       <!-- 数据表格 -->
       <el-table :data="models" border stripe>
-        <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="regulation_name" label="法规类别" width="150" />
         <el-table-column prop="model_name" label="型号名称" />
         <el-table-column prop="remark" label="备注" />

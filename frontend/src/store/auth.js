@@ -65,6 +65,11 @@ export const useAuthStore = defineStore('auth', {
       this.user = null
       localStorage.removeItem('token')
       localStorage.removeItem('user')
+      
+      // 跳转到登录页
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
     },
 
     // 获取当前用户信息

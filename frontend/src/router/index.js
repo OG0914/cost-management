@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { getToken } from '../utils/auth'
+import { getToken, isTokenExpired, clearAuth } from '../utils/auth'
 
 const routes = [
   {
@@ -86,19 +86,42 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const token = getToken()
   
   // 需要认证的页面
   if (to.meta.requiresAuth) {
-    if (token) {
-      next()
-    } else {
+    if (!token) {
+      // 没有token，跳转登录
       next('/login')
+      return
+    }
+
+    // 检查token是否过期
+    if (isTokenExpired()) {
+      clearAuth()
+      next('/login')
+      return
+    }
+
+    // 如果是应用首次加载（刷新页面或直接访问），验证token有效性
+    if (from.path === '/' || from.name === null) {
+      try {
+        const { useAuthStore } = await import('../store/auth')
+        const authStore = useAuthStore()
+        await authStore.fetchUserInfo()
+        next()
+      } catch (error) {
+        // Token无效，清除并跳转登录
+        clearAuth()
+        next('/login')
+      }
+    } else {
+      next()
     }
   } else {
     // 已登录用户访问登录页，重定向到仪表盘
-    if (to.path === '/login' && token) {
+    if (to.path === '/login' && token && !isTokenExpired()) {
       next('/dashboard')
     } else {
       next()

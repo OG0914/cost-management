@@ -164,7 +164,21 @@ const importMaterials = (req, res, next) => {
 // 导出原料 Excel
 const exportMaterials = (req, res, next) => {
   try {
-    const materials = Material.findAll();
+    const { ids } = req.body;
+    
+    let materials;
+    if (ids && ids.length > 0) {
+      // 导出选中的数据
+      materials = ids.map(id => Material.findById(id)).filter(m => m !== null);
+    } else {
+      // 如果没有指定ID，导出所有数据
+      materials = Material.findAll();
+    }
+    
+    if (materials.length === 0) {
+      return res.status(400).json(error('没有可导出的数据', 400));
+    }
+    
     const workbook = ExcelGenerator.generateMaterialExcel(materials);
     
     // 生成文件

@@ -450,3 +450,516 @@ exports.deletePackagingMaterial = (req, res) => {
     });
   }
 };
+
+// ==================== Excel 导入导出 ====================
+
+const ExcelParser = require('../utils/excelParser');
+const ExcelGenerator = require('../utils/excelGenerator');
+const Model = require('../models/Model');
+const XLSX = require('xlsx');
+const fs = require('fs');
+const path = require('path');
+
+/**
+ * 导入工序 Excel
+ */
+exports.importProcesses = async (req, res) => {
+  let filePath = null;
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: '请上传文件'
+      });
+    }
+    
+    filePath = req.file.path;
+    console.log('开始解析工序文件:', filePath);
+    
+    const result = ExcelParser.parseProcessExcel(filePath);
+    console.log('解析结果:', result);
+    
+    if (!result.success) {
+      // 删除临时文件
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      
+      return res.status(400).json({
+        success: false,
+        message: '文件解析失败',
+        errors: result.errors
+      });
+    }
+    
+    if (result.valid === 0) {
+      // 删除临时文件
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      
+      return res.status(400).json({
+        success: false,
+        message: '没有有效的数据行'
+      });
+    }
+    
+    // 按配置分组处理数据
+    const configMap = new Map();
+    
+    result.data.forEach(item => {
+      // 解析包装方式
+      const packagingMatch = item.packaging_method.match(/(\d+)pc\/bag.*?(\d+)bags?\/box.*?(\d+)boxes?\/carton/i);
+      if (!packagingMatch) {
+        return;
+      }
+      
+      const [, pc_per_bag, bags_per_box, boxes_per_carton] = packagingMatch;
+      
+      const key = `${item.model_name}|${item.config_name}|${pc_per_bag}|${bags_per_box}|${boxes_per_carton}`;
+      
+      if (!configMap.has(key)) {
+        configMap.set(key, {
+          model_name: item.model_name,
+          config_name: item.config_name,
+          pc_per_bag: parseInt(pc_per_bag),
+          bags_per_box: parseInt(bags_per_box),
+          boxes_per_carton: parseInt(boxes_per_carton),
+          processes: []
+        });
+      }
+      
+      configMap.get(key).processes.push({
+        process_name: item.process_name,
+        unit_price: item.unit_price
+      });
+    });
+    
+    let created = 0;
+    let updated = 0;
+    const errors = [];
+    
+    // 处理每个配置
+    for (const [key, configData] of configMap) {
+      // 查找型号
+      const model = Model.findByName(configData.model_name);
+      if (!model) {
+        errors.push(`型号 "${configData.model_name}" 不存在，请先创建该型号`);
+        continue;
+      }
+      
+      // 查找或创建配置
+      const existingConfigs = PackagingConfig.findByModelId(model.id);
+      let config = existingConfigs.find(c => 
+        c.config_name === configData.config_name &&
+        c.pc_per_bag === configData.pc_per_bag &&
+        c.bags_per_box === configData.bags_per_box &&
+        c.boxes_per_carton === configData.boxes_per_carton
+      );
+      
+      if (config) {
+        // 更新：删除旧工序，添加新工序
+        ProcessConfig.deleteByPackagingConfigId(config.id);
+        ProcessConfig.createBatch(config.id, configData.processes);
+        updated++;
+      } else {
+        // 创建新配置
+        const configId = PackagingConfig.create({
+          model_id: model.id,
+          config_name: configData.config_name,
+          pc_per_bag: configData.pc_per_bag,
+          bags_per_box: configData.bags_per_box,
+          boxes_per_carton: configData.boxes_per_carton
+        });
+        ProcessConfig.createBatch(configId, configData.processes);
+        created++;
+      }
+    }
+    
+    // 删除临时文件
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        total: result.total,
+        valid: result.valid,
+        created,
+        updated,
+        errors: errors.length > 0 ? errors : undefined
+      },
+      message: errors.length > 0 
+        ? `部分导入成功。创建 ${created} 条，更新 ${updated} 条。${errors.length} 个错误。`
+        : '导入成功'
+    });
+  } catch (error) {
+    console.error('导入工序失败:', error);
+    // 清理临时文件
+    if (filePath && fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    res.status(500).json({
+      success: false,
+      message: '导入失败: ' + error.message
+    });
+  }
+};
+
+/**
+ * 导出工序 Excel
+ */
+exports.exportProcesses = (req, res) => {
+  try {
+    const { ids } = req.body;
+    
+    let configs;
+    if (ids && ids.length > 0) {
+      // 导出选中的配置
+      configs = ids.map(id => PackagingConfig.findById(id)).filter(c => c !== null);
+    } else {
+      // 如果没有指定ID，导出所有配置
+      configs = PackagingConfig.findAll();
+    }
+    
+    if (configs.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: '没有可导出的数据'
+      });
+    }
+    
+    const processes = [];
+    
+    configs.forEach(config => {
+      const configProcesses = ProcessConfig.findByPackagingConfigId(config.id);
+      const packagingMethod = `${config.pc_per_bag}pc/bag, ${config.bags_per_box}bags/box, ${config.boxes_per_carton}boxes/carton`;
+      
+      configProcesses.forEach(p => {
+        processes.push({
+          model_name: config.model_name,
+          config_name: config.config_name,
+          packaging_method: packagingMethod,
+          process_name: p.process_name,
+          unit_price: p.unit_price
+        });
+      });
+    });
+    
+    const workbook = ExcelGenerator.generateProcessExcel(processes);
+    
+    const fileName = `工序清单_${Date.now()}.xlsx`;
+    const filePath = path.join(__dirname, '../temp', fileName);
+    
+    const tempDir = path.join(__dirname, '../temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    
+    XLSX.writeFile(workbook, filePath);
+    
+    res.download(filePath, fileName, (err) => {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      if (err) {
+        console.error('下载失败:', err);
+      }
+    });
+  } catch (error) {
+    console.error('导出工序失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '导出失败'
+    });
+  }
+};
+
+/**
+ * 下载工序导入模板
+ */
+exports.downloadProcessTemplate = (req, res) => {
+  try {
+    const workbook = ExcelGenerator.generateProcessTemplate();
+    
+    const fileName = '工序导入模板.xlsx';
+    const filePath = path.join(__dirname, '../temp', fileName);
+    
+    const tempDir = path.join(__dirname, '../temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    
+    XLSX.writeFile(workbook, filePath);
+    
+    res.download(filePath, fileName, (err) => {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      if (err) {
+        console.error('下载失败:', err);
+      }
+    });
+  } catch (error) {
+    console.error('下载模板失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '下载模板失败'
+    });
+  }
+};
+
+/**
+ * 导入包材 Excel
+ */
+exports.importPackagingMaterials = async (req, res) => {
+  let filePath = null;
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: '请上传文件'
+      });
+    }
+    
+    filePath = req.file.path;
+    console.log('开始解析包材文件:', filePath);
+    
+    const result = ExcelParser.parsePackagingMaterialExcel(filePath);
+    console.log('解析结果:', result);
+    
+    if (!result.success) {
+      // 删除临时文件
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      
+      return res.status(400).json({
+        success: false,
+        message: '文件解析失败',
+        errors: result.errors
+      });
+    }
+    
+    if (result.valid === 0) {
+      // 删除临时文件
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      
+      return res.status(400).json({
+        success: false,
+        message: '没有有效的数据行'
+      });
+    }
+    
+    // 按配置分组处理数据
+    const configMap = new Map();
+    
+    result.data.forEach(item => {
+      // 解析包装方式
+      const packagingMatch = item.packaging_method.match(/(\d+)pc\/bag.*?(\d+)bags?\/box.*?(\d+)boxes?\/carton/i);
+      if (!packagingMatch) {
+        return;
+      }
+      
+      const [, pc_per_bag, bags_per_box, boxes_per_carton] = packagingMatch;
+      
+      const key = `${item.model_name}|${item.config_name}|${pc_per_bag}|${bags_per_box}|${boxes_per_carton}`;
+      
+      if (!configMap.has(key)) {
+        configMap.set(key, {
+          model_name: item.model_name,
+          config_name: item.config_name,
+          pc_per_bag: parseInt(pc_per_bag),
+          bags_per_box: parseInt(bags_per_box),
+          boxes_per_carton: parseInt(boxes_per_carton),
+          materials: []
+        });
+      }
+      
+      configMap.get(key).materials.push({
+        material_name: item.material_name,
+        basic_usage: item.basic_usage,
+        unit_price: item.unit_price,
+        carton_volume: item.carton_volume
+      });
+    });
+    
+    let created = 0;
+    let updated = 0;
+    const errors = [];
+    
+    // 处理每个配置
+    for (const [key, configData] of configMap) {
+      // 查找型号
+      const model = Model.findByName(configData.model_name);
+      if (!model) {
+        errors.push(`型号 "${configData.model_name}" 不存在，请先创建该型号`);
+        continue;
+      }
+      
+      // 查找或创建配置
+      const existingConfigs = PackagingConfig.findByModelId(model.id);
+      let config = existingConfigs.find(c => 
+        c.config_name === configData.config_name &&
+        c.pc_per_bag === configData.pc_per_bag &&
+        c.bags_per_box === configData.bags_per_box &&
+        c.boxes_per_carton === configData.boxes_per_carton
+      );
+      
+      if (config) {
+        // 更新：删除旧包材，添加新包材
+        PackagingMaterial.deleteByPackagingConfigId(config.id);
+        PackagingMaterial.createBatch(config.id, configData.materials);
+        updated++;
+      } else {
+        // 创建新配置
+        const configId = PackagingConfig.create({
+          model_id: model.id,
+          config_name: configData.config_name,
+          pc_per_bag: configData.pc_per_bag,
+          bags_per_box: configData.bags_per_box,
+          boxes_per_carton: configData.boxes_per_carton
+        });
+        PackagingMaterial.createBatch(configId, configData.materials);
+        created++;
+      }
+    }
+    
+    // 删除临时文件
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        total: result.total,
+        valid: result.valid,
+        created,
+        updated,
+        errors: errors.length > 0 ? errors : undefined
+      },
+      message: errors.length > 0 
+        ? `部分导入成功。创建 ${created} 条，更新 ${updated} 条。${errors.length} 个错误。`
+        : '导入成功'
+    });
+  } catch (error) {
+    console.error('导入包材失败:', error);
+    // 清理临时文件
+    if (filePath && fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    res.status(500).json({
+      success: false,
+      message: '导入失败: ' + error.message
+    });
+  }
+};
+
+/**
+ * 导出包材 Excel
+ */
+exports.exportPackagingMaterials = (req, res) => {
+  try {
+    const { ids } = req.body;
+    
+    let configs;
+    if (ids && ids.length > 0) {
+      // 导出选中的配置
+      configs = ids.map(id => PackagingConfig.findById(id)).filter(c => c !== null);
+    } else {
+      // 如果没有指定ID，导出所有配置
+      configs = PackagingConfig.findAll();
+    }
+    
+    if (configs.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: '没有可导出的数据'
+      });
+    }
+    
+    const materials = [];
+    
+    configs.forEach(config => {
+      const configMaterials = PackagingMaterial.findByPackagingConfigId(config.id);
+      const packagingMethod = `${config.pc_per_bag}pc/bag, ${config.bags_per_box}bags/box, ${config.boxes_per_carton}boxes/carton`;
+      
+      configMaterials.forEach(m => {
+        materials.push({
+          model_name: config.model_name,
+          config_name: config.config_name,
+          packaging_method: packagingMethod,
+          material_name: m.material_name,
+          basic_usage: m.basic_usage,
+          unit_price: m.unit_price,
+          carton_volume: m.carton_volume
+        });
+      });
+    });
+    
+    const workbook = ExcelGenerator.generatePackagingMaterialExcel(materials);
+    
+    const fileName = `包材清单_${Date.now()}.xlsx`;
+    const filePath = path.join(__dirname, '../temp', fileName);
+    
+    const tempDir = path.join(__dirname, '../temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    
+    XLSX.writeFile(workbook, filePath);
+    
+    res.download(filePath, fileName, (err) => {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      if (err) {
+        console.error('下载失败:', err);
+      }
+    });
+  } catch (error) {
+    console.error('导出包材失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '导出失败'
+    });
+  }
+};
+
+/**
+ * 下载包材导入模板
+ */
+exports.downloadPackagingMaterialTemplate = (req, res) => {
+  try {
+    const workbook = ExcelGenerator.generatePackagingMaterialTemplate();
+    
+    const fileName = '包材导入模板.xlsx';
+    const filePath = path.join(__dirname, '../temp', fileName);
+    
+    const tempDir = path.join(__dirname, '../temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    
+    XLSX.writeFile(workbook, filePath);
+    
+    res.download(filePath, fileName, (err) => {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      if (err) {
+        console.error('下载失败:', err);
+      }
+    });
+  } catch (error) {
+    console.error('下载模板失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '下载模板失败'
+    });
+  }
+};
