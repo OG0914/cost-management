@@ -47,9 +47,17 @@ router.post('/quotations/:id/submit', costController.submitQuotation);
  * 辅助功能路由
  */
 
-// 获取型号标准数据
+// 获取型号标准数据（旧接口，保留兼容）
 // 权限：所有登录用户
 router.get('/models/:modelId/standard-data', costController.getModelStandardData);
+
+// 获取所有包装配置列表
+// 权限：所有登录用户
+router.get('/packaging-configs', costController.getPackagingConfigs);
+
+// 获取包装配置详情（包含工序和包材）
+// 权限：所有登录用户
+router.get('/packaging-configs/:configId/details', costController.getPackagingConfigDetails);
 
 // 计算报价（不保存）
 // 权限：所有登录用户

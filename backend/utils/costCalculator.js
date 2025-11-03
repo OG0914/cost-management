@@ -23,17 +23,21 @@ class CostCalculator {
 
   /**
    * 计算基础成本价
-   * 公式：成本价 = 原料总价 + 工价总价 + 包材总价 + 运费成本
+   * 公式：成本价 = 原料总价 + 工价总价 + 包材总价 + 运费成本（可选）
    * 
    * @param {Object} params - 计算参数
    * @param {number} params.materialTotal - 原料总价
    * @param {number} params.processTotal - 工价总价
    * @param {number} params.packagingTotal - 包材总价
    * @param {number} params.freightCost - 运费成本（运费总价 ÷ 数量）
+   * @param {boolean} params.includeFreight - 是否将运费计入基础成本价（默认true）
    * @returns {number} 基础成本价
    */
-  calculateBaseCost({ materialTotal, processTotal, packagingTotal, freightCost }) {
-    const baseCost = materialTotal + processTotal + packagingTotal + freightCost;
+  calculateBaseCost({ materialTotal, processTotal, packagingTotal, freightCost, includeFreight = true }) {
+    let baseCost = materialTotal + processTotal + packagingTotal;
+    if (includeFreight) {
+      baseCost += freightCost;
+    }
     return this._round(baseCost, 4);
   }
 
@@ -110,6 +114,7 @@ class CostCalculator {
    * @param {number} params.freightTotal - 运费总价
    * @param {number} params.quantity - 购买数量
    * @param {string} params.salesType - 销售类型（'domestic' 或 'export'）
+   * @param {boolean} params.includeFreightInBase - 是否将运费计入基础成本价（默认true）
    * @returns {Object} 完整的报价计算结果
    */
   calculateQuotation(params) {
@@ -119,7 +124,8 @@ class CostCalculator {
       packagingTotal,
       freightTotal,
       quantity,
-      salesType
+      salesType,
+      includeFreightInBase = true
     } = params;
 
     // 计算运费成本（每片）
@@ -130,7 +136,8 @@ class CostCalculator {
       materialTotal,
       processTotal,
       packagingTotal,
-      freightCost
+      freightCost,
+      includeFreight: includeFreightInBase
     });
 
     // 计算管销价
@@ -140,13 +147,24 @@ class CostCalculator {
       baseCost,
       overheadPrice,
       freightCost,
-      salesType
+      salesType,
+      includeFreightInBase
     };
 
     // 根据销售类型计算最终价格
     if (salesType === 'domestic') {
       // 内销
-      const domesticPrice = this.calculateDomesticPrice(overheadPrice);
+      let domesticPrice;
+      if (includeFreightInBase) {
+        // 运费已计入基础成本价
+        // 公式：管销价 × (1 + 增值税率)
+        domesticPrice = this.calculateDomesticPrice(overheadPrice);
+      } else {
+        // 运费未计入基础成本价，需要在管销价基础上加运费再计算含税价
+        // 公式：(管销价 + 运费) × (1 + 增值税率)
+        domesticPrice = (overheadPrice + freightCost) * (1 + this.vatRate);
+        domesticPrice = this._round(domesticPrice, 4);
+      }
       const profitTiers = this.generateProfitTiers(domesticPrice);
 
       result = {
@@ -157,8 +175,21 @@ class CostCalculator {
       };
     } else if (salesType === 'export') {
       // 外销
-      const exportPrice = this.calculateExportPrice(overheadPrice);
-      const insurancePrice = this.calculateInsurancePrice(exportPrice);
+      let exportPrice, insurancePrice;
+      if (includeFreightInBase) {
+        // 运费已计入基础成本价
+        // 公式：管销价 ÷ 汇率
+        exportPrice = this.calculateExportPrice(overheadPrice);
+        insurancePrice = this.calculateInsurancePrice(exportPrice);
+      } else {
+        // 运费未计入基础成本价，需要在管销价基础上加运费再计算
+        // 公式：(管销价 + 运费) ÷ 汇率
+        exportPrice = (overheadPrice + freightCost) / this.exchangeRate;
+        exportPrice = this._round(exportPrice, 4);
+        insurancePrice = this.calculateInsurancePrice(exportPrice);
+      }
+      // 外销的最终成本价是保险价（管销价/汇率×1.003）
+      // 利润区间基于保险价计算
       const profitTiers = this.generateProfitTiers(insurancePrice);
 
       result = {
@@ -166,7 +197,8 @@ class CostCalculator {
         exportPrice,
         insurancePrice,
         profitTiers,
-        currency: 'USD'
+        currency: 'USD',
+        exchangeRate: this.exchangeRate
       };
     }
 

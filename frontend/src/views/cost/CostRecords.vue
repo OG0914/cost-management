@@ -51,13 +51,16 @@
         </el-table-column>
         <el-table-column prop="creator_name" label="创建人" width="100" />
         <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click="viewDetail(row.id)">查看</el-button>
-            <el-button size="small" type="primary" @click="editQuotation(row.id)" v-if="row.status === 'draft'">
+            <el-button size="small" type="primary" @click="editQuotation(row.id)" v-if="canEdit(row)">
               编辑
             </el-button>
-            <el-button size="small" type="danger" @click="deleteQuotation(row.id)" v-if="row.status === 'draft'">
+            <el-button size="small" type="warning" @click="copyQuotation(row.id)">
+              复制
+            </el-button>
+            <el-button size="small" type="danger" @click="deleteQuotation(row.id)" v-if="canDelete(row)">
               删除
             </el-button>
           </template>
@@ -166,16 +169,54 @@ const goToAdd = () => {
   router.push('/cost/add')
 }
 
+// 判断是否可以编辑
+const canEdit = (row) => {
+  // 只有草稿和已退回状态可以编辑
+  return row.status === 'draft' || row.status === 'rejected'
+}
+
+// 判断是否可以删除
+const canDelete = (row) => {
+  // 只有草稿状态可以删除
+  return row.status === 'draft'
+}
+
 // 查看详情
 const viewDetail = (id) => {
-  ElMessage.info('查看详情功能待实现')
-  // router.push(`/cost/detail/${id}`)
+  router.push(`/cost/detail/${id}`)
 }
 
 // 编辑报价单
 const editQuotation = (id) => {
-  ElMessage.info('编辑功能待实现')
-  // router.push(`/cost/edit/${id}`)
+  router.push(`/cost/edit/${id}`)
+}
+
+// 复制报价单
+const copyQuotation = async (id) => {
+  try {
+    await ElMessageBox.confirm('确定要复制这个报价单吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'info'
+    })
+
+    // 获取原报价单详情
+    const res = await request.get(`/cost/quotations/${id}`)
+    
+    if (res.success) {
+      // 跳转到新增页面，并传递复制的数据
+      router.push({
+        path: '/cost/add',
+        query: { copyFrom: id }
+      })
+      ElMessage.success('正在复制报价单...')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('复制失败:', error)
+      ElMessage.error('复制失败')
+    }
+  }
 }
 
 // 删除报价单

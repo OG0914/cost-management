@@ -17,8 +17,9 @@ class Quotation {
       INSERT INTO quotations (
         quotation_no, customer_name, customer_region, model_id, regulation_id,
         quantity, freight_total, freight_per_unit, sales_type,
-        base_cost, overhead_price, final_price, currency, status, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        base_cost, overhead_price, final_price, currency, status, created_by, 
+        packaging_config_id, include_freight_in_base
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
     const result = stmt.run(
@@ -36,7 +37,9 @@ class Quotation {
       data.final_price,
       data.currency || 'CNY',
       data.status || 'draft',
-      data.created_by
+      data.created_by,
+      data.packaging_config_id || null,
+      data.include_freight_in_base !== false ? 1 : 0
     );
     
     return result.lastInsertRowid;
@@ -178,7 +181,8 @@ class Quotation {
     const allowedFields = [
       'customer_name', 'customer_region', 'model_id', 'regulation_id',
       'quantity', 'freight_total', 'freight_per_unit', 'sales_type',
-      'base_cost', 'overhead_price', 'final_price', 'currency'
+      'base_cost', 'overhead_price', 'final_price', 'currency', 
+      'packaging_config_id', 'include_freight_in_base'
     ];
 
     allowedFields.forEach(field => {
@@ -268,16 +272,28 @@ class Quotation {
 
   /**
    * 生成报价单编号
+   * 格式：MK+日期+流水号，如 MK20251029-001
    * @returns {string} 报价单编号
    */
   static generateQuotationNo() {
+    const db = dbManager.getDatabase();
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    const timestamp = now.getTime().toString().slice(-6);
+    const dateStr = `${year}${month}${day}`;
     
-    return `QT${year}${month}${day}${timestamp}`;
+    // 查询今天已有的报价单数量
+    const stmt = db.prepare(`
+      SELECT COUNT(*) as count 
+      FROM quotations 
+      WHERE quotation_no LIKE ?
+    `);
+    const result = stmt.get(`MK${dateStr}-%`);
+    const count = result.count + 1;
+    const serial = String(count).padStart(3, '0');
+    
+    return `MK${dateStr}-${serial}`;
   }
 
   /**

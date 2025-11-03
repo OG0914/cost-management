@@ -67,6 +67,18 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/cost/edit/:id',
+    name: 'CostEdit',
+    component: () => import('../views/cost/CostAdd.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/cost/detail/:id',
+    name: 'CostDetail',
+    component: () => import('../views/cost/CostDetail.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/cost/records',
     name: 'CostRecords',
     component: () => import('../views/cost/CostRecords.vue'),

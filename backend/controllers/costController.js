@@ -72,8 +72,12 @@ const createQuotation = async (req, res) => {
         // 生成报价单编号
         const quotation_no = Quotation.generateQuotationNo();
 
-        // 确定最终价格（取第一档利润报价）
-        const final_price = calculation.profitTiers[0].price;
+        // 确定最终成本价（不含利润）
+        // 内销：domesticPrice（含13%增值税）
+        // 外销：insurancePrice（保险价，即管销价/汇率×1.003）
+        const final_price = sales_type === 'domestic' 
+            ? calculation.domesticPrice 
+            : calculation.insurancePrice;
 
         // 创建报价单
         const quotationId = Quotation.create({
@@ -82,6 +86,7 @@ const createQuotation = async (req, res) => {
             customer_region,
             model_id,
             regulation_id,
+            packaging_config_id: req.body.packaging_config_id || null,
             quantity,
             freight_total,
             freight_per_unit,
@@ -90,6 +95,7 @@ const createQuotation = async (req, res) => {
             overhead_price: calculation.overheadPrice,
             final_price,
             currency: calculation.currency,
+            include_freight_in_base: req.body.include_freight_in_base !== false,
             status: 'draft',
             created_by: req.user.id
         });
@@ -120,20 +126,14 @@ const createQuotation = async (req, res) => {
 /**
  * 获取型号标准数据
  * GET /api/cost/models/:modelId/standard-data
+ * 注意：原料不绑定型号，只返回工序和包材数据
  */
 const getModelStandardData = async (req, res) => {
     try {
         const { modelId } = req.params;
+        console.log('获取型号标准数据，modelId:', modelId);
+        
         const db = dbManager.getDatabase();
-
-        // 获取原料数据
-        const materialsStmt = db.prepare(`
-      SELECT id, name, unit, price, currency, usage_amount
-      FROM materials
-      WHERE model_id = ?
-      ORDER BY id
-    `);
-        const materials = materialsStmt.all(modelId);
 
         // 获取工序数据
         const processesStmt = db.prepare(`
@@ -143,6 +143,7 @@ const getModelStandardData = async (req, res) => {
       ORDER BY id
     `);
         const processes = processesStmt.all(modelId);
+        console.log(`找到 ${processes.length} 个工序`);
 
         // 获取包材数据
         const packagingStmt = db.prepare(`
@@ -152,9 +153,9 @@ const getModelStandardData = async (req, res) => {
       ORDER BY id
     `);
         const packaging = packagingStmt.all(modelId);
+        console.log(`找到 ${packaging.length} 个包材`);
 
         res.json(success({
-            materials,
             processes,
             packaging
         }, '获取型号标准数据成功'));
@@ -206,7 +207,8 @@ const calculateQuotation = async (req, res) => {
             packagingTotal,
             freightTotal: freight_total || 0,
             quantity,
-            salesType: sales_type
+            salesType: sales_type,
+            includeFreightInBase: req.body.include_freight_in_base !== false
         });
 
         res.json(success(calculation, '计算成功'));
@@ -275,11 +277,16 @@ const updateQuotation = async (req, res) => {
             packagingTotal,
             freightTotal: freight_total,
             quantity,
-            salesType: sales_type
+            salesType: sales_type,
+            includeFreightInBase: req.body.include_freight_in_base !== false
         });
 
-        // 确定最终价格
-        const final_price = calculation.profitTiers[0].price;
+        // 确定最终成本价（不含利润）
+        // 内销：domesticPrice（含13%增值税）
+        // 外销：insurancePrice（保险价，即管销价/汇率×1.003）
+        const final_price = sales_type === 'domestic' 
+            ? calculation.domesticPrice 
+            : calculation.insurancePrice;
 
         // 更新报价单
         Quotation.update(id, {
@@ -292,7 +299,9 @@ const updateQuotation = async (req, res) => {
             base_cost: calculation.baseCost,
             overhead_price: calculation.overheadPrice,
             final_price,
-            currency: calculation.currency
+            currency: calculation.currency,
+            packaging_config_id: req.body.packaging_config_id || null,
+            include_freight_in_base: req.body.include_freight_in_base !== false
         });
 
         // 删除旧明细并创建新明细
@@ -424,6 +433,9 @@ const getQuotationDetail = async (req, res) => {
         // 查询报价单明细
         const items = QuotationItem.getGroupedByCategory(id);
 
+        // 工序总计需要乘以1.56系数
+        items.process.total = items.process.total * 1.56;
+
         // 重新计算以获取利润区间
         const calculatorConfig = SystemConfig.getCalculatorConfig();
         const calculator = new CostCalculator(calculatorConfig);
@@ -434,7 +446,8 @@ const getQuotationDetail = async (req, res) => {
             packagingTotal: items.packaging.total,
             freightTotal: quotation.freight_total,
             quantity: quotation.quantity,
-            salesType: quotation.sales_type
+            salesType: quotation.sales_type,
+            includeFreightInBase: quotation.include_freight_in_base !== false
         });
 
         res.json(success({
@@ -488,9 +501,120 @@ const deleteQuotation = async (req, res) => {
     }
 };
 
+/**
+ * 获取所有包装配置列表
+ * GET /api/cost/packaging-configs
+ */
+const getPackagingConfigs = async (req, res) => {
+    try {
+        const db = dbManager.getDatabase();
+
+        const stmt = db.prepare(`
+            SELECT 
+                pc.id,
+                pc.model_id,
+                pc.config_name,
+                pc.pc_per_bag,
+                pc.bags_per_box,
+                pc.boxes_per_carton,
+                pc.is_active,
+                m.model_name,
+                m.regulation_id,
+                r.name as regulation_name
+            FROM packaging_configs pc
+            JOIN models m ON pc.model_id = m.id
+            JOIN regulations r ON m.regulation_id = r.id
+            WHERE pc.is_active = 1
+            ORDER BY m.model_name, pc.config_name
+        `);
+        
+        const configs = stmt.all();
+        console.log(`找到 ${configs.length} 个包装配置`);
+
+        res.json(success(configs, '获取包装配置列表成功'));
+
+    } catch (err) {
+        console.error('获取包装配置列表失败:', err);
+        res.status(500).json(error('获取包装配置列表失败: ' + err.message, 500));
+    }
+};
+
+/**
+ * 获取包装配置详情（包含工序和包材）
+ * GET /api/cost/packaging-configs/:configId/details
+ */
+const getPackagingConfigDetails = async (req, res) => {
+    try {
+        const { configId } = req.params;
+        console.log('获取包装配置详情，configId:', configId);
+        
+        const db = dbManager.getDatabase();
+
+        // 获取配置基本信息
+        const configStmt = db.prepare(`
+            SELECT 
+                pc.*,
+                m.model_name,
+                m.regulation_id,
+                r.name as regulation_name
+            FROM packaging_configs pc
+            JOIN models m ON pc.model_id = m.id
+            JOIN regulations r ON m.regulation_id = r.id
+            WHERE pc.id = ?
+        `);
+        const config = configStmt.get(configId);
+
+        if (!config) {
+            return res.status(404).json(error('包装配置不存在', 404));
+        }
+
+        // 获取工序配置
+        const processesStmt = db.prepare(`
+            SELECT 
+                id,
+                process_name,
+                unit_price,
+                sort_order
+            FROM process_configs
+            WHERE packaging_config_id = ? AND is_active = 1
+            ORDER BY sort_order, id
+        `);
+        const processes = processesStmt.all(configId);
+        console.log(`找到 ${processes.length} 个工序`);
+
+        // 获取包材配置
+        const materialsStmt = db.prepare(`
+            SELECT 
+                id,
+                material_name,
+                basic_usage,
+                unit_price,
+                carton_volume,
+                sort_order
+            FROM packaging_materials
+            WHERE packaging_config_id = ? AND is_active = 1
+            ORDER BY sort_order, id
+        `);
+        const materials = materialsStmt.all(configId);
+        console.log(`找到 ${materials.length} 个包材`);
+
+        res.json(success({
+            config,
+            processes,
+            materials
+        }, '获取包装配置详情成功'));
+
+    } catch (err) {
+        console.error('获取包装配置详情失败:', err);
+        res.status(500).json(error('获取包装配置详情失败: ' + err.message, 500));
+    }
+};
+
 module.exports = {
     createQuotation,
     getModelStandardData,
+    getPackagingConfigs,
+    getPackagingConfigDetails,
     calculateQuotation,
     updateQuotation,
     submitQuotation,
