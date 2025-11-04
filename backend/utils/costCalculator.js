@@ -23,18 +23,20 @@ class CostCalculator {
 
   /**
    * 计算基础成本价
-   * 公式：成本价 = 原料总价 + 工价总价 + 包材总价 + 运费成本（可选）
+   * 公式：成本价 = 原料总价 + 工价总价（1.56倍数） + 包材总价 + 运费成本（可选）
    * 
    * @param {Object} params - 计算参数
    * @param {number} params.materialTotal - 原料总价
-   * @param {number} params.processTotal - 工价总价
+   * @param {number} params.processTotal - 工价总价（原始值，会自动乘以1.56）
    * @param {number} params.packagingTotal - 包材总价
    * @param {number} params.freightCost - 运费成本（运费总价 ÷ 数量）
    * @param {boolean} params.includeFreight - 是否将运费计入基础成本价（默认true）
    * @returns {number} 基础成本价
    */
   calculateBaseCost({ materialTotal, processTotal, packagingTotal, freightCost, includeFreight = true }) {
-    let baseCost = materialTotal + processTotal + packagingTotal;
+    // 工序总计需要乘以1.56倍数
+    const adjustedProcessTotal = processTotal * 1.56;
+    let baseCost = materialTotal + adjustedProcessTotal + packagingTotal;
     if (includeFreight) {
       baseCost += freightCost;
     }

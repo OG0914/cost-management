@@ -536,8 +536,9 @@ const materialTotal = computed(() => {
 })
 
 const processTotal = computed(() => {
+  // 工序总和（显示时乘以1.56系数，但发送给后端时使用原始值）
   const sum = form.processes.reduce((sum, item) => sum + item.subtotal, 0)
-  return sum * 1.56 // 工序总和乘以1.56系数
+  return sum * 1.56
 })
 
 const packagingTotal = computed(() => {

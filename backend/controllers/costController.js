@@ -66,7 +66,8 @@ const createQuotation = async (req, res) => {
             packagingTotal,
             freightTotal: freight_total,
             quantity,
-            salesType: sales_type
+            salesType: sales_type,
+            includeFreightInBase: req.body.include_freight_in_base !== false
         });
 
         // 生成报价单编号
@@ -281,12 +282,25 @@ const updateQuotation = async (req, res) => {
             includeFreightInBase: req.body.include_freight_in_base !== false
         });
 
+        console.log('更新报价单 - 计算结果:', {
+            salesType: sales_type,
+            domesticPrice: calculation.domesticPrice,
+            exportPrice: calculation.exportPrice,
+            insurancePrice: calculation.insurancePrice,
+            currency: calculation.currency
+        });
+
         // 确定最终成本价（不含利润）
         // 内销：domesticPrice（含13%增值税）
         // 外销：insurancePrice（保险价，即管销价/汇率×1.003）
         const final_price = sales_type === 'domestic' 
             ? calculation.domesticPrice 
             : calculation.insurancePrice;
+
+        if (!final_price) {
+            console.error('最终价格计算失败:', { sales_type, calculation });
+            return res.status(500).json(error('价格计算失败', 500));
+        }
 
         // 更新报价单
         Quotation.update(id, {
@@ -301,7 +315,7 @@ const updateQuotation = async (req, res) => {
             final_price,
             currency: calculation.currency,
             packaging_config_id: req.body.packaging_config_id || null,
-            include_freight_in_base: req.body.include_freight_in_base !== false
+            include_freight_in_base: req.body.include_freight_in_base !== false ? 1 : 0
         });
 
         // 删除旧明细并创建新明细
@@ -433,22 +447,23 @@ const getQuotationDetail = async (req, res) => {
         // 查询报价单明细
         const items = QuotationItem.getGroupedByCategory(id);
 
-        // 工序总计需要乘以1.56系数
-        items.process.total = items.process.total * 1.56;
-
         // 重新计算以获取利润区间
+        // 注意：工序总计传入原始值，计算器内部会自动乘以1.56
         const calculatorConfig = SystemConfig.getCalculatorConfig();
         const calculator = new CostCalculator(calculatorConfig);
 
         const calculation = calculator.calculateQuotation({
             materialTotal: items.material.total,
-            processTotal: items.process.total,
+            processTotal: items.process.total, // 原始工序总计，不需要手动乘以1.56
             packagingTotal: items.packaging.total,
             freightTotal: quotation.freight_total,
             quantity: quotation.quantity,
             salesType: quotation.sales_type,
             includeFreightInBase: quotation.include_freight_in_base !== false
         });
+
+        // 为了前端显示，将工序总计乘以1.56
+        items.process.displayTotal = items.process.total * 1.56;
 
         res.json(success({
             quotation,
