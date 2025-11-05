@@ -88,6 +88,26 @@
             </el-form-item>
           </el-col>
 
+          <el-col :span="8" v-if="form.sales_type === 'export'">
+            <el-form-item label="货运方式" prop="shipping_method">
+              <el-radio-group v-model="form.shipping_method" @change="onShippingMethodChange">
+                <el-radio label="fcl">整柜</el-radio>
+                <el-radio label="lcl">散货</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+
+          <el-col :span="8" v-if="form.sales_type === 'export' && form.shipping_method">
+            <el-form-item label="港口" prop="port">
+              <el-input 
+                v-model="form.port" 
+                placeholder="如：FOB深圳"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="20">
           <el-col :span="8">
             <el-form-item label="购买数量" prop="quantity">
               <el-input-number
@@ -515,6 +535,8 @@ const form = reactive({
   customer_name: '',
   customer_region: '',
   sales_type: 'domestic',
+  shipping_method: '',
+  port: '',
   quantity: null,
   freight_total: null,
   include_freight_in_base: true,
@@ -673,7 +695,18 @@ const onPackagingConfigChange = async () => {
 
 // 销售类型变化
 const onSalesTypeChange = () => {
+  // 如果切换到内销，清空货运方式和港口
+  if (form.sales_type === 'domestic') {
+    form.shipping_method = ''
+    form.port = ''
+  }
   calculateCost()
+}
+
+// 货运方式变化
+const onShippingMethodChange = () => {
+  // 清空港口信息，让用户重新填写
+  form.port = ''
 }
 
 // 数量变化
@@ -846,6 +879,8 @@ const saveDraft = async () => {
         quantity: form.quantity,
         freight_total: form.freight_total || 0,
         sales_type: form.sales_type,
+        shipping_method: form.shipping_method || null,
+        port: form.port || null,
         include_freight_in_base: form.include_freight_in_base,
         items
       })
@@ -865,6 +900,8 @@ const saveDraft = async () => {
         quantity: form.quantity,
         freight_total: form.freight_total || 0,
         sales_type: form.sales_type,
+        shipping_method: form.shipping_method || null,
+        port: form.port || null,
         include_freight_in_base: form.include_freight_in_base,
         items
       })
@@ -911,6 +948,8 @@ const submitQuotation = async () => {
         quantity: form.quantity,
         freight_total: form.freight_total || 0,
         sales_type: form.sales_type,
+        shipping_method: form.shipping_method || null,
+        port: form.port || null,
         include_freight_in_base: form.include_freight_in_base,
         items
       })
@@ -935,6 +974,8 @@ const submitQuotation = async () => {
         quantity: form.quantity,
         freight_total: form.freight_total || 0,
         sales_type: form.sales_type,
+        shipping_method: form.shipping_method || null,
+        port: form.port || null,
         include_freight_in_base: form.include_freight_in_base,
         items
       })
@@ -997,6 +1038,8 @@ const loadQuotationData = async (id, isCopy = false) => {
       form.customer_name = isCopy ? `${quotation.customer_name}（复制）` : quotation.customer_name
       form.customer_region = quotation.customer_region
       form.sales_type = quotation.sales_type
+      form.shipping_method = quotation.shipping_method || ''
+      form.port = quotation.port || ''
       form.quantity = quotation.quantity
       form.freight_total = quotation.freight_total
       form.include_freight_in_base = quotation.include_freight_in_base !== false

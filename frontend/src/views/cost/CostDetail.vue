@@ -32,9 +32,22 @@
           <el-descriptions-item label="客户名称">{{ quotation.customer_name }}</el-descriptions-item>
           <el-descriptions-item label="客户地区">{{ quotation.customer_region }}</el-descriptions-item>
           <el-descriptions-item label="型号">{{ quotation.model_name }}</el-descriptions-item>
+          <el-descriptions-item label="包装方式">
+            <span v-if="quotation.packaging_config_name">
+              {{ quotation.packaging_config_name }} 
+              ({{ quotation.pc_per_bag }}pc/bag, {{ quotation.bags_per_box }}bags/box, {{ quotation.boxes_per_carton }}boxes/carton)
+            </span>
+            <span v-else>-</span>
+          </el-descriptions-item>
           
           <el-descriptions-item label="销售类型">
             {{ quotation.sales_type === 'domestic' ? '内销' : '外销' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="货运方式" v-if="quotation.sales_type === 'export' && quotation.shipping_method">
+            {{ quotation.shipping_method === 'fcl' ? '整柜' : '散货' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="港口" v-if="quotation.sales_type === 'export' && quotation.port">
+            {{ quotation.port }}
           </el-descriptions-item>
           <el-descriptions-item label="购买数量">{{ formatNumber(quotation.quantity, 0) }}</el-descriptions-item>
           <el-descriptions-item label="运费总价">{{ formatNumber(quotation.freight_total) }}</el-descriptions-item>

@@ -16,10 +16,10 @@ class Quotation {
     const stmt = db.prepare(`
       INSERT INTO quotations (
         quotation_no, customer_name, customer_region, model_id, regulation_id,
-        quantity, freight_total, freight_per_unit, sales_type,
+        quantity, freight_total, freight_per_unit, sales_type, shipping_method, port,
         base_cost, overhead_price, final_price, currency, status, created_by, 
         packaging_config_id, include_freight_in_base
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
     const result = stmt.run(
@@ -32,6 +32,8 @@ class Quotation {
       data.freight_total,
       data.freight_per_unit,
       data.sales_type,
+      data.shipping_method || null,
+      data.port || null,
       data.base_cost,
       data.overhead_price,
       data.final_price,
@@ -56,11 +58,16 @@ class Quotation {
       SELECT q.*, 
              r.name as regulation_name,
              m.model_name,
+             pc.config_name as packaging_config_name,
+             pc.pc_per_bag,
+             pc.bags_per_box,
+             pc.boxes_per_carton,
              u1.real_name as creator_name,
              u2.real_name as reviewer_name
       FROM quotations q
       LEFT JOIN regulations r ON q.regulation_id = r.id
       LEFT JOIN models m ON q.model_id = m.id
+      LEFT JOIN packaging_configs pc ON q.packaging_config_id = pc.id
       LEFT JOIN users u1 ON q.created_by = u1.id
       LEFT JOIN users u2 ON q.reviewed_by = u2.id
       WHERE q.id = ?
@@ -142,11 +149,16 @@ class Quotation {
       SELECT q.*, 
              r.name as regulation_name,
              m.model_name,
+             pc.config_name as packaging_config_name,
+             pc.pc_per_bag,
+             pc.bags_per_box,
+             pc.boxes_per_carton,
              u1.real_name as creator_name,
              u2.real_name as reviewer_name
       FROM quotations q
       LEFT JOIN regulations r ON q.regulation_id = r.id
       LEFT JOIN models m ON q.model_id = m.id
+      LEFT JOIN packaging_configs pc ON q.packaging_config_id = pc.id
       LEFT JOIN users u1 ON q.created_by = u1.id
       LEFT JOIN users u2 ON q.reviewed_by = u2.id
       ${whereSQL}
@@ -181,6 +193,7 @@ class Quotation {
     const allowedFields = [
       'customer_name', 'customer_region', 'model_id', 'regulation_id',
       'quantity', 'freight_total', 'freight_per_unit', 'sales_type',
+      'shipping_method', 'port',
       'base_cost', 'overhead_price', 'final_price', 'currency', 
       'packaging_config_id', 'include_freight_in_base'
     ];

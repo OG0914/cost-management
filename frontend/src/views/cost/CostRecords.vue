@@ -33,9 +33,27 @@
       <!-- 数据表格 -->
       <el-table :data="quotations" border v-loading="loading">
         <el-table-column prop="quotation_no" label="报价单编号" width="180" />
+        <el-table-column prop="sales_type" label="类型" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.sales_type === 'domestic' ? 'success' : 'warning'" size="small">
+              {{ row.sales_type === 'domestic' ? '内销' : '外销' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="customer_name" label="客户名称" width="150" />
         <el-table-column prop="customer_region" label="客户地区" width="100" />
         <el-table-column prop="model_name" label="型号" width="120" />
+        <el-table-column prop="packaging_config_name" label="包装方式" width="220">
+          <template #default="{ row }">
+            <div v-if="row.packaging_config_name">
+              <div>{{ row.packaging_config_name }}</div>
+              <div style="color: #909399; font-size: 12px;">
+                {{ row.pc_per_bag }}pc/bag, {{ row.bags_per_box }}bags/box, {{ row.boxes_per_carton }}boxes/carton
+              </div>
+            </div>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="quantity" label="数量" width="100">
           <template #default="{ row }">
             {{ formatNumber(row.quantity, 0) }}

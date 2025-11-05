@@ -24,6 +24,8 @@ const createQuotation = async (req, res) => {
             quantity,
             freight_total,
             sales_type,
+            shipping_method,
+            port,
             items // 报价单明细数组
         } = req.body;
 
@@ -92,6 +94,8 @@ const createQuotation = async (req, res) => {
             freight_total,
             freight_per_unit,
             sales_type,
+            shipping_method: shipping_method || null,
+            port: port || null,
             base_cost: calculation.baseCost,
             overhead_price: calculation.overheadPrice,
             final_price,
@@ -233,6 +237,8 @@ const updateQuotation = async (req, res) => {
             quantity,
             freight_total,
             sales_type,
+            shipping_method,
+            port,
             items
         } = req.body;
 
@@ -310,6 +316,8 @@ const updateQuotation = async (req, res) => {
             freight_total,
             freight_per_unit,
             sales_type,
+            shipping_method: shipping_method || null,
+            port: port || null,
             base_cost: calculation.baseCost,
             overhead_price: calculation.overheadPrice,
             final_price,
