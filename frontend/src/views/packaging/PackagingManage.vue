@@ -64,7 +64,7 @@
         </el-table-column>
         <el-table-column label="包材总价" width="130" align="right">
           <template #default="{ row }">
-            <span class="price-info">¥{{ (row.material_total_price || 0).toFixed(4) }}</span>
+            <span class="price-info">¥{{ formatNumber(row.material_total_price || 0) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100" align="center">
@@ -117,15 +117,15 @@
         <el-divider content-position="left">包装方式</el-divider>
 
         <el-form-item label="每袋数量（只）" required>
-          <el-input-number v-model="form.pc_per_bag" :min="1" style="width: 100%" />
+          <el-input-number v-model="form.pc_per_bag" :min="1" :controls="false" style="width: 100%" />
         </el-form-item>
 
         <el-form-item label="每盒袋数（袋）" required>
-          <el-input-number v-model="form.bags_per_box" :min="1" style="width: 100%" />
+          <el-input-number v-model="form.bags_per_box" :min="1" :controls="false" style="width: 100%" />
         </el-form-item>
 
         <el-form-item label="每箱盒数（盒）" required>
-          <el-input-number v-model="form.boxes_per_carton" :min="1" style="width: 100%" />
+          <el-input-number v-model="form.boxes_per_carton" :min="1" :controls="false" style="width: 100%" />
         </el-form-item>
 
         <el-form-item label="状态" v-if="isEdit">
@@ -160,6 +160,7 @@
                 :min="0" 
                 :precision="4" 
                 :step="0.01" 
+                :controls="false"
                 size="small"
                 style="width: 100%"
               />
@@ -172,6 +173,7 @@
                 :min="0" 
                 :precision="4" 
                 :step="0.01" 
+                :controls="false"
                 size="small"
                 style="width: 100%"
               />
@@ -179,7 +181,7 @@
           </el-table-column>
           <el-table-column label="小计" width="120" align="right">
             <template #default="{ row }">
-              <span class="subtotal-text">¥{{ (row.basic_usage && row.basic_usage !== 0 ? ((row.unit_price || 0) / row.basic_usage) : 0).toFixed(4) }}</span>
+              <span class="subtotal-text">¥{{ formatNumber(row.basic_usage && row.basic_usage !== 0 ? ((row.unit_price || 0) / row.basic_usage) : 0) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="外箱材积(m³)" width="130">
@@ -189,6 +191,7 @@
                 :min="0" 
                 :precision="4" 
                 :step="0.001" 
+                :controls="false"
                 size="small"
                 style="width: 100%"
               />
@@ -224,29 +227,29 @@
         <el-table-column prop="material_name" label="包材名称" min-width="150" />
         <el-table-column prop="basic_usage" label="基本用量" width="100">
           <template #default="{ row }">
-            {{ row.basic_usage.toFixed(4) }}
+            {{ formatNumber(row.basic_usage) }}
           </template>
         </el-table-column>
         <el-table-column prop="unit_price" label="单价" width="100">
           <template #default="{ row }">
-            ¥{{ row.unit_price.toFixed(4) }}
+            ¥{{ formatNumber(row.unit_price) }}
           </template>
         </el-table-column>
         <el-table-column label="小计" width="120" align="right">
           <template #default="{ row }">
-            <span class="subtotal-text">¥{{ (row.basic_usage !== 0 ? (row.unit_price / row.basic_usage) : 0).toFixed(4) }}</span>
+            <span class="subtotal-text">¥{{ formatNumber(row.basic_usage !== 0 ? (row.unit_price / row.basic_usage) : 0) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="carton_volume" label="外箱材积(m³)" width="120">
           <template #default="{ row }">
-            {{ row.carton_volume ? row.carton_volume.toFixed(4) : '-' }}
+            {{ row.carton_volume ? formatNumber(row.carton_volume) : '-' }}
           </template>
         </el-table-column>
       </el-table>
 
       <div class="mt-4 text-right">
         <p class="text-lg font-bold">
-          包材总价: <span class="text-blue-600">¥{{ totalMaterialPrice.toFixed(4) }}</span>
+          包材总价: <span class="text-blue-600">¥{{ formatNumber(totalMaterialPrice) }}</span>
         </p>
       </div>
     </el-dialog>
@@ -260,6 +263,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, ArrowLeft, Download } from '@element-plus/icons-vue';
 import request from '../../utils/request';
 import { useAuthStore } from '../../store/auth';
+import { formatNumber } from '../../utils/format';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -290,9 +294,9 @@ const form = reactive({
   id: null,
   model_id: null,
   config_name: '',
-  pc_per_bag: 1,
-  bags_per_box: 10,
-  boxes_per_carton: 24,
+  pc_per_bag: null,
+  bags_per_box: null,
+  boxes_per_carton: null,
   is_active: 1,
   materials: []
 });
@@ -324,7 +328,7 @@ const getSummaries = (param) => {
         return usage !== 0 ? price / usage : 0;
       });
       const total = values.reduce((prev, curr) => prev + curr, 0);
-      sums[index] = `¥${total.toFixed(4)}`;
+      sums[index] = `¥${formatNumber(total)}`;
     } else {
       sums[index] = '';
     }
@@ -346,7 +350,7 @@ const getViewSummaries = (param) => {
         return item.basic_usage !== 0 ? item.unit_price / item.basic_usage : 0;
       });
       const total = values.reduce((prev, curr) => prev + curr, 0);
-      sums[index] = `¥${total.toFixed(4)}`;
+      sums[index] = `¥${formatNumber(total)}`;
     } else {
       sums[index] = '';
     }
@@ -502,8 +506,8 @@ const deleteConfig = async (row) => {
 const addMaterial = () => {
   form.materials.push({
     material_name: '',
-    basic_usage: 0,
-    unit_price: 0,
+    basic_usage: null,
+    unit_price: null,
     carton_volume: null,
     sort_order: form.materials.length
   });
@@ -568,9 +572,9 @@ const resetForm = () => {
   form.id = null;
   form.model_id = selectedModelId.value || null;
   form.config_name = '';
-  form.pc_per_bag = 1;
-  form.bags_per_box = 10;
-  form.boxes_per_carton = 24;
+  form.pc_per_bag = null;
+  form.bags_per_box = null;
+  form.boxes_per_carton = null;
   form.is_active = 1;
   form.materials = [];
 };

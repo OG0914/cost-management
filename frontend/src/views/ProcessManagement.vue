@@ -64,7 +64,7 @@
         </el-table-column>
         <el-table-column label="工序总价" width="130" align="right">
           <template #default="{ row }">
-            <span class="price-info">¥{{ (row.process_total_price || 0).toFixed(4) }}</span>
+            <span class="price-info">¥{{ formatNumber(row.process_total_price || 0) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100" align="center">
@@ -117,15 +117,15 @@
         <el-divider content-position="left">包装方式</el-divider>
 
         <el-form-item label="每袋数量（只）" required>
-          <el-input-number v-model="form.pc_per_bag" :min="1" style="width: 100%" />
+          <el-input-number v-model="form.pc_per_bag" :min="1" :controls="false" style="width: 100%" />
         </el-form-item>
 
         <el-form-item label="每盒袋数（袋）" required>
-          <el-input-number v-model="form.bags_per_box" :min="1" style="width: 100%" />
+          <el-input-number v-model="form.bags_per_box" :min="1" :controls="false" style="width: 100%" />
         </el-form-item>
 
         <el-form-item label="每箱盒数（盒）" required>
-          <el-input-number v-model="form.boxes_per_carton" :min="1" style="width: 100%" />
+          <el-input-number v-model="form.boxes_per_carton" :min="1" :controls="false" style="width: 100%" />
         </el-form-item>
 
         <el-form-item label="状态" v-if="isEdit">
@@ -160,6 +160,7 @@
                 :min="0" 
                 :precision="4" 
                 :step="0.01" 
+                :controls="false"
                 size="small"
                 style="width: 100%"
               />
@@ -195,17 +196,17 @@
         <el-table-column prop="process_name" label="工序名称" />
         <el-table-column prop="unit_price" label="单价" width="120">
           <template #default="{ row }">
-            ¥{{ row.unit_price.toFixed(4) }}
+            ¥{{ formatNumber(row.unit_price) }}
           </template>
         </el-table-column>
       </el-table>
 
       <div class="mt-4 text-right">
         <p class="text-sm text-gray-600 mb-2">
-          工序小计: ¥{{ currentProcesses.reduce((sum, p) => sum + p.unit_price, 0).toFixed(4) }}
+          工序小计: ¥{{ formatNumber(currentProcesses.reduce((sum, p) => sum + p.unit_price, 0)) }}
         </p>
         <p class="text-lg font-bold">
-          工序总价（含系数1.56）: <span class="text-blue-600">¥{{ totalProcessPrice.toFixed(4) }}</span>
+          工序总价（含系数1.56）: <span class="text-blue-600">¥{{ formatNumber(totalProcessPrice) }}</span>
         </p>
       </div>
     </el-dialog>
@@ -219,6 +220,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, ArrowLeft, Download } from '@element-plus/icons-vue';
 import request from '../utils/request';
 import { useAuthStore } from '../store/auth';
+import { formatNumber } from '../utils/format';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -249,9 +251,9 @@ const form = reactive({
   id: null,
   model_id: null,
   config_name: '',
-  pc_per_bag: 1,
-  bags_per_box: 10,
-  boxes_per_carton: 24,
+  pc_per_bag: null,
+  bags_per_box: null,
+  boxes_per_carton: null,
   is_active: 1,
   processes: []
 });
@@ -418,7 +420,7 @@ const deleteConfig = async (row) => {
 const addProcess = () => {
   form.processes.push({
     process_name: '',
-    unit_price: 0,
+    unit_price: null,
     sort_order: form.processes.length
   });
 };
@@ -482,9 +484,9 @@ const resetForm = () => {
   form.id = null;
   form.model_id = selectedModelId.value || null;
   form.config_name = '';
-  form.pc_per_bag = 1;
-  form.bags_per_box = 10;
-  form.boxes_per_carton = 24;
+  form.pc_per_bag = null;
+  form.bags_per_box = null;
+  form.boxes_per_carton = null;
   form.is_active = 1;
   form.processes = [];
 };

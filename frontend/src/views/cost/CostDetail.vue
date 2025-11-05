@@ -36,8 +36,8 @@
           <el-descriptions-item label="销售类型">
             {{ quotation.sales_type === 'domestic' ? '内销' : '外销' }}
           </el-descriptions-item>
-          <el-descriptions-item label="购买数量">{{ quotation.quantity }}</el-descriptions-item>
-          <el-descriptions-item label="运费总价">{{ quotation.freight_total?.toFixed(4) }}</el-descriptions-item>
+          <el-descriptions-item label="购买数量">{{ formatNumber(quotation.quantity, 0) }}</el-descriptions-item>
+          <el-descriptions-item label="运费总价">{{ formatNumber(quotation.freight_total) }}</el-descriptions-item>
           
           <el-descriptions-item label="创建时间">{{ quotation.created_at }}</el-descriptions-item>
           <el-descriptions-item label="提交时间">{{ quotation.submitted_at || '-' }}</el-descriptions-item>
@@ -54,22 +54,26 @@
         <el-table :data="items.material.items" border>
           <el-table-column type="index" label="序号" width="60" />
           <el-table-column prop="item_name" label="原料名称" />
-          <el-table-column prop="usage_amount" label="用量" width="120" />
+          <el-table-column prop="usage_amount" label="用量" width="120">
+            <template #default="{ row }">
+              {{ formatNumber(row.usage_amount) }}
+            </template>
+          </el-table-column>
           <el-table-column prop="unit_price" label="单价" width="120">
             <template #default="{ row }">
-              {{ row.unit_price?.toFixed(4) }}
+              {{ formatNumber(row.unit_price) }}
             </template>
           </el-table-column>
           <el-table-column prop="subtotal" label="小计" width="120">
             <template #default="{ row }">
-              {{ row.subtotal?.toFixed(4) }}
+              {{ formatNumber(row.subtotal) }}
             </template>
           </el-table-column>
         </el-table>
         
         <div class="total-row">
           <span>原料总计：</span>
-          <span class="total-value">{{ items.material.total?.toFixed(4) }}</span>
+          <span class="total-value">{{ formatNumber(items.material.total) }}</span>
         </div>
       </el-card>
 
@@ -82,26 +86,30 @@
         <el-table :data="items.process.items" border>
           <el-table-column type="index" label="序号" width="60" />
           <el-table-column prop="item_name" label="工序名称" />
-          <el-table-column prop="usage_amount" label="用量" width="120" />
+          <el-table-column prop="usage_amount" label="用量" width="120">
+            <template #default="{ row }">
+              {{ formatNumber(row.usage_amount) }}
+            </template>
+          </el-table-column>
           <el-table-column prop="unit_price" label="单价" width="120">
             <template #default="{ row }">
-              {{ row.unit_price?.toFixed(4) }}
+              {{ formatNumber(row.unit_price) }}
             </template>
           </el-table-column>
           <el-table-column prop="subtotal" label="小计" width="120">
             <template #default="{ row }">
-              {{ row.subtotal?.toFixed(4) }}
+              {{ formatNumber(row.subtotal) }}
             </template>
           </el-table-column>
         </el-table>
         
         <div class="total-row">
           <span>工序小计：</span>
-          <span class="total-value">{{ (items.process.total / 1.56)?.toFixed(4) }}</span>
+          <span class="total-value">{{ formatNumber(items.process.total / 1.56) }}</span>
         </div>
         <div class="total-row">
           <span>工序总计（含1.56系数）：</span>
-          <span class="total-value">{{ items.process.total?.toFixed(4) }}</span>
+          <span class="total-value">{{ formatNumber(items.process.total) }}</span>
         </div>
       </el-card>
 
@@ -114,22 +122,26 @@
         <el-table :data="items.packaging.items" border>
           <el-table-column type="index" label="序号" width="60" />
           <el-table-column prop="item_name" label="包材名称" />
-          <el-table-column prop="usage_amount" label="基本用量" width="120" />
+          <el-table-column prop="usage_amount" label="基本用量" width="120">
+            <template #default="{ row }">
+              {{ formatNumber(row.usage_amount) }}
+            </template>
+          </el-table-column>
           <el-table-column prop="unit_price" label="单价" width="120">
             <template #default="{ row }">
-              {{ row.unit_price?.toFixed(4) }}
+              {{ formatNumber(row.unit_price) }}
             </template>
           </el-table-column>
           <el-table-column prop="subtotal" label="小计" width="120">
             <template #default="{ row }">
-              {{ row.subtotal?.toFixed(4) }}
+              {{ formatNumber(row.subtotal) }}
             </template>
           </el-table-column>
         </el-table>
         
         <div class="total-row">
           <span>包材总计：</span>
-          <span class="total-value">{{ items.packaging.total?.toFixed(4) }}</span>
+          <span class="total-value">{{ formatNumber(items.packaging.total) }}</span>
         </div>
       </el-card>
 
@@ -141,22 +153,22 @@
         
         <el-descriptions :column="2" border>
           <el-descriptions-item label="运费成本（每片）">
-            {{ quotation.freight_per_unit?.toFixed(4) }}
+            {{ formatNumber(quotation.freight_per_unit) }}
           </el-descriptions-item>
           <el-descriptions-item label="基础成本价">
-            {{ quotation.base_cost?.toFixed(4) }}
+            {{ formatNumber(quotation.base_cost) }}
           </el-descriptions-item>
           <el-descriptions-item label="管销价">
-            {{ quotation.overhead_price?.toFixed(4) }}
+            {{ formatNumber(quotation.overhead_price) }}
           </el-descriptions-item>
           <el-descriptions-item label="运费计入成本">
             {{ quotation.include_freight_in_base ? '是' : '否' }}
           </el-descriptions-item>
           <el-descriptions-item :label="quotation.sales_type === 'domestic' ? '最终成本价（含13%增值税）' : '最终成本价（不含增值税）'">
-            {{ quotation.final_price?.toFixed(4) }} {{ quotation.currency }}
+            {{ formatNumber(quotation.final_price) }} {{ quotation.currency }}
           </el-descriptions-item>
           <el-descriptions-item label="汇率（CNY/USD）" v-if="quotation.sales_type === 'export' && calculation">
-            {{ calculation.exchangeRate || '7.2000' }}
+            {{ formatNumber(calculation.exchangeRate) }}
           </el-descriptions-item>
         </el-descriptions>
 
@@ -167,7 +179,7 @@
             <el-table-column label="利润率" prop="profitPercentage" width="120" />
             <el-table-column label="报价" width="150">
               <template #default="{ row }">
-                {{ row.price.toFixed(4) }} {{ calculation.currency }}
+                {{ formatNumber(row.price) }} {{ calculation.currency }}
               </template>
             </el-table-column>
             <el-table-column label="说明">
@@ -188,6 +200,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import request from '@/utils/request'
+import { formatNumber } from '@/utils/format'
 
 const router = useRouter()
 const route = useRoute()

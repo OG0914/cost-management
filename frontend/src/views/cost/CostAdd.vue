@@ -136,6 +136,22 @@
           <div class="section-header">
             <span class="section-title">原料明细</span>
             <div>
+              <el-button 
+                v-if="!editMode.materials && form.materials.some(p => p.from_standard)" 
+                type="warning" 
+                size="small" 
+                @click="toggleEditMode('materials')"
+              >
+                解锁编辑
+              </el-button>
+              <el-button 
+                v-if="editMode.materials" 
+                type="success" 
+                size="small" 
+                @click="toggleEditMode('materials')"
+              >
+                锁定编辑
+              </el-button>
               <el-button type="primary" size="small" @click="addMaterialRow">添加原料</el-button>
             </div>
           </div>
@@ -146,6 +162,7 @@
           <el-table-column label="原料名称" min-width="200">
             <template #default="{ row, $index }">
               <el-select
+                v-if="!row.from_standard || editMode.materials"
                 v-model="row.material_id"
                 filterable
                 clearable
@@ -165,6 +182,7 @@
                   </span>
                 </el-option>
               </el-select>
+              <span v-else>{{ row.item_name }}</span>
             </template>
           </el-table-column>
           <el-table-column label="用量" width="120">
@@ -177,29 +195,37 @@
                 @change="calculateItemSubtotal(row)"
                 size="small"
                 style="width: 100%"
+                :disabled="row.from_standard && !editMode.materials"
               />
             </template>
           </el-table-column>
           <el-table-column label="单价" width="120">
             <template #default="{ row }">
-              <span>{{ row.unit_price?.toFixed(4) || '0.0000' }}</span>
+              <span>{{ formatNumber(row.unit_price) || '' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="小计" width="120">
             <template #default="{ row }">
-              <span>{{ row.subtotal?.toFixed(4) || '0.0000' }}</span>
+              <span>{{ formatNumber(row.subtotal) || '' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="80" fixed="right">
-            <template #default="{ $index }">
-              <el-button type="danger" size="small" @click="removeMaterialRow($index)">删除</el-button>
+            <template #default="{ $index, row }">
+              <el-button 
+                type="danger" 
+                size="small" 
+                @click="removeMaterialRow($index)"
+                :disabled="row.from_standard && !editMode.materials"
+              >
+                删除
+              </el-button>
             </template>
           </el-table-column>
         </el-table>
 
         <div class="total-row">
           <span>原料总计：</span>
-          <span class="total-value">{{ materialTotal.toFixed(4) }}</span>
+          <span class="total-value">{{ formatNumber(materialTotal) }}</span>
         </div>
       </el-card>
 
@@ -271,7 +297,7 @@
           </el-table-column>
           <el-table-column label="小计" width="120">
             <template #default="{ row }">
-              <span>{{ row.subtotal.toFixed(4) }}</span>
+              <span>{{ formatNumber(row.subtotal) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="80" fixed="right">
@@ -290,7 +316,7 @@
 
         <div class="total-row">
           <span>工序总计：</span>
-          <span class="total-value">{{ processTotal.toFixed(4) }}</span>
+          <span class="total-value">{{ formatNumber(processTotal) }}</span>
         </div>
       </el-card>
 
@@ -365,12 +391,12 @@
           </el-table-column>
           <el-table-column label="单价" width="120">
             <template #default="{ row }">
-              <span>{{ row.unit_price?.toFixed(4) || '0.0000' }}</span>
+              <span>{{ formatNumber(row.unit_price) || '' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="小计" width="120">
             <template #default="{ row }">
-              <span>{{ row.subtotal?.toFixed(4) || '0.0000' }}</span>
+              <span>{{ formatNumber(row.subtotal) || '' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="80" fixed="right">
@@ -389,7 +415,7 @@
 
         <div class="total-row">
           <span>包材总计：</span>
-          <span class="total-value">{{ packagingTotal.toFixed(4) }}</span>
+          <span class="total-value">{{ formatNumber(packagingTotal) }}</span>
         </div>
       </el-card>
 
@@ -401,23 +427,23 @@
 
         <el-descriptions :column="2" border>
           <el-descriptions-item label="运费成本（每片）">
-            {{ calculation.freightCost?.toFixed(4) || '0.0000' }}
+            {{ formatNumber(calculation.freightCost) || '' }}
           </el-descriptions-item>
           <el-descriptions-item label="基础成本价">
-            {{ calculation.baseCost?.toFixed(4) || '0.0000' }}
+            {{ formatNumber(calculation.baseCost) || '' }}
           </el-descriptions-item>
           <el-descriptions-item label="管销价">
-            {{ calculation.overheadPrice?.toFixed(4) || '0.0000' }}
+            {{ formatNumber(calculation.overheadPrice) || '' }}
           </el-descriptions-item>
           <el-descriptions-item label="汇率（CNY/USD）" v-if="form.sales_type === 'export'">
-            {{ calculation.exchangeRate || '7.2000' }}
+            {{ formatNumber(calculation.exchangeRate) || '' }}
           </el-descriptions-item>
           <el-descriptions-item :label="form.sales_type === 'domestic' ? '最终成本价（含13%增值税）' : '最终成本价（不含增值税）'">
             <span v-if="form.sales_type === 'domestic'">
-              {{ calculation.domesticPrice?.toFixed(4) || '0.0000' }} CNY
+              {{ formatNumber(calculation.domesticPrice) || '' }} CNY
             </span>
             <span v-else>
-              {{ calculation.insurancePrice?.toFixed(4) || '0.0000' }} USD
+              {{ formatNumber(calculation.insurancePrice) || '' }} USD
             </span>
           </el-descriptions-item>
         </el-descriptions>
@@ -429,7 +455,7 @@
             <el-table-column label="利润率" prop="profitPercentage" width="120" />
             <el-table-column label="报价" width="150">
               <template #default="{ row }">
-                {{ row.price.toFixed(4) }} {{ calculation.currency }}
+                {{ formatNumber(row.price) }} {{ calculation.currency }}
               </template>
             </el-table-column>
             <el-table-column label="说明">
@@ -459,6 +485,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import request from '@/utils/request'
+import { formatNumber } from '@/utils/format'
 
 const router = useRouter()
 const route = useRoute()
@@ -488,8 +515,8 @@ const form = reactive({
   customer_name: '',
   customer_region: '',
   sales_type: 'domestic',
-  quantity: 1000,
-  freight_total: 0,
+  quantity: null,
+  freight_total: null,
   include_freight_in_base: true,
   materials: [],
   processes: [],
@@ -712,8 +739,8 @@ const addMaterialRow = () => {
     category: 'material',
     material_id: null,
     item_name: '',
-    usage_amount: 0,
-    unit_price: 0,
+    usage_amount: null,
+    unit_price: null,
     subtotal: 0,
     is_changed: 1,
     from_standard: false
@@ -724,8 +751,8 @@ const addProcessRow = () => {
   form.processes.push({
     category: 'process',
     item_name: '',
-    usage_amount: 1,
-    unit_price: 0,
+    usage_amount: null,
+    unit_price: null,
     subtotal: 0,
     is_changed: 1,
     from_standard: false
@@ -737,8 +764,8 @@ const addPackagingRow = () => {
     category: 'packaging',
     material_id: null,
     item_name: '',
-    usage_amount: 0,
-    unit_price: 0,
+    usage_amount: null,
+    unit_price: null,
     subtotal: 0,
     is_changed: 1,
     from_standard: false
@@ -983,7 +1010,7 @@ const loadQuotationData = async (id, isCopy = false) => {
         unit_price: item.unit_price,
         subtotal: item.subtotal,
         is_changed: item.is_changed || 0,
-        from_standard: false
+        from_standard: true // 标记为标准数据，这样会显示为文本而不是下拉框
       }))
       
       form.processes = items.process.items.map(item => ({
@@ -993,7 +1020,7 @@ const loadQuotationData = async (id, isCopy = false) => {
         unit_price: item.unit_price,
         subtotal: item.subtotal,
         is_changed: item.is_changed || 0,
-        from_standard: false
+        from_standard: true // 标记为标准数据，这样会显示为文本而不是下拉框
       }))
       
       form.packaging = items.packaging.items.map(item => ({
@@ -1004,7 +1031,7 @@ const loadQuotationData = async (id, isCopy = false) => {
         unit_price: item.unit_price,
         subtotal: item.subtotal,
         is_changed: item.is_changed || 0,
-        from_standard: false
+        from_standard: true // 标记为标准数据，这样会显示为文本而不是下拉框
       }))
       
       // 尝试从原料库匹配原料ID（如果没有的话）

@@ -47,7 +47,11 @@
         <el-table-column prop="item_no" label="品号" width="120" />
         <el-table-column prop="name" label="原料名称" />
         <el-table-column prop="unit" label="单位" width="100" />
-        <el-table-column prop="price" label="单价" width="120" />
+        <el-table-column prop="price" label="单价" width="120">
+          <template #default="{ row }">
+            {{ formatNumber(row.price) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="currency" label="币别" width="100" />
         <el-table-column prop="model_name" label="绑定型号" width="150" />
         <el-table-column prop="updated_at" label="更新时间" width="180" />
@@ -77,7 +81,7 @@
           <el-input v-model="form.unit" placeholder="请输入单位（如：kg、个）" />
         </el-form-item>
         <el-form-item label="单价" required>
-          <el-input-number v-model="form.price" :precision="2" :min="0" style="width: 100%" />
+          <el-input-number v-model="form.price" :precision="2" :min="0" :controls="false" style="width: 100%" />
         </el-form-item>
         <el-form-item label="币别">
           <el-select v-model="form.currency" style="width: 100%">
@@ -118,6 +122,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Upload, Download, ArrowLeft } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
+import { formatNumber } from '../../utils/format'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -140,7 +145,7 @@ const form = reactive({
   item_no: '',
   name: '',
   unit: '',
-  price: 0,
+  price: null,
   currency: 'CNY',
   model_id: null,
   usage_amount: null
@@ -181,7 +186,7 @@ const handleAdd = () => {
   form.item_no = ''
   form.name = ''
   form.unit = ''
-  form.price = 0
+  form.price = null
   form.currency = 'CNY'
   form.model_id = null
   form.usage_amount = null

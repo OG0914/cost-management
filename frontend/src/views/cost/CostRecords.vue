@@ -36,10 +36,14 @@
         <el-table-column prop="customer_name" label="客户名称" width="150" />
         <el-table-column prop="customer_region" label="客户地区" width="100" />
         <el-table-column prop="model_name" label="型号" width="120" />
-        <el-table-column prop="quantity" label="数量" width="100" />
+        <el-table-column prop="quantity" label="数量" width="100">
+          <template #default="{ row }">
+            {{ formatNumber(row.quantity, 0) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="final_price" label="最终价格" width="120">
           <template #default="{ row }">
-            {{ row.final_price?.toFixed(2) }} {{ row.currency }}
+            {{ formatNumber(row.final_price) }} {{ row.currency }}
           </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
@@ -88,6 +92,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, Plus } from '@element-plus/icons-vue'
 import request from '@/utils/request'
+import { formatNumber } from '@/utils/format'
 
 const router = useRouter()
 
