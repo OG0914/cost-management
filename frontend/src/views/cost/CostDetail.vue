@@ -50,11 +50,9 @@
             {{ quotation.port }}
           </el-descriptions-item>
           <el-descriptions-item label="购买数量">{{ formatNumber(quotation.quantity, 0) }}</el-descriptions-item>
+          <el-descriptions-item label="箱数" v-if="shippingInfo.cartons">{{ shippingInfo.cartons }}</el-descriptions-item>
+          <el-descriptions-item label="CBM" v-if="shippingInfo.cbm">{{ shippingInfo.cbm }}</el-descriptions-item>
           <el-descriptions-item label="运费总价">{{ formatNumber(quotation.freight_total) }}</el-descriptions-item>
-          
-          <el-descriptions-item label="创建时间">{{ quotation.created_at }}</el-descriptions-item>
-          <el-descriptions-item label="提交时间">{{ quotation.submitted_at || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="审核时间">{{ quotation.reviewed_at || '-' }}</el-descriptions-item>
         </el-descriptions>
       </el-card>
 
@@ -227,6 +225,12 @@ const items = ref({
 const calculation = ref(null)
 const loading = ref(false)
 
+// 货运信息（箱数和CBM）
+const shippingInfo = reactive({
+  cartons: null,
+  cbm: null
+})
+
 // 是否可以编辑
 const canEdit = computed(() => {
   return quotation.value.status === 'draft' || quotation.value.status === 'rejected'
@@ -248,12 +252,53 @@ const loadDetail = async () => {
       console.log('报价单数据:', quotation.value)
       console.log('明细数据:', items.value)
       console.log('计算数据:', calculation.value)
+      
+      // 计算箱数和CBM
+      calculateShippingInfo()
     }
   } catch (error) {
     console.error('加载详情失败:', error)
     ElMessage.error('加载详情失败')
   } finally {
     loading.value = false
+  }
+}
+
+// 计算箱数和CBM
+const calculateShippingInfo = () => {
+  // 重置
+  shippingInfo.cartons = null
+  shippingInfo.cbm = null
+  
+  // 检查必要条件
+  if (!quotation.value.quantity || quotation.value.quantity <= 0) {
+    return
+  }
+  
+  if (!quotation.value.pc_per_bag || !quotation.value.bags_per_box || !quotation.value.boxes_per_carton) {
+    return
+  }
+  
+  // 计算每箱只数
+  const pcsPerCarton = quotation.value.pc_per_bag * quotation.value.bags_per_box * quotation.value.boxes_per_carton
+  
+  if (pcsPerCarton <= 0) {
+    return
+  }
+  
+  // 计算箱数
+  const cartons = Math.ceil(quotation.value.quantity / pcsPerCarton)
+  shippingInfo.cartons = cartons
+  
+  // 计算CBM（需要从包材中获取外箱材积）
+  const cartonMaterial = items.value.packaging.items.find(item => item.carton_volume && item.carton_volume > 0)
+  
+  if (cartonMaterial && cartonMaterial.carton_volume > 0) {
+    // 总材积 = 外箱材积 * 箱数
+    const totalVolume = cartonMaterial.carton_volume * cartons
+    // CBM = 总材积 / 35.32（保留一位小数）
+    const cbm = (totalVolume / 35.32).toFixed(1)
+    shippingInfo.cbm = cbm
   }
 }
 

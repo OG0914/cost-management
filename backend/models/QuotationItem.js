@@ -104,6 +104,31 @@ class QuotationItem {
    */
   static findByQuotationIdAndCategory(quotationId, category) {
     const db = dbManager.getDatabase();
+    
+    // 如果是包材分类，需要关联 packaging_materials 表获取外箱材积
+    if (category === 'packaging') {
+      // 首先获取报价单的 packaging_config_id
+      const quotationStmt = db.prepare('SELECT packaging_config_id FROM quotations WHERE id = ?');
+      const quotation = quotationStmt.get(quotationId);
+      
+      if (quotation && quotation.packaging_config_id) {
+        // 关联 packaging_materials 表获取外箱材积
+        const stmt = db.prepare(`
+          SELECT 
+            qi.*,
+            pm.carton_volume
+          FROM quotation_items qi
+          LEFT JOIN packaging_materials pm 
+            ON pm.packaging_config_id = ? 
+            AND pm.material_name = qi.item_name
+          WHERE qi.quotation_id = ? AND qi.category = ?
+          ORDER BY qi.id
+        `);
+        return stmt.all(quotation.packaging_config_id, quotationId, category);
+      }
+    }
+    
+    // 其他分类或没有 packaging_config_id 时使用普通查询
     const stmt = db.prepare(`
       SELECT * FROM quotation_items 
       WHERE quotation_id = ? AND category = ?

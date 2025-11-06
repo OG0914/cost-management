@@ -121,6 +121,28 @@
             </el-form-item>
           </el-col>
 
+          <el-col :span="8" v-if="shippingInfo.cartons !== null">
+            <el-form-item label="箱数">
+              <el-input
+                :value="shippingInfo.cartons"
+                disabled
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+
+          <el-col :span="8" v-if="shippingInfo.cbm !== null">
+            <el-form-item label="CBM">
+              <el-input
+                :value="shippingInfo.cbm"
+                disabled
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="20">
           <el-col :span="8">
             <el-form-item label="运费总价" prop="freight_total">
               <el-input-number
@@ -573,6 +595,14 @@ const calculation = ref(null)
 const saving = ref(false)
 const submitting = ref(false)
 
+// 货运信息（箱数和CBM）
+const shippingInfo = reactive({
+  cartons: null,
+  cbm: null,
+  cartonVolume: null, // 外箱材积
+  pcsPerCarton: null  // 每箱只数
+})
+
 // 过滤后的包装配置列表
 const filteredPackagingConfigs = computed(() => {
   if (!form.regulation_id) return []
@@ -647,6 +677,17 @@ const onPackagingConfigChange = async () => {
       console.log('工序数据:', processes)
       console.log('包材数据:', materials)
 
+      // 计算每箱只数：pc_per_bag * bags_per_box * boxes_per_carton
+      const pcsPerCarton = config.pc_per_bag * config.bags_per_box * config.boxes_per_carton
+      shippingInfo.pcsPerCarton = pcsPerCarton
+      
+      // 查找外箱材积（从包材中查找）
+      const cartonMaterial = materials.find(m => m.carton_volume && m.carton_volume > 0)
+      shippingInfo.cartonVolume = cartonMaterial ? cartonMaterial.carton_volume : null
+      
+      console.log('每箱只数:', pcsPerCarton)
+      console.log('外箱材积:', shippingInfo.cartonVolume)
+
       // 加载工序
       form.processes = (processes || []).map(p => ({
         category: 'process',
@@ -675,6 +716,9 @@ const onPackagingConfigChange = async () => {
       // 重置编辑状态
       editMode.processes = false
       editMode.packaging = false
+
+      // 计算箱数和CBM
+      calculateShippingInfo()
 
       // 自动计算
       calculateCost()
@@ -711,7 +755,37 @@ const onShippingMethodChange = () => {
 
 // 数量变化
 const onQuantityChange = () => {
+  calculateShippingInfo()
   calculateCost()
+}
+
+// 计算箱数和CBM
+const calculateShippingInfo = () => {
+  // 重置
+  shippingInfo.cartons = null
+  shippingInfo.cbm = null
+  
+  // 检查必要条件
+  if (!form.quantity || form.quantity <= 0) {
+    return
+  }
+  
+  if (!shippingInfo.pcsPerCarton || shippingInfo.pcsPerCarton <= 0) {
+    return
+  }
+  
+  // 计算箱数
+  const cartons = Math.ceil(form.quantity / shippingInfo.pcsPerCarton)
+  shippingInfo.cartons = cartons
+  
+  // 计算CBM（如果有外箱材积）
+  if (shippingInfo.cartonVolume && shippingInfo.cartonVolume > 0) {
+    // 总材积 = 外箱材积 * 箱数
+    const totalVolume = shippingInfo.cartonVolume * cartons
+    // CBM = 总材积 / 35.32（保留一位小数）
+    const cbm = (totalVolume / 35.32).toFixed(1)
+    shippingInfo.cbm = cbm
+  }
 }
 
 // 计算明细小计
@@ -1096,6 +1170,20 @@ const loadQuotationData = async (id, isCopy = false) => {
           }
         }
       })
+      
+      // 设置货运信息以便计算箱数和CBM
+      if (quotation.pc_per_bag && quotation.bags_per_box && quotation.boxes_per_carton) {
+        // 计算每箱只数
+        const pcsPerCarton = quotation.pc_per_bag * quotation.bags_per_box * quotation.boxes_per_carton
+        shippingInfo.pcsPerCarton = pcsPerCarton
+        
+        // 查找外箱材积（从包材中查找）
+        const cartonMaterial = items.packaging.items.find(item => item.carton_volume && item.carton_volume > 0)
+        shippingInfo.cartonVolume = cartonMaterial ? cartonMaterial.carton_volume : null
+        
+        // 计算箱数和CBM
+        calculateShippingInfo()
+      }
       
       // 计算成本
       calculateCost()

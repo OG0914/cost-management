@@ -111,6 +111,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, Plus } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { formatNumber } from '@/utils/format'
+import { getUser } from '@/utils/auth'
 
 const router = useRouter()
 
@@ -200,7 +201,12 @@ const canEdit = (row) => {
 
 // 判断是否可以删除
 const canDelete = (row) => {
-  // 只有草稿状态可以删除
+  const user = getUser()
+  // 管理员可以删除任何状态的报价单
+  if (user && user.role === 'admin') {
+    return true
+  }
+  // 普通用户只能删除草稿状态的报价单
   return row.status === 'draft'
 }
 

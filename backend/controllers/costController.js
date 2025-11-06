@@ -499,13 +499,23 @@ const deleteQuotation = async (req, res) => {
             return res.status(404).json(error('报价单不存在', 404));
         }
 
-        // 检查权限：只有创建者或管理员可以删除
-        if (quotation.created_by !== req.user.id && req.user.role !== 'admin') {
+        // 管理员可以删除任何报价单，无论审批与否
+        if (req.user.role === 'admin') {
+            const success_flag = Quotation.delete(id);
+            if (success_flag) {
+                return res.json(success(null, '报价单删除成功'));
+            } else {
+                return res.status(500).json(error('删除报价单失败', 500));
+            }
+        }
+
+        // 非管理员：只能删除自己创建的报价单
+        if (quotation.created_by !== req.user.id) {
             return res.status(403).json(error('无权限删除此报价单', 403));
         }
 
-        // 检查状态：管理员可以删除任何状态，普通用户只能删除草稿
-        if (req.user.role !== 'admin' && quotation.status !== 'draft') {
+        // 非管理员：只能删除草稿状态的报价单
+        if (quotation.status !== 'draft') {
             return res.status(400).json(error('只有草稿状态的报价单可以删除', 400));
         }
 
