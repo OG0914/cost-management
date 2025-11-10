@@ -98,10 +98,19 @@
           </el-col>
 
           <el-col :span="8" v-if="form.sales_type === 'export' && form.shipping_method">
-            <el-form-item label="港口" prop="port">
+            <el-form-item label="港口类型" prop="port_type">
+              <el-radio-group v-model="form.port_type" @change="onPortTypeChange">
+                <el-radio label="fob_shenzhen">FOB深圳</el-radio>
+                <el-radio label="other">其他港口</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+
+          <el-col :span="8" v-if="form.sales_type === 'export' && form.shipping_method && form.port_type === 'other'">
+            <el-form-item label="港口名称" prop="port">
               <el-input 
                 v-model="form.port" 
-                placeholder="如：FOB深圳"
+                placeholder="请输入港口名称"
               />
             </el-form-item>
           </el-col>
@@ -117,7 +126,11 @@
                 :controls="false"
                 @change="onQuantityChange"
                 style="width: 100%"
+                :disabled="form.sales_type === 'export' && form.shipping_method === 'fcl' && form.port_type === 'fob_shenzhen'"
               />
+              <div v-if="form.sales_type === 'export' && form.shipping_method === 'fcl' && form.port_type === 'fob_shenzhen'" style="color: #909399; font-size: 12px; margin-top: 5px;">
+                整柜FOB深圳自动计算数量：950÷单箱材积×每箱只数
+              </div>
             </el-form-item>
           </el-col>
 
@@ -142,6 +155,86 @@
           </el-col>
         </el-row>
 
+        <!-- FOB深圳运费计算明细 - 整柜 -->
+        <el-row :gutter="20" v-if="form.sales_type === 'export' && form.port_type === 'fob_shenzhen' && form.shipping_method === 'fcl' && freightCalculation">
+          <el-col :span="24">
+            <el-card class="freight-detail-card">
+              <template #header>
+                <span style="font-weight: bold;">FOB深圳运费计算明细（整柜）</span>
+              </template>
+              <el-descriptions :column="2" border size="small">
+                <el-descriptions-item label="单箱材积（立方英尺）" v-if="freightCalculation.cartonVolume">
+                  {{ freightCalculation.cartonVolume }}
+                </el-descriptions-item>
+                <el-descriptions-item label="可装箱数" v-if="freightCalculation.maxCartons">
+                  {{ freightCalculation.maxCartons }}箱 (950 ÷ {{ freightCalculation.cartonVolume }})
+                </el-descriptions-item>
+                <el-descriptions-item label="每箱只数" v-if="freightCalculation.pcsPerCarton">
+                  {{ freightCalculation.pcsPerCarton }}pcs
+                </el-descriptions-item>
+                <el-descriptions-item label="建议数量" v-if="freightCalculation.suggestedQuantity">
+                  <span style="color: #67c23a; font-weight: bold;">
+                    {{ freightCalculation.suggestedQuantity }}pcs
+                  </span>
+                  <span style="color: #909399; font-size: 12px; margin-left: 5px;">
+                    ({{ freightCalculation.maxCartons }} × {{ freightCalculation.pcsPerCarton }})
+                  </span>
+                </el-descriptions-item>
+                <el-descriptions-item label="运费（美金）">
+                  ${{ freightCalculation.freightUSD }}
+                </el-descriptions-item>
+                <el-descriptions-item label="汇率（USD/CNY）">
+                  {{ freightCalculation.exchangeRate }}
+                </el-descriptions-item>
+                <el-descriptions-item label="运费总计（人民币）" :span="2">
+                  <span style="color: #409eff; font-weight: bold; font-size: 16px;">
+                    ¥{{ freightCalculation.totalFreight }}
+                  </span>
+                  <span style="color: #909399; font-size: 12px; margin-left: 10px;">
+                    (${{ freightCalculation.freightUSD }} × {{ freightCalculation.exchangeRate }})
+                  </span>
+                </el-descriptions-item>
+              </el-descriptions>
+            </el-card>
+          </el-col>
+        </el-row>
+
+        <!-- FOB深圳运费计算明细 - 散货 -->
+        <el-row :gutter="20" v-if="form.sales_type === 'export' && form.port_type === 'fob_shenzhen' && form.shipping_method === 'lcl' && freightCalculation">
+          <el-col :span="24">
+            <el-card class="freight-detail-card">
+              <template #header>
+                <span style="font-weight: bold;">FOB深圳运费计算明细（散货）</span>
+              </template>
+              <el-descriptions :column="2" border size="small">
+                <el-descriptions-item label="CBM（实际）">
+                  {{ freightCalculation.cbm }}
+                </el-descriptions-item>
+                <el-descriptions-item label="CBM（向上取整）">
+                  {{ freightCalculation.ceiledCBM }}
+                </el-descriptions-item>
+                <el-descriptions-item label="基础运费">
+                  ¥{{ freightCalculation.baseFreight }}
+                </el-descriptions-item>
+                <el-descriptions-item label="操作费（Handling charge）">
+                  ¥{{ freightCalculation.handlingCharge }}
+                </el-descriptions-item>
+                <el-descriptions-item label="拼箱费（CFS）">
+                  ¥{{ freightCalculation.cfs }} (¥170 × {{ freightCalculation.ceiledCBM }})
+                </el-descriptions-item>
+                <el-descriptions-item label="文件费">
+                  ¥{{ freightCalculation.documentFee }}
+                </el-descriptions-item>
+                <el-descriptions-item label="运费总计" :span="2">
+                  <span style="color: #409eff; font-weight: bold; font-size: 16px;">
+                    ¥{{ freightCalculation.totalFreight }}
+                  </span>
+                </el-descriptions-item>
+              </el-descriptions>
+            </el-card>
+          </el-col>
+        </el-row>
+
         <el-row :gutter="20">
           <el-col :span="8">
             <el-form-item label="运费总价" prop="freight_total">
@@ -152,6 +245,7 @@
                 :controls="false"
                 @change="calculateCost"
                 style="width: 100%"
+                :disabled="form.sales_type === 'export' && form.port_type === 'fob_shenzhen'"
               />
             </el-form-item>
           </el-col>
@@ -436,6 +530,12 @@
               <span>{{ formatNumber(row.unit_price) || '' }}</span>
             </template>
           </el-table-column>
+          <el-table-column label="外箱材积" width="120">
+            <template #default="{ row }">
+              <span v-if="row.carton_volume">{{ row.carton_volume }}</span>
+              <span v-else style="color: #909399;">-</span>
+            </template>
+          </el-table-column>
           <el-table-column label="小计" width="120">
             <template #default="{ row }">
               <span>{{ formatNumber(row.subtotal) || '' }}</span>
@@ -558,6 +658,7 @@ const form = reactive({
   customer_region: '',
   sales_type: 'domestic',
   shipping_method: '',
+  port_type: 'fob_shenzhen', // FOB深圳 或 其他港口
   port: '',
   quantity: null,
   freight_total: null,
@@ -602,6 +703,9 @@ const shippingInfo = reactive({
   cartonVolume: null, // 外箱材积
   pcsPerCarton: null  // 每箱只数
 })
+
+// FOB深圳运费计算结果
+const freightCalculation = ref(null)
 
 // 过滤后的包装配置列表
 const filteredPackagingConfigs = computed(() => {
@@ -705,6 +809,7 @@ const onPackagingConfigChange = async () => {
         item_name: m.material_name,
         usage_amount: m.basic_usage || 0,
         unit_price: m.unit_price || 0,
+        carton_volume: m.carton_volume || null, // 保存外箱材积
         subtotal: (m.basic_usage && m.basic_usage !== 0) ? (m.unit_price || 0) / m.basic_usage : 0,
         is_changed: 0,
         from_standard: true // 标记为标准数据
@@ -742,7 +847,9 @@ const onSalesTypeChange = () => {
   // 如果切换到内销，清空货运方式和港口
   if (form.sales_type === 'domestic') {
     form.shipping_method = ''
+    form.port_type = 'fob_shenzhen'
     form.port = ''
+    freightCalculation.value = null
   }
   calculateCost()
 }
@@ -750,7 +857,22 @@ const onSalesTypeChange = () => {
 // 货运方式变化
 const onShippingMethodChange = () => {
   // 清空港口信息，让用户重新填写
+  form.port_type = 'fob_shenzhen'
   form.port = ''
+  freightCalculation.value = null
+  calculateFOBFreight()
+}
+
+// 港口类型变化
+const onPortTypeChange = () => {
+  if (form.port_type === 'fob_shenzhen') {
+    form.port = 'FOB深圳'
+    calculateFOBFreight()
+  } else {
+    form.port = ''
+    form.freight_total = null
+    freightCalculation.value = null
+  }
 }
 
 // 数量变化
@@ -785,6 +907,112 @@ const calculateShippingInfo = () => {
     // CBM = 总材积 / 35.32（保留一位小数）
     const cbm = (totalVolume / 35.32).toFixed(1)
     shippingInfo.cbm = cbm
+  }
+  
+  // 如果是FOB深圳，自动计算运费
+  if (form.sales_type === 'export' && form.port_type === 'fob_shenzhen') {
+    calculateFOBFreight()
+  }
+}
+
+// 计算FOB深圳运费
+const calculateFOBFreight = () => {
+  // 重置
+  freightCalculation.value = null
+  
+  if (form.sales_type !== 'export' || form.port_type !== 'fob_shenzhen') {
+    return
+  }
+  
+  // 整柜（FCL）运费计算
+  if (form.shipping_method === 'fcl') {
+    const freightUSD = 840 // 固定840美金
+    const exchangeRate = 7.1 // 汇率
+    const totalFreight = freightUSD * exchangeRate // 840 * 7.1 = 5964
+    
+    // 计算建议数量
+    let suggestedQuantity = null
+    let maxCartons = null
+    let cartonVolume = null
+    let pcsPerCarton = null
+    
+    if (shippingInfo.cartonVolume && shippingInfo.cartonVolume > 0 && shippingInfo.pcsPerCarton && shippingInfo.pcsPerCarton > 0) {
+      cartonVolume = shippingInfo.cartonVolume
+      pcsPerCarton = shippingInfo.pcsPerCarton
+      // 950 ÷ 单箱材积 = 可装箱数（向上取整）
+      maxCartons = Math.ceil(950 / cartonVolume)
+      // 建议数量 = 可装箱数 × 每箱只数
+      suggestedQuantity = maxCartons * pcsPerCarton
+      
+      // 自动设置数量
+      form.quantity = suggestedQuantity
+    }
+    
+    freightCalculation.value = {
+      freightUSD,
+      exchangeRate,
+      totalFreight,
+      cartonVolume,
+      maxCartons,
+      pcsPerCarton,
+      suggestedQuantity
+    }
+    
+    // 自动填充运费总价
+    form.freight_total = totalFreight
+    
+    // 重新计算成本
+    calculateCost()
+    return
+  }
+  
+  // 散货（LCL）运费计算
+  if (form.shipping_method === 'lcl') {
+    // 检查必要条件
+    if (!shippingInfo.cbm || shippingInfo.cbm <= 0) {
+      return
+    }
+    
+    const cbm = parseFloat(shippingInfo.cbm)
+    const ceiledCBM = Math.ceil(cbm)
+    
+    // 基础运费
+    let baseFreight = 0
+    if (ceiledCBM >= 1 && ceiledCBM <= 3) {
+      baseFreight = 800
+    } else if (ceiledCBM > 3 && ceiledCBM <= 10) {
+      baseFreight = 1000
+    } else if (ceiledCBM > 10 && ceiledCBM <= 15) {
+      baseFreight = 1500
+    } else if (ceiledCBM > 15) {
+      // 超过15CBM，可以提示用户或使用其他计算方式
+      ElMessage.warning('CBM超过15，建议选择整柜运输或联系物流确认运费')
+      return
+    }
+    
+    // 固定费用
+    const handlingCharge = 500
+    const cfs = 170 * ceiledCBM
+    const documentFee = 500
+    
+    // 总运费
+    const totalFreight = baseFreight + handlingCharge + cfs + documentFee
+    
+    freightCalculation.value = {
+      cbm: cbm.toFixed(1),
+      ceiledCBM,
+      baseFreight,
+      handlingCharge,
+      cfs,
+      documentFee,
+      totalFreight
+    }
+    
+    // 自动填充运费总价
+    form.freight_total = totalFreight
+    
+    // 重新计算成本
+    calculateCost()
   }
 }
 
@@ -873,6 +1101,7 @@ const addPackagingRow = () => {
     item_name: '',
     usage_amount: null,
     unit_price: null,
+    carton_volume: null,
     subtotal: 0,
     is_changed: 1,
     from_standard: false
@@ -1113,7 +1342,14 @@ const loadQuotationData = async (id, isCopy = false) => {
       form.customer_region = quotation.customer_region
       form.sales_type = quotation.sales_type
       form.shipping_method = quotation.shipping_method || ''
-      form.port = quotation.port || ''
+      // 判断港口类型
+      if (quotation.port === 'FOB深圳') {
+        form.port_type = 'fob_shenzhen'
+        form.port = 'FOB深圳'
+      } else {
+        form.port_type = 'other'
+        form.port = quotation.port || ''
+      }
       form.quantity = quotation.quantity
       form.freight_total = quotation.freight_total
       form.include_freight_in_base = quotation.include_freight_in_base !== false
@@ -1146,6 +1382,7 @@ const loadQuotationData = async (id, isCopy = false) => {
         item_name: item.item_name,
         usage_amount: item.usage_amount,
         unit_price: item.unit_price,
+        carton_volume: item.carton_volume || null, // 保存外箱材积
         subtotal: item.subtotal,
         is_changed: item.is_changed || 0,
         from_standard: true // 标记为标准数据，这样会显示为文本而不是下拉框
@@ -1291,5 +1528,15 @@ onMounted(async () => {
 
 :deep(.el-input-number) {
   width: 100%;
+}
+
+.freight-detail-card {
+  background-color: #f5f7fa;
+  border: 1px solid #e4e7ed;
+}
+
+.freight-detail-card :deep(.el-card__header) {
+  background-color: #ecf5ff;
+  border-bottom: 1px solid #d9ecff;
 }
 </style>

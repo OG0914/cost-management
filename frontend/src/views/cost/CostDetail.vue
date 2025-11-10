@@ -143,6 +143,12 @@
               {{ formatNumber(row.unit_price) }}
             </template>
           </el-table-column>
+          <el-table-column prop="carton_volume" label="外箱材积" width="120">
+            <template #default="{ row }">
+              <span v-if="row.carton_volume">{{ row.carton_volume }}</span>
+              <span v-else style="color: #909399;">-</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="subtotal" label="小计" width="120">
             <template #default="{ row }">
               {{ formatNumber(row.subtotal) }}
