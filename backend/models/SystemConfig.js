@@ -158,6 +158,7 @@ class SystemConfig {
       vatRate: parseFloat(this.getValue('vat_rate')) || 0.13,
       insuranceRate: parseFloat(this.getValue('insurance_rate')) || 0.003,
       exchangeRate: parseFloat(this.getValue('exchange_rate')) || 7.2,
+      fobShenzhenExchangeRate: parseFloat(this.getValue('fob_shenzhen_exchange_rate')) || 7.1,
       profitTiers: this.getValue('profit_tiers') || [0.05, 0.10, 0.25, 0.50]
     };
   }

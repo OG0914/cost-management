@@ -69,6 +69,19 @@
             <div class="config-description">用于计算外销价：外销价 = 管销价 ÷ 汇率</div>
           </el-form-item>
 
+          <!-- FOB深圳运费汇率 -->
+          <el-form-item label="FOB深圳运费汇率">
+            <el-input-number
+              v-model="configForm.fob_shenzhen_exchange_rate"
+              :min="0.01"
+              :step="0.1"
+              :precision="2"
+              style="width: 200px"
+            />
+            <span class="config-hint">（默认 7.1）</span>
+            <div class="config-description">用于计算整柜FOB深圳运费：运费（人民币）= 运费（美金）× 运费汇率</div>
+          </el-form-item>
+
           <!-- 利润区间 -->
           <el-form-item label="利润区间">
             <div class="profit-tiers-container">
@@ -151,6 +164,7 @@ const configForm = reactive({
   vat_rate: 0.13,
   insurance_rate: 0.003,
   exchange_rate: 7.2,
+  fob_shenzhen_exchange_rate: 7.1,
   profit_tiers: [0.05, 0.10, 0.25, 0.50]
 });
 

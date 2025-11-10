@@ -205,6 +205,26 @@
               </template>
             </el-table-column>
           </el-table>
+
+          <!-- 自定义利润 -->
+          <div class="custom-profit-section">
+            <h4>自定义利润</h4>
+            <div class="custom-profit-input">
+              <span class="label">利润率：</span>
+              <el-input
+                v-model.number="customProfitRate"
+                type="number"
+                placeholder="请输入利润率（如：0.35 表示 35%）"
+                style="width: 280px"
+                @input="calculateCustomProfit"
+                clearable
+              />
+              <span class="unit">（0-1000%）</span>
+              <span class="result" v-if="customProfitPrice !== null">
+                报价：<strong>{{ formatNumber(customProfitPrice) }} {{ calculation.currency }}</strong>
+              </span>
+            </div>
+          </div>
         </div>
       </el-card>
     </div>
@@ -231,6 +251,10 @@ const items = ref({
 const calculation = ref(null)
 const loading = ref(false)
 
+// 自定义利润
+const customProfitRate = ref(null)
+const customProfitPrice = ref(null)
+
 // 货运信息（箱数和CBM）
 const shippingInfo = reactive({
   cartons: null,
@@ -241,6 +265,53 @@ const shippingInfo = reactive({
 const canEdit = computed(() => {
   return quotation.value.status === 'draft' || quotation.value.status === 'rejected'
 })
+
+// 计算自定义利润
+const calculateCustomProfit = () => {
+  // 清空结果
+  customProfitPrice.value = null
+  
+  // 验证输入
+  if (customProfitRate.value === null || customProfitRate.value === undefined || customProfitRate.value === '') {
+    return
+  }
+  
+  // 验证计算结果是否存在
+  if (!calculation.value) {
+    return
+  }
+  
+  // 获取基础价格（根据销售类型）
+  let basePrice
+  if (calculation.value.salesType === 'domestic') {
+    // 内销：使用内销价
+    basePrice = calculation.value.domesticPrice
+  } else if (calculation.value.salesType === 'export') {
+    // 外销：使用保险价
+    basePrice = calculation.value.insurancePrice
+  }
+  
+  if (!basePrice) {
+    return
+  }
+  
+  // 转换为数字
+  const rate = parseFloat(customProfitRate.value)
+  
+  // 验证是否为有效数字
+  if (isNaN(rate)) {
+    return
+  }
+  
+  // 验证范围（0-10，即0%-1000%）
+  if (rate < 0 || rate > 10) {
+    ElMessage.warning('利润率范围应在 0-10 之间（0%-1000%）')
+    return
+  }
+  
+  // 计算自定义利润价格：基础价格 × (1 + 利润率)
+  customProfitPrice.value = basePrice * (1 + rate)
+}
 
 // 加载报价单详情
 const loadDetail = async () => {
@@ -415,5 +486,44 @@ onMounted(() => {
 .profit-tiers h4 {
   margin-bottom: 10px;
   color: #303133;
+}
+
+.custom-profit-section {
+  margin-top: 24px;
+  padding: 16px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+}
+
+.custom-profit-section h4 {
+  margin-bottom: 12px;
+  color: #303133;
+  font-size: 14px;
+}
+
+.custom-profit-input {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.custom-profit-input .label {
+  font-weight: 500;
+  color: #606266;
+}
+
+.custom-profit-input .unit {
+  color: #909399;
+  font-size: 13px;
+}
+
+.custom-profit-input .result {
+  margin-left: 20px;
+  color: #606266;
+}
+
+.custom-profit-input .result strong {
+  color: #67c23a;
+  font-size: 16px;
 }
 </style>
