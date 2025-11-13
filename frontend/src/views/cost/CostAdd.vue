@@ -91,7 +91,8 @@
           <el-col :span="8" v-if="form.sales_type === 'export'">
             <el-form-item label="货运方式" prop="shipping_method">
               <el-radio-group v-model="form.shipping_method" @change="onShippingMethodChange">
-                <el-radio label="fcl">整柜</el-radio>
+                <el-radio label="fcl_40">40尺整柜</el-radio>
+                <el-radio label="fcl_20">20尺整柜</el-radio>
                 <el-radio label="lcl">散货</el-radio>
               </el-radio-group>
             </el-form-item>
@@ -126,10 +127,13 @@
                 :controls="false"
                 @change="onQuantityChange"
                 style="width: 100%"
-                :disabled="form.sales_type === 'export' && form.shipping_method === 'fcl' && form.port_type === 'fob_shenzhen'"
+                :disabled="form.sales_type === 'export' && (form.shipping_method === 'fcl_20' || form.shipping_method === 'fcl_40') && form.port_type === 'fob_shenzhen'"
               />
-              <div v-if="form.sales_type === 'export' && form.shipping_method === 'fcl' && form.port_type === 'fob_shenzhen'" style="color: #909399; font-size: 12px; margin-top: 5px;">
-                整柜FOB深圳自动计算数量：950÷单箱材积×每箱只数
+              <div v-if="form.sales_type === 'export' && form.shipping_method === 'fcl_20' && form.port_type === 'fob_shenzhen'" style="color: #909399; font-size: 12px; margin-top: 5px;">
+                20尺整柜FOB深圳自动计算数量：950÷单箱材积×每箱只数
+              </div>
+              <div v-if="form.sales_type === 'export' && form.shipping_method === 'fcl_40' && form.port_type === 'fob_shenzhen'" style="color: #909399; font-size: 12px; margin-top: 5px;">
+                40尺整柜FOB深圳自动计算数量：1950÷单箱材积×每箱只数
               </div>
             </el-form-item>
           </el-col>
@@ -156,18 +160,18 @@
         </el-row>
 
         <!-- FOB深圳运费计算明细 - 整柜 -->
-        <el-row :gutter="20" v-if="form.sales_type === 'export' && form.port_type === 'fob_shenzhen' && form.shipping_method === 'fcl' && freightCalculation">
+        <el-row :gutter="20" v-if="form.sales_type === 'export' && form.port_type === 'fob_shenzhen' && (form.shipping_method === 'fcl_20' || form.shipping_method === 'fcl_40') && freightCalculation">
           <el-col :span="24">
             <el-card class="freight-detail-card">
               <template #header>
-                <span style="font-weight: bold;">FOB深圳运费计算明细（整柜）</span>
+                <span style="font-weight: bold;">FOB深圳运费计算明细（{{ form.shipping_method === 'fcl_40' ? '40尺整柜' : '20尺整柜' }}）</span>
               </template>
               <el-descriptions :column="2" border size="small">
                 <el-descriptions-item label="单箱材积（立方英尺）" v-if="freightCalculation.cartonVolume">
                   {{ freightCalculation.cartonVolume }}
                 </el-descriptions-item>
                 <el-descriptions-item label="可装箱数" v-if="freightCalculation.maxCartons">
-                  {{ freightCalculation.maxCartons }}箱 (950 ÷ {{ freightCalculation.cartonVolume }})
+                  {{ freightCalculation.maxCartons }}箱 ({{ freightCalculation.containerVolume }} ÷ {{ freightCalculation.cartonVolume }})
                 </el-descriptions-item>
                 <el-descriptions-item label="每箱只数" v-if="freightCalculation.pcsPerCarton">
                   {{ freightCalculation.pcsPerCarton }}pcs
@@ -733,7 +737,9 @@ const freightCalculation = ref(null)
 
 // 系统配置
 const systemConfig = ref({
-  fobShenzhenExchangeRate: 7.1 // 默认值
+  fobShenzhenExchangeRate: 7.1, // 默认值
+  fcl20FreightUsd: 840, // 20尺整柜运费（美金）
+  fcl40FreightUsd: 940  // 40尺整柜运费（美金）
 })
 
 // 过滤后的包装配置列表
@@ -954,8 +960,13 @@ const calculateFOBFreight = () => {
   }
   
   // 整柜（FCL）运费计算
-  if (form.shipping_method === 'fcl') {
-    const freightUSD = 840 // 固定840美金
+  if (form.shipping_method === 'fcl_20' || form.shipping_method === 'fcl_40') {
+    // 根据整柜类型设置参数
+    const containerVolume = form.shipping_method === 'fcl_40' ? 1950 : 950
+    const freightUSD = form.shipping_method === 'fcl_40' 
+      ? systemConfig.value.fcl40FreightUsd 
+      : systemConfig.value.fcl20FreightUsd
+    
     const exchangeRate = systemConfig.value.fobShenzhenExchangeRate // 从系统配置获取运费汇率
     const totalFreight = freightUSD * exchangeRate
     
@@ -968,8 +979,8 @@ const calculateFOBFreight = () => {
     if (shippingInfo.cartonVolume && shippingInfo.cartonVolume > 0 && shippingInfo.pcsPerCarton && shippingInfo.pcsPerCarton > 0) {
       cartonVolume = shippingInfo.cartonVolume
       pcsPerCarton = shippingInfo.pcsPerCarton
-      // 950 ÷ 单箱材积 = 可装箱数（向上取整）
-      maxCartons = Math.ceil(950 / cartonVolume)
+      // 容积 ÷ 单箱材积 = 可装箱数（向上取整）
+      maxCartons = Math.ceil(containerVolume / cartonVolume)
       // 建议数量 = 可装箱数 × 每箱只数
       suggestedQuantity = maxCartons * pcsPerCarton
       
@@ -981,6 +992,7 @@ const calculateFOBFreight = () => {
       freightUSD,
       exchangeRate,
       totalFreight,
+      containerVolume,
       cartonVolume,
       maxCartons,
       pcsPerCarton,
@@ -1472,6 +1484,8 @@ const loadSystemConfig = async () => {
     const response = await request.get('/config')
     if (response.success && response.data) {
       systemConfig.value.fobShenzhenExchangeRate = response.data.fob_shenzhen_exchange_rate || 7.1
+      systemConfig.value.fcl20FreightUsd = response.data.fcl_20_freight_usd || 840
+      systemConfig.value.fcl40FreightUsd = response.data.fcl_40_freight_usd || 940
     }
   } catch (error) {
     console.error('加载系统配置失败:', error)

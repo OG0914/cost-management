@@ -44,7 +44,7 @@
             {{ quotation.sales_type === 'domestic' ? '内销' : '外销' }}
           </el-descriptions-item>
           <el-descriptions-item label="货运方式" v-if="quotation.sales_type === 'export' && quotation.shipping_method">
-            {{ quotation.shipping_method === 'fcl' ? '整柜' : '散货' }}
+            {{ quotation.shipping_method === 'fcl_40' ? '40尺整柜' : quotation.shipping_method === 'fcl_20' ? '20尺整柜' : quotation.shipping_method === 'fcl' ? '整柜' : '散货' }}
           </el-descriptions-item>
           <el-descriptions-item label="港口" v-if="quotation.sales_type === 'export' && quotation.port">
             {{ quotation.port }}

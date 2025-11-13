@@ -11,6 +11,7 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || 'localhost';
 
 // 中间件配置
 app.use(cors()); // 允许跨域
@@ -54,13 +55,34 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 // 启动服务器
-app.listen(PORT, () => {
+app.listen(PORT, HOST, () => {
+  const os = require('os');
+  const networkInterfaces = os.networkInterfaces();
+  const localIPs = [];
+  
+  // 获取所有局域网 IP
+  Object.keys(networkInterfaces).forEach(interfaceName => {
+    networkInterfaces[interfaceName].forEach(iface => {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        localIPs.push(iface.address);
+      }
+    });
+  });
+
   console.log(`========================================`);
   console.log(`成本分析管理系统后端服务已启动`);
   console.log(`端口: ${PORT}`);
   console.log(`环境: ${process.env.NODE_ENV || 'development'}`);
   console.log(`数据库: ${dbPath}`);
-  console.log(`访问: http://localhost:${PORT}`);
+  console.log(`----------------------------------------`);
+  console.log(`本地访问: http://localhost:${PORT}`);
+  if (localIPs.length > 0) {
+    console.log(`局域网访问:`);
+    localIPs.forEach(ip => {
+      console.log(`  http://${ip}:${PORT}`);
+    });
+  }
+  console.log(`----------------------------------------`);
   console.log(`健康检查: http://localhost:${PORT}/api/health`);
   console.log(`========================================`);
 });

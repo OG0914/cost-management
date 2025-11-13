@@ -33,6 +33,10 @@
               <el-icon><Download /></el-icon>
               导出Excel
             </el-button>
+            <el-button type="danger" @click="handleBatchDelete" :disabled="selectedMaterials.length === 0">
+              <el-icon><Delete /></el-icon>
+              批量删除
+            </el-button>
             <el-button type="primary" @click="handleAdd">
               <el-icon><Plus /></el-icon>
               新增原料
@@ -119,7 +123,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Upload, Download, ArrowLeft } from '@element-plus/icons-vue'
+import { Plus, Upload, Download, ArrowLeft, Delete } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { formatNumber } from '../../utils/format'
@@ -245,6 +249,52 @@ const handleDelete = async (row) => {
     await request.delete(`/materials/${row.id}`)
     ElMessage.success('删除成功')
     fetchMaterials()
+  } catch (error) {
+    if (error !== 'cancel') {
+      // 错误已在拦截器处理
+    }
+  }
+}
+
+// 批量删除
+const handleBatchDelete = async () => {
+  if (selectedMaterials.value.length === 0) {
+    ElMessage.warning('请先选择要删除的原料')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedMaterials.value.length} 条原料吗？此操作不可恢复！`, 
+      '批量删除确认', 
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const ids = selectedMaterials.value.map(item => item.id)
+    
+    // 逐个删除
+    let successCount = 0
+    let failCount = 0
+    
+    for (const id of ids) {
+      try {
+        await request.delete(`/materials/${id}`)
+        successCount++
+      } catch (error) {
+        failCount++
+      }
+    }
+    
+    if (successCount > 0) {
+      ElMessage.success(`成功删除 ${successCount} 条原料${failCount > 0 ? `，失败 ${failCount} 条` : ''}`)
+      fetchMaterials()
+    } else {
+      ElMessage.error('删除失败')
+    }
   } catch (error) {
     if (error !== 'cancel') {
       // 错误已在拦截器处理

@@ -17,6 +17,10 @@
               <el-icon><Download /></el-icon>
               导出Excel
             </el-button>
+            <el-button type="danger" @click="handleBatchDelete" :disabled="selectedConfigs.length === 0">
+              <el-icon><Delete /></el-icon>
+              批量删除
+            </el-button>
             <el-button type="primary" @click="showCreateDialog">
               <el-icon><Plus /></el-icon>
               新增包装配置
@@ -260,7 +264,7 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, ArrowLeft, Download } from '@element-plus/icons-vue';
+import { Plus, ArrowLeft, Download, Delete } from '@element-plus/icons-vue';
 import request from '../../utils/request';
 import { useAuthStore } from '../../store/auth';
 import { formatNumber } from '../../utils/format';
@@ -495,6 +499,52 @@ const deleteConfig = async (row) => {
     await request.delete(`/processes/packaging-configs/${row.id}`);
     ElMessage.success('删除成功');
     loadPackagingConfigs();
+  } catch (error) {
+    if (error !== 'cancel') {
+      // 错误已在拦截器处理
+    }
+  }
+};
+
+// 批量删除
+const handleBatchDelete = async () => {
+  if (selectedConfigs.value.length === 0) {
+    ElMessage.warning('请先选择要删除的配置');
+    return;
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedConfigs.value.length} 条包装配置吗？此操作不可恢复！`, 
+      '批量删除确认', 
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    );
+
+    const ids = selectedConfigs.value.map(item => item.id);
+    
+    // 逐个删除
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const id of ids) {
+      try {
+        await request.delete(`/processes/packaging-configs/${id}`);
+        successCount++;
+      } catch (error) {
+        failCount++;
+      }
+    }
+    
+    if (successCount > 0) {
+      ElMessage.success(`成功删除 ${successCount} 条配置${failCount > 0 ? `，失败 ${failCount} 条` : ''}`);
+      loadPackagingConfigs();
+    } else {
+      ElMessage.error('删除失败');
+    }
   } catch (error) {
     if (error !== 'cancel') {
       // 错误已在拦截器处理

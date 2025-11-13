@@ -25,7 +25,7 @@
               style="width: 200px"
             />
             <span class="config-hint">（默认 0.2，即 20%）</span>
-            <div class="config-description">用于计算管销价：管销价 = 成本价 ÷ (1 - 管销率)</div>
+            
           </el-form-item>
 
           <!-- 增值税率 -->
@@ -39,7 +39,7 @@
               style="width: 200px"
             />
             <span class="config-hint">（默认 0.13，即 13%）</span>
-            <div class="config-description">用于计算内销价：内销价 = 管销价 × (1 + 增值税率)</div>
+            
           </el-form-item>
 
           <!-- 保险率 -->
@@ -53,7 +53,7 @@
               style="width: 200px"
             />
             <span class="config-hint">（默认 0.003，即 0.3%）</span>
-            <div class="config-description">用于计算外销保险价：保险价 = 外销价 × (1 + 保险率)</div>
+            
           </el-form-item>
 
           <!-- 汇率 -->
@@ -66,7 +66,7 @@
               style="width: 200px"
             />
             <span class="config-hint">（默认 7.2）</span>
-            <div class="config-description">用于计算外销价：外销价 = 管销价 ÷ 汇率</div>
+            
           </el-form-item>
 
           <!-- FOB深圳运费汇率 -->
@@ -79,7 +79,33 @@
               style="width: 200px"
             />
             <span class="config-hint">（默认 7.1）</span>
-            <div class="config-description">用于计算整柜FOB深圳运费：运费（人民币）= 运费（美金）× 运费汇率</div>
+            
+          </el-form-item>
+
+          <!-- 20尺整柜运费 -->
+          <el-form-item label="20尺整柜运费（美金）">
+            <el-input-number
+              v-model="configForm.fcl_20_freight_usd"
+              :min="0"
+              :step="10"
+              :precision="0"
+              style="width: 200px"
+            />
+            <span class="config-hint">（默认 $840）</span>
+            
+          </el-form-item>
+
+          <!-- 40尺整柜运费 -->
+          <el-form-item label="40尺整柜运费（美金）">
+            <el-input-number
+              v-model="configForm.fcl_40_freight_usd"
+              :min="0"
+              :step="10"
+              :precision="0"
+              style="width: 200px"
+            />
+            <span class="config-hint">（默认 $940）</span>
+            
           </el-form-item>
 
           <!-- 利润区间 -->
@@ -165,6 +191,8 @@ const configForm = reactive({
   insurance_rate: 0.003,
   exchange_rate: 7.2,
   fob_shenzhen_exchange_rate: 7.1,
+  fcl_20_freight_usd: 840,
+  fcl_40_freight_usd: 940,
   profit_tiers: [0.05, 0.10, 0.25, 0.50]
 });
 
