@@ -5,17 +5,21 @@
 const PackagingConfig = require('../models/PackagingConfig');
 const ProcessConfig = require('../models/ProcessConfig');
 const PackagingMaterial = require('../models/PackagingMaterial');
+const SystemConfig = require('../models/SystemConfig');
 
 // 获取所有包装配置
 exports.getAllPackagingConfigs = (req, res) => {
   try {
     const configs = PackagingConfig.findAll();
     
+    // 获取工价系数
+    const processCoefficient = parseFloat(SystemConfig.getValue('process_coefficient')) || 1.56;
+    
     // 为每个配置计算工序总价和包材总价
     const configsWithPrice = configs.map(config => {
       const processes = ProcessConfig.findByPackagingConfigId(config.id);
       const processSum = processes.reduce((sum, p) => sum + p.unit_price, 0);
-      const processTotalPrice = processSum * 1.56;
+      const processTotalPrice = processSum * processCoefficient;
       
       const materials = PackagingMaterial.findByPackagingConfigId(config.id);
       // 包材总价 = Σ(单价 ÷ 基本用量)
@@ -49,11 +53,14 @@ exports.getPackagingConfigsByModel = (req, res) => {
     const { modelId } = req.params;
     const configs = PackagingConfig.findByModelId(modelId);
     
+    // 获取工价系数
+    const processCoefficient = parseFloat(SystemConfig.getValue('process_coefficient')) || 1.56;
+    
     // 为每个配置计算工序总价和包材总价
     const configsWithPrice = configs.map(config => {
       const processes = ProcessConfig.findByPackagingConfigId(config.id);
       const processSum = processes.reduce((sum, p) => sum + p.unit_price, 0);
-      const processTotalPrice = processSum * 1.56;
+      const processTotalPrice = processSum * processCoefficient;
       
       const materials = PackagingMaterial.findByPackagingConfigId(config.id);
       // 包材总价 = Σ(单价 ÷ 基本用量)
@@ -146,6 +153,14 @@ exports.createPackagingConfig = (req, res) => {
       });
     }
 
+    // 检查配置名称是否已存在
+    if (PackagingConfig.existsByModelAndName(model_id, config_name)) {
+      return res.status(400).json({
+        success: false,
+        message: '该型号下已存在同名的配置，请修改配置名称'
+      });
+    }
+
     // 创建包装配置
     const configId = PackagingConfig.create({
       model_id,
@@ -174,7 +189,8 @@ exports.createPackagingConfig = (req, res) => {
     console.error('创建包装配置失败:', error);
     
     // 检查是否是唯一性约束错误
-    if (error.message && error.message.includes('UNIQUE constraint failed')) {
+    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE' || 
+        (error.message && error.message.includes('UNIQUE constraint failed'))) {
       return res.status(400).json({
         success: false,
         message: '该型号下已存在同名的配置，请修改配置名称'

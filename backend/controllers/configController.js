@@ -147,7 +147,7 @@ const deleteConfig = (req, res, next) => {
     const { key } = req.params;
 
     // 防止删除核心配置
-    const protectedKeys = ['overhead_rate', 'vat_rate', 'insurance_rate', 'exchange_rate', 'profit_tiers'];
+    const protectedKeys = ['overhead_rate', 'vat_rate', 'insurance_rate', 'exchange_rate', 'process_coefficient', 'profit_tiers'];
     if (protectedKeys.includes(key)) {
       return res.status(400).json(error('不能删除核心配置项', 400));
     }
@@ -191,6 +191,14 @@ function validateConfigValue(key, value) {
       const rate = parseFloat(value);
       if (isNaN(rate) || rate < 0 || rate > 1) {
         return '费率必须是 0 到 1 之间的数值';
+      }
+      break;
+
+    case 'process_coefficient':
+      // 验证工价系数：正数
+      const coefficient = parseFloat(value);
+      if (isNaN(coefficient) || coefficient <= 0) {
+        return '工价系数必须是正数';
       }
       break;
 

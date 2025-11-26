@@ -44,6 +44,18 @@ class PackagingConfig {
     return stmt.get(id);
   }
 
+  // 检查配置名称是否已存在
+  static existsByModelAndName(modelId, configName) {
+    const db = dbManager.getDatabase();
+    const stmt = db.prepare(`
+      SELECT COUNT(*) as count
+      FROM packaging_configs
+      WHERE model_id = ? AND config_name = ? AND is_active = 1
+    `);
+    const result = stmt.get(modelId, configName);
+    return result.count > 0;
+  }
+
   // 创建包装配置
   static create(data) {
     const db = dbManager.getDatabase();
@@ -76,12 +88,24 @@ class PackagingConfig {
   // 删除包装配置（软删除）
   static delete(id) {
     const db = dbManager.getDatabase();
+    
+    // 先获取当前配置信息
+    const config = this.findById(id);
+    if (!config) {
+      throw new Error('配置不存在');
+    }
+    
+    // 软删除时，在配置名称后添加删除标记和时间戳，避免唯一性约束冲突
+    const deletedName = `${config.config_name}_deleted_${Date.now()}`;
+    
     const stmt = db.prepare(`
       UPDATE packaging_configs
-      SET is_active = 0, updated_at = CURRENT_TIMESTAMP
+      SET is_active = 0, 
+          config_name = ?,
+          updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `);
-    return stmt.run(id);
+    return stmt.run(deletedName, id);
   }
 
   // 获取包装配置及其工序列表

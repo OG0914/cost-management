@@ -116,10 +116,10 @@
         
         <div class="total-row">
           <span>工序小计：</span>
-          <span class="total-value">{{ formatNumber(items.process.total / 1.56) }}</span>
+          <span class="total-value">{{ formatNumber(items.process.total / configStore.getProcessCoefficient()) }}</span>
         </div>
         <div class="total-row">
-          <span>工序总计（含1.56系数）：</span>
+          <span>工序总计（含{{ configStore.getProcessCoefficient() }}系数）：</span>
           <span class="total-value">{{ formatNumber(items.process.total) }}</span>
         </div>
       </el-card>
@@ -238,9 +238,11 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { formatNumber } from '@/utils/format'
+import { useConfigStore } from '@/store/config'
 
 const router = useRouter()
 const route = useRoute()
+const configStore = useConfigStore()
 
 const quotation = ref({})
 const items = ref({
@@ -420,7 +422,8 @@ const copyQuotation = () => {
   ElMessage.success('正在复制报价单...')
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await configStore.loadConfig()
   loadDetail()
 })
 </script>

@@ -210,7 +210,7 @@
           工序小计: ¥{{ formatNumber(currentProcesses.reduce((sum, p) => sum + p.unit_price, 0)) }}
         </p>
         <p class="text-lg font-bold">
-          工序总价（含系数1.56）: <span class="text-blue-600">¥{{ formatNumber(totalProcessPrice) }}</span>
+          工序总价（含系数{{ configStore.getProcessCoefficient() }}）: <span class="text-blue-600">¥{{ formatNumber(totalProcessPrice) }}</span>
         </p>
       </div>
     </el-dialog>
@@ -224,10 +224,12 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, ArrowLeft, Download, Delete } from '@element-plus/icons-vue';
 import request from '../utils/request';
 import { useAuthStore } from '../store/auth';
+import { useConfigStore } from '../store/config';
 import { formatNumber } from '../utils/format';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const configStore = useConfigStore();
 
 // 返回上一级
 const goBack = () => {
@@ -266,10 +268,11 @@ const form = reactive({
 const currentConfig = ref(null);
 const currentProcesses = ref([]);
 
-// 工序总价（总数 * 1.56）
+// 工序总价（总数 * 工价系数）
 const totalProcessPrice = computed(() => {
   const sum = currentProcesses.value.reduce((total, p) => total + p.unit_price, 0);
-  return sum * 1.56;
+  const coefficient = configStore.getProcessCoefficient();
+  return sum * coefficient;
 });
 
 // 加载型号列表
@@ -574,7 +577,8 @@ const handleExport = async () => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
+  await configStore.loadConfig();
   loadModels();
   loadPackagingConfigs();
 });

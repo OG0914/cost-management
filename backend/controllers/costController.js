@@ -456,13 +456,13 @@ const getQuotationDetail = async (req, res) => {
         const items = QuotationItem.getGroupedByCategory(id);
 
         // 重新计算以获取利润区间
-        // 注意：工序总计传入原始值，计算器内部会自动乘以1.56
+        // 注意：工序总计传入原始值，计算器内部会自动乘以工价系数
         const calculatorConfig = SystemConfig.getCalculatorConfig();
         const calculator = new CostCalculator(calculatorConfig);
 
         const calculation = calculator.calculateQuotation({
             materialTotal: items.material.total,
-            processTotal: items.process.total, // 原始工序总计，不需要手动乘以1.56
+            processTotal: items.process.total, // 原始工序总计，不需要手动乘以工价系数
             packagingTotal: items.packaging.total,
             freightTotal: quotation.freight_total,
             quantity: quotation.quantity,
@@ -470,8 +470,8 @@ const getQuotationDetail = async (req, res) => {
             includeFreightInBase: quotation.include_freight_in_base !== false
         });
 
-        // 为了前端显示，将工序总计乘以1.56
-        items.process.displayTotal = items.process.total * 1.56;
+        // 为了前端显示，将工序总计乘以工价系数
+        items.process.displayTotal = items.process.total * calculatorConfig.processCoefficient;
 
         res.json(success({
             quotation,

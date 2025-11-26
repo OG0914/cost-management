@@ -69,6 +69,19 @@
             
           </el-form-item>
 
+          <!-- 工价系数 -->
+          <el-form-item label="工价系数">
+            <el-input-number
+              v-model="configForm.process_coefficient"
+              :min="0.01"
+              :step="0.01"
+              :precision="2"
+              style="width: 200px"
+            />
+            <span class="config-hint">（默认 1.56）</span>
+            
+          </el-form-item>
+
           <!-- FOB深圳运费汇率 -->
           <el-form-item label="FOB深圳运费汇率">
             <el-input-number
@@ -166,7 +179,8 @@
             <li>配置参数的修改将立即生效，影响新创建的报价单</li>
             <li>已创建的历史报价单将保留创建时的配置参数</li>
             <li>管销率、增值税率、保险率的取值范围为 0 到 1 之间的小数</li>
-            <li>汇率必须为正数，建议定期更新以反映实际汇率变化</li>
+            <li>汇率和工价系数必须为正数，建议定期更新以反映实际成本变化</li>
+            <li>工价系数用于计算工序总价：工序总价 = 工序小计 × 工价系数</li>
             <li>利润区间可以自定义添加或删除，至少保留一个档位</li>
           </ul>
         </el-alert>
@@ -190,6 +204,7 @@ const configForm = reactive({
   vat_rate: 0.13,
   insurance_rate: 0.003,
   exchange_rate: 7.2,
+  process_coefficient: 1.56,
   fob_shenzhen_exchange_rate: 7.1,
   fcl_20_freight_usd: 840,
   fcl_40_freight_usd: 940,
@@ -240,6 +255,10 @@ const handleSave = async () => {
   }
   if (configForm.exchange_rate <= 0) {
     ElMessage.error('汇率必须大于 0');
+    return;
+  }
+  if (configForm.process_coefficient <= 0) {
+    ElMessage.error('工价系数必须大于 0');
     return;
   }
   if (configForm.profit_tiers.length === 0) {

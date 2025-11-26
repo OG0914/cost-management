@@ -1,33 +1,75 @@
 /**
- * 检查系统配置
+ * 检查系统配置脚本
+ * 用于验证所有必要的配置项是否存在
  */
 
-const Database = require('better-sqlite3');
 const path = require('path');
+const dbManager = require('../db/database');
 
-const dbPath = path.join(__dirname, '../db/cost_analysis.db');
+// 初始化数据库
+const dbPath = path.join(__dirname, '..', 'db', 'cost_analysis.db');
+dbManager.initialize(dbPath);
 
-console.log('查询系统配置...');
-console.log('数据库路径:', dbPath);
+const db = dbManager.getDatabase();
+
+console.log('开始检查系统配置...\n');
+
+// 必需的配置项
+const requiredConfigs = [
+  { key: 'overhead_rate', description: '管销率', expectedType: 'number' },
+  { key: 'vat_rate', description: '增值税率', expectedType: 'number' },
+  { key: 'insurance_rate', description: '保险率', expectedType: 'number' },
+  { key: 'exchange_rate', description: '汇率（CNY/USD）', expectedType: 'number' },
+  { key: 'process_coefficient', description: '工价系数', expectedType: 'number' },
+  { key: 'profit_tiers', description: '利润区间', expectedType: 'array' }
+];
+
+let allPassed = true;
 
 try {
-  const db = new Database(dbPath);
+  const stmt = db.prepare('SELECT * FROM system_config WHERE config_key = ?');
   
-  const configs = db.prepare('SELECT * FROM system_config ORDER BY config_key').all();
-  
-  console.log('\n系统配置列表:');
-  console.log('-----------------------------------');
-  configs.forEach(config => {
-    console.log(`${config.config_key}: ${config.config_value}`);
-    if (config.description) {
-      console.log(`  描述: ${config.description}`);
+  requiredConfigs.forEach(config => {
+    const result = stmt.get(config.key);
+    
+    if (!result) {
+      console.log(`❌ 缺少配置: ${config.key} (${config.description})`);
+      allPassed = false;
+    } else {
+      let value = result.config_value;
+      let parsedValue;
+      
+      // 尝试解析值
+      try {
+        parsedValue = JSON.parse(value);
+      } catch (e) {
+        parsedValue = value;
+      }
+      
+      // 验证类型
+      const actualType = Array.isArray(parsedValue) ? 'array' : typeof parsedValue;
+      
+      if (actualType !== config.expectedType) {
+        console.log(`⚠️  配置类型不匹配: ${config.key}`);
+        console.log(`   期望类型: ${config.expectedType}, 实际类型: ${actualType}`);
+        console.log(`   当前值: ${value}`);
+      } else {
+        console.log(`✓ ${config.key}: ${value} (${config.description})`);
+      }
     }
-    console.log('');
   });
   
-  db.close();
+  console.log('\n检查完成！');
+  
+  if (allPassed) {
+    console.log('✓ 所有必需的配置项都已存在');
+  } else {
+    console.log('❌ 存在缺失的配置项，请运行相应的迁移脚本');
+  }
   
 } catch (error) {
-  console.error('查询失败:', error);
+  console.error('检查失败:', error);
   process.exit(1);
+} finally {
+  dbManager.close();
 }

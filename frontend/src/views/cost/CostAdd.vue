@@ -652,10 +652,12 @@ import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { formatNumber } from '@/utils/format'
+import { useConfigStore } from '@/store/config'
 
 const router = useRouter()
 const route = useRoute()
 const formRef = ref(null)
+const configStore = useConfigStore()
 
 // 是否编辑模式
 const isEditMode = computed(() => {
@@ -754,9 +756,10 @@ const materialTotal = computed(() => {
 })
 
 const processTotal = computed(() => {
-  // 工序总和（显示时乘以1.56系数，但发送给后端时使用原始值）
+  // 工序总和（显示时乘以工价系数，但发送给后端时使用原始值）
   const sum = form.processes.reduce((sum, item) => sum + item.subtotal, 0)
-  return sum * 1.56
+  const coefficient = configStore.getProcessCoefficient()
+  return sum * coefficient
 })
 
 const packagingTotal = computed(() => {
@@ -1541,6 +1544,8 @@ const calculateCustomProfit = () => {
 
 // 初始化
 onMounted(async () => {
+  // 加载系统配置（包括工价系数）
+  await configStore.loadConfig()
   await loadSystemConfig()
   await loadRegulations()
   await loadPackagingConfigs()
