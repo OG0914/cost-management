@@ -14,15 +14,31 @@
       <!-- 搜索筛选 -->
       <el-form :inline="true" :model="searchForm" class="search-form">
         <el-form-item label="客户名称">
-          <el-input v-model="searchForm.customer_name" placeholder="请输入客户名称" clearable />
+          <el-input v-model="searchForm.customer_name" placeholder="请输入客户名称" clearable style="width: 180px" />
+        </el-form-item>
+        <el-form-item label="型号">
+          <el-input v-model="searchForm.model_name" placeholder="请输入型号" clearable style="width: 150px" />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 120px">
             <el-option label="草稿" value="draft" />
             <el-option label="已提交" value="submitted" />
             <el-option label="已审核" value="approved" />
             <el-option label="已退回" value="rejected" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="创建日期">
+          <el-date-picker
+            v-model="searchForm.date_range"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            clearable
+            style="width: 260px"
+          />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="loadQuotations">查询</el-button>
@@ -117,7 +133,9 @@ const router = useRouter()
 
 const searchForm = reactive({
   customer_name: '',
-  status: ''
+  model_name: '',
+  status: '',
+  date_range: []
 })
 
 const quotations = ref([])
@@ -136,7 +154,15 @@ const loadQuotations = async () => {
     const params = {
       page: pagination.page,
       pageSize: pagination.pageSize,
-      ...searchForm
+      customer_name: searchForm.customer_name,
+      model_name: searchForm.model_name,
+      status: searchForm.status
+    }
+
+    // 添加日期范围参数
+    if (searchForm.date_range && searchForm.date_range.length === 2) {
+      params.start_date = searchForm.date_range[0]
+      params.end_date = searchForm.date_range[1]
     }
 
     const res = await request.get('/cost/quotations', { params })
@@ -156,7 +182,9 @@ const loadQuotations = async () => {
 // 重置搜索
 const resetSearch = () => {
   searchForm.customer_name = ''
+  searchForm.model_name = ''
   searchForm.status = ''
+  searchForm.date_range = []
   pagination.page = 1
   loadQuotations()
 }

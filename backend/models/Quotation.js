@@ -97,6 +97,7 @@ class Quotation {
     const {
       status,
       customer_name,
+      model_name,
       model_id,
       created_by,
       date_from,
@@ -120,6 +121,10 @@ class Quotation {
 
     if (customer_name) {
       builder.whereLike('q.customer_name', customer_name);
+    }
+
+    if (model_name) {
+      builder.whereLike('m.model_name', model_name);
     }
 
     if (model_id) {

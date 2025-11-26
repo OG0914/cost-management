@@ -397,9 +397,9 @@ const getQuotationList = async (req, res) => {
         const {
             status,
             customer_name,
-            model_id,
-            date_from,
-            date_to,
+            model_name,
+            start_date,
+            end_date,
             page = 1,
             pageSize = 20
         } = req.query;
@@ -408,9 +408,9 @@ const getQuotationList = async (req, res) => {
         const options = {
             status,
             customer_name,
-            model_id,
-            date_from,
-            date_to,
+            model_name,
+            date_from: start_date,
+            date_to: end_date,
             page: parseInt(page),
             pageSize: parseInt(pageSize)
         };
