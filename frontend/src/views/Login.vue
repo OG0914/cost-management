@@ -13,25 +13,33 @@
       <div class="login-form">
         <!-- 用户名 -->
         <div class="form-group">
-          <label class="form-label">用户名</label>
-          <input
-            v-model="loginForm.username"
-            type="text"
-            class="form-input"
-            placeholder="请输入用户名"
-          />
+          <div class="input-wrapper">
+            <el-icon class="input-icon">
+              <User />
+            </el-icon>
+            <input
+              v-model="loginForm.username"
+              type="text"
+              class="form-input"
+              placeholder="用户名"
+            />
+          </div>
         </div>
 
         <!-- 密码 -->
         <div class="form-group">
-          <label class="form-label">密码</label>
-          <input
-            v-model="loginForm.password"
-            type="password"
-            class="form-input"
-            placeholder="请输入密码"
-            @keyup.enter="handleLogin"
-          />
+          <div class="input-wrapper">
+            <el-icon class="input-icon">
+              <Lock />
+            </el-icon>
+            <input
+              v-model="loginForm.password"
+              type="password"
+              class="form-input"
+              placeholder="密码"
+              @keyup.enter="handleLogin"
+            />
+          </div>
         </div>
 
         <!-- 登录按钮 -->
@@ -143,33 +151,39 @@ const handleLogin = async () => {
   margin-bottom: 19px; /* 表单栏位之间的间距：19px */
 }
 
-.form-label {
-  display: block;
-  margin-bottom: 6px; /* 标签到输入框的间距：6px */
-  font-size: 11px; /* 表单标签：11px */
-  font-weight: 500; /* font-weight: 500 */
-  color: #606266;
+.input-wrapper {
+  display: flex;
+  align-items: center;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  overflow: hidden;
+  transition: all 0.3s;
+}
+
+.input-wrapper:focus-within {
+  border-color: #409EFF;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+}
+
+.input-icon {
+  margin-left: 13px;
+  color: #909399;
+  flex-shrink: 0;
 }
 
 .form-input {
-  width: 100%;
+  flex: 1;
   padding: 11px 13px; /* 输入框内边距：11px 13px（上下 11px，左右 13px） */
   font-size: 13px; /* 输入框：13px */
   font-family: 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', 'SimHei', sans-serif;
   color: #303133;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
+  border: none;
   outline: none;
-  transition: border-color 0.3s;
   box-sizing: border-box;
 }
 
 .form-input::placeholder {
   color: #c0c4cc;
-}
-
-.form-input:focus {
-  border-color: #409EFF;
 }
 
 .login-button {

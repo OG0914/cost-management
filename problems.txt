@@ -1,0 +1,14 @@
+不要动手修改，阅读并回答以下四个代码开发过程中已发现的问题：
+1.在 costController.js中，控制器不仅负责处理 HTTP 请求和响应，还包含了大量的业务逻辑（如参数校验、复杂的数据组装、权限判断细节）。
+风险: 随着业务变复杂，Controller 会变得极其臃肿，难以维护和测试。
+建议: 引入 Service 层（如 services/costService.js），将业务逻辑（如“创建报价单的核心流程”、“计算逻辑的调用”）从 Controller 中剥离。Controller 只负责接收参数、调用 Service 并返回结果。
+2.工价系数 1.56硬编码，应该将此类核心业务参数统一放在后端的 SystemConfig，前端通过 API 获取配置。
+3.前端组件逻辑臃肿 (Frontend)
+问题: ProcessManagement.vue文件接近 600 行，包含了 API 调用、数据处理、表单验证、UI 交互等所有逻辑。
+风险: 组件难以复用，阅读困难。
+建议:API 抽离: 将 request.get(...) 等调用封装到 src/api/process.js 中。
+逻辑抽离: 可以使用 Vue 3 的 Composables (Hooks) 将表格逻辑（加载、筛选、分页）和表单逻辑（验证、提交）拆分。
+4.SQL 拼接的潜在隐患 (Backend)
+问题: 虽然使用了 better-sqlite3 的参数化查询（这是对的），但在 Quotation.findAll 中，whereClause 是通过字符串拼接生成的。
+风险: 虽然目前看起来是安全的（因为拼接的是字段名占位符 ?），但这种手动拼接 SQL 字符串的方式在复杂查询下容易出错，且可读性较差。
+建议: 对于复杂的动态查询，可以考虑使用轻量级的 SQL 构建器（如 knex.js）来生成 SQL 语句，或者进一步封装查询构建逻辑。

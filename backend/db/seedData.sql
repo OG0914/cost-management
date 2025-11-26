@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT NOT NULL CHECK(role IN ('admin', 'purchaser', 'producer', 'reviewer', 'salesperson', 'readonly')),
   real_name TEXT,
   email TEXT,
+  is_active BOOLEAN DEFAULT 1,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -126,6 +127,8 @@ CREATE TABLE IF NOT EXISTS quotations (
   freight_total REAL NOT NULL,
   freight_per_unit REAL NOT NULL,
   sales_type TEXT NOT NULL CHECK(sales_type IN ('domestic', 'export')),
+  shipping_method TEXT,
+  port TEXT,
   base_cost REAL NOT NULL,
   overhead_price REAL NOT NULL,
   final_price REAL NOT NULL,
@@ -133,6 +136,8 @@ CREATE TABLE IF NOT EXISTS quotations (
   status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft', 'submitted', 'approved', 'rejected')),
   created_by INTEGER NOT NULL,
   reviewed_by INTEGER,
+  packaging_config_id INTEGER,
+  include_freight_in_base BOOLEAN DEFAULT 1,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   submitted_at DATETIME,
@@ -140,7 +145,8 @@ CREATE TABLE IF NOT EXISTS quotations (
   FOREIGN KEY (model_id) REFERENCES models(id),
   FOREIGN KEY (regulation_id) REFERENCES regulations(id),
   FOREIGN KEY (created_by) REFERENCES users(id),
-  FOREIGN KEY (reviewed_by) REFERENCES users(id)
+  FOREIGN KEY (reviewed_by) REFERENCES users(id),
+  FOREIGN KEY (packaging_config_id) REFERENCES packaging_configs(id)
 );
 
 -- 报价单明细表
@@ -154,8 +160,10 @@ CREATE TABLE IF NOT EXISTS quotation_items (
   subtotal REAL NOT NULL,
   is_changed BOOLEAN DEFAULT 0,
   original_value REAL,
+  material_id INTEGER,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (quotation_id) REFERENCES quotations(id) ON DELETE CASCADE
+  FOREIGN KEY (quotation_id) REFERENCES quotations(id) ON DELETE CASCADE,
+  FOREIGN KEY (material_id) REFERENCES materials(id)
 );
 
 -- 批注表

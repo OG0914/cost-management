@@ -3,6 +3,7 @@
  */
 
 const dbManager = require('../db/database');
+const QueryBuilder = require('../utils/queryBuilder');
 
 class Quotation {
   /**
@@ -104,69 +105,64 @@ class Quotation {
       pageSize = 20
     } = options;
 
-    let whereClause = [];
-    let params = [];
+    // 使用查询构建器构建查询
+    const builder = new QueryBuilder('quotations q')
+      .leftJoin('regulations r', 'q.regulation_id = r.id')
+      .leftJoin('models m', 'q.model_id = m.id')
+      .leftJoin('packaging_configs pc', 'q.packaging_config_id = pc.id')
+      .leftJoin('users u1', 'q.created_by = u1.id')
+      .leftJoin('users u2', 'q.reviewed_by = u2.id');
 
+    // 动态添加查询条件
     if (status) {
-      whereClause.push('q.status = ?');
-      params.push(status);
+      builder.where('q.status', '=', status);
     }
 
     if (customer_name) {
-      whereClause.push('q.customer_name LIKE ?');
-      params.push(`%${customer_name}%`);
+      builder.whereLike('q.customer_name', customer_name);
     }
 
     if (model_id) {
-      whereClause.push('q.model_id = ?');
-      params.push(model_id);
+      builder.where('q.model_id', '=', model_id);
     }
 
     if (created_by) {
-      whereClause.push('q.created_by = ?');
-      params.push(created_by);
+      builder.where('q.created_by', '=', created_by);
     }
 
     if (date_from) {
-      whereClause.push('DATE(q.created_at) >= ?');
-      params.push(date_from);
+      builder.whereDate('q.created_at', '>=', date_from);
     }
 
     if (date_to) {
-      whereClause.push('DATE(q.created_at) <= ?');
-      params.push(date_to);
+      builder.whereDate('q.created_at', '<=', date_to);
     }
 
-    const whereSQL = whereClause.length > 0 ? 'WHERE ' + whereClause.join(' AND ') : '';
-
     // 查询总数
-    const countStmt = db.prepare(`SELECT COUNT(*) as total FROM quotations q ${whereSQL}`);
-    const { total } = countStmt.get(...params);
+    const countQuery = builder.buildCount();
+    const countStmt = db.prepare(countQuery.sql);
+    const { total } = countStmt.get(...countQuery.params);
 
     // 查询数据
     const offset = (page - 1) * pageSize;
-    const dataStmt = db.prepare(`
-      SELECT q.*, 
-             r.name as regulation_name,
-             m.model_name,
-             pc.config_name as packaging_config_name,
-             pc.pc_per_bag,
-             pc.bags_per_box,
-             pc.boxes_per_carton,
-             u1.real_name as creator_name,
-             u2.real_name as reviewer_name
-      FROM quotations q
-      LEFT JOIN regulations r ON q.regulation_id = r.id
-      LEFT JOIN models m ON q.model_id = m.id
-      LEFT JOIN packaging_configs pc ON q.packaging_config_id = pc.id
-      LEFT JOIN users u1 ON q.created_by = u1.id
-      LEFT JOIN users u2 ON q.reviewed_by = u2.id
-      ${whereSQL}
-      ORDER BY q.created_at DESC
-      LIMIT ? OFFSET ?
-    `);
+    const dataQuery = builder
+      .orderByDesc('q.created_at')
+      .limit(pageSize)
+      .offset(offset)
+      .buildSelect(`
+        q.*, 
+        r.name as regulation_name,
+        m.model_name,
+        pc.config_name as packaging_config_name,
+        pc.pc_per_bag,
+        pc.bags_per_box,
+        pc.boxes_per_carton,
+        u1.real_name as creator_name,
+        u2.real_name as reviewer_name
+      `);
 
-    const data = dataStmt.all(...params, pageSize, offset);
+    const dataStmt = db.prepare(dataQuery.sql);
+    const data = dataStmt.all(...dataQuery.params);
 
     return {
       data,
