@@ -2,21 +2,43 @@
  * Excel 解析工具
  */
 
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 
 class ExcelParser {
   /**
    * 解析原料 Excel
    * 期望列：品号、原料名称、单位、单价、币别
    */
-  static parseMaterialExcel(filePath) {
+  static async parseMaterialExcel(filePath) {
     try {
-      const workbook = XLSX.readFile(filePath);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.readFile(filePath);
+      const worksheet = workbook.worksheets[0];
       
       // 转换为 JSON
-      const data = XLSX.utils.sheet_to_json(worksheet);
+      const data = [];
+      const headers = [];
+      
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) {
+          // 读取表头
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            headers[colNumber] = cell.value;
+          });
+        } else {
+          // 读取数据行
+          const rowData = {};
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            if (headers[colNumber]) {
+              rowData[headers[colNumber]] = cell.value;
+            }
+          });
+          // 只添加非空行
+          if (Object.keys(rowData).length > 0) {
+            data.push(rowData);
+          }
+        }
+      });
       
       // 验证和转换数据
       const materials = [];
@@ -43,12 +65,22 @@ class ExcelParser {
           return;
         }
         
+        // 处理富文本对象
+        const getValue = (value) => {
+          if (value && typeof value === 'object' && value.richText) {
+            return value.richText.map(t => t.text).join('');
+          }
+          return value;
+        };
+        
         const material = {
-          item_no: String(row['品号'] || row['item_no']).trim(),
-          name: row['原料名称'] || row['name'],
-          unit: row['单位'] || row['unit'],
-          price: parseFloat(row['单价'] || row['price']),
-          currency: row['币别'] || row['currency'] || 'CNY'
+          item_no: String(getValue(row['品号']) || getValue(row['item_no']) || '').trim(),
+          name: String(getValue(row['原料名称']) || getValue(row['name']) || ''),
+          unit: String(getValue(row['单位']) || getValue(row['unit']) || ''),
+          price: parseFloat(getValue(row['单价']) || getValue(row['price']) || 0),
+          currency: String(getValue(row['币别']) || getValue(row['currency']) || 'CNY'),
+          model_id: null,
+          usage_amount: null
         };
         
         // 验证数据类型
@@ -82,13 +114,35 @@ class ExcelParser {
    * 解析工序 Excel
    * 期望列：型号、配置、包装方式、工序、单价
    */
-  static parseProcessExcel(filePath) {
+  static async parseProcessExcel(filePath) {
     try {
-      const workbook = XLSX.readFile(filePath);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.readFile(filePath);
+      const worksheet = workbook.worksheets[0];
       
-      const data = XLSX.utils.sheet_to_json(worksheet);
+      const data = [];
+      const headers = [];
+      
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) {
+          // 读取表头
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            headers[colNumber] = cell.value;
+          });
+        } else {
+          // 读取数据行
+          const rowData = {};
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            if (headers[colNumber]) {
+              rowData[headers[colNumber]] = cell.value;
+            }
+          });
+          // 只添加非空行
+          if (Object.keys(rowData).length > 0) {
+            data.push(rowData);
+          }
+        }
+      });
       
       console.log('工序Excel数据行数:', data.length);
       if (data.length > 0) {
@@ -160,13 +214,35 @@ class ExcelParser {
    * 解析包材 Excel
    * 期望列：型号、配置、包装方式、包材名称、基本用量、单价、纸箱体积
    */
-  static parsePackagingMaterialExcel(filePath) {
+  static async parsePackagingMaterialExcel(filePath) {
     try {
-      const workbook = XLSX.readFile(filePath);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.readFile(filePath);
+      const worksheet = workbook.worksheets[0];
       
-      const data = XLSX.utils.sheet_to_json(worksheet);
+      const data = [];
+      const headers = [];
+      
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) {
+          // 读取表头
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            headers[colNumber] = cell.value;
+          });
+        } else {
+          // 读取数据行
+          const rowData = {};
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            if (headers[colNumber]) {
+              rowData[headers[colNumber]] = cell.value;
+            }
+          });
+          // 只添加非空行
+          if (Object.keys(rowData).length > 0) {
+            data.push(rowData);
+          }
+        }
+      });
       
       console.log('包材Excel数据行数:', data.length);
       if (data.length > 0) {

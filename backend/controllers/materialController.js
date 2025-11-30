@@ -6,7 +6,6 @@ const Material = require('../models/Material');
 const ExcelParser = require('../utils/excelParser');
 const ExcelGenerator = require('../utils/excelGenerator');
 const { success, error } = require('../utils/response');
-const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
 
@@ -115,14 +114,14 @@ const deleteMaterial = (req, res, next) => {
 };
 
 // 导入原料 Excel
-const importMaterials = (req, res, next) => {
+const importMaterials = async (req, res, next) => {
   try {
     if (!req.file) {
       return res.status(400).json(error('请上传文件', 400));
     }
     
     const filePath = req.file.path;
-    const result = ExcelParser.parseMaterialExcel(filePath);
+    const result = await ExcelParser.parseMaterialExcel(filePath);
     
     // 删除临时文件
     fs.unlinkSync(filePath);
@@ -135,7 +134,8 @@ const importMaterials = (req, res, next) => {
     let created = 0;
     let updated = 0;
     
-    result.data.forEach(material => {
+    result.data.forEach((material, index) => {
+      console.log(`处理第 ${index + 1} 条数据:`, JSON.stringify(material));
       const existing = Material.findByItemNo(material.item_no);
       if (existing) {
         Material.update(existing.id, material);
@@ -162,7 +162,7 @@ const importMaterials = (req, res, next) => {
 };
 
 // 导出原料 Excel
-const exportMaterials = (req, res, next) => {
+const exportMaterials = async (req, res, next) => {
   try {
     const { ids } = req.body;
     
@@ -179,7 +179,7 @@ const exportMaterials = (req, res, next) => {
       return res.status(400).json(error('没有可导出的数据', 400));
     }
     
-    const workbook = ExcelGenerator.generateMaterialExcel(materials);
+    const workbook = await ExcelGenerator.generateMaterialExcel(materials);
     
     // 生成文件
     const fileName = `原料清单_${Date.now()}.xlsx`;
@@ -191,7 +191,7 @@ const exportMaterials = (req, res, next) => {
       fs.mkdirSync(tempDir, { recursive: true });
     }
     
-    XLSX.writeFile(workbook, filePath);
+    await workbook.xlsx.writeFile(filePath);
     
     // 发送文件
     res.download(filePath, fileName, (err) => {
@@ -209,9 +209,9 @@ const exportMaterials = (req, res, next) => {
 };
 
 // 下载导入模板
-const downloadTemplate = (req, res, next) => {
+const downloadTemplate = async (req, res, next) => {
   try {
-    const workbook = ExcelGenerator.generateMaterialTemplate();
+    const workbook = await ExcelGenerator.generateMaterialTemplate();
     
     const fileName = '原料导入模板.xlsx';
     const filePath = path.join(__dirname, '../temp', fileName);
@@ -221,7 +221,7 @@ const downloadTemplate = (req, res, next) => {
       fs.mkdirSync(tempDir, { recursive: true });
     }
     
-    XLSX.writeFile(workbook, filePath);
+    await workbook.xlsx.writeFile(filePath);
     
     res.download(filePath, fileName, (err) => {
       if (fs.existsSync(filePath)) {

@@ -42,12 +42,30 @@ class Material {
     const db = dbManager.getDatabase();
     const { item_no, name, unit, price, currency, model_id, usage_amount } = data;
     
+    console.log('Material.create 接收到的数据:', {
+      item_no,
+      name,
+      unit,
+      price,
+      currency,
+      model_id,
+      usage_amount
+    });
+    
     const stmt = db.prepare(`
       INSERT INTO materials (item_no, name, unit, price, currency, model_id, usage_amount)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     
-    const result = stmt.run(item_no, name, unit, price, currency || 'CNY', model_id || null, usage_amount || null);
+    const result = stmt.run(
+      item_no,
+      name,
+      unit,
+      price,
+      currency || 'CNY',
+      model_id || null,
+      usage_amount || null
+    );
     return result.lastInsertRowid;
   }
 

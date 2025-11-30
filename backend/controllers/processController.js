@@ -472,7 +472,6 @@ exports.deletePackagingMaterial = (req, res) => {
 const ExcelParser = require('../utils/excelParser');
 const ExcelGenerator = require('../utils/excelGenerator');
 const Model = require('../models/Model');
-const XLSX = require('xlsx');
 const fs = require('fs');
 const path = require('path');
 
@@ -492,7 +491,7 @@ exports.importProcesses = async (req, res) => {
     filePath = req.file.path;
     console.log('开始解析工序文件:', filePath);
     
-    const result = ExcelParser.parseProcessExcel(filePath);
+    const result = await ExcelParser.parseProcessExcel(filePath);
     console.log('解析结果:', result);
     
     if (!result.success) {
@@ -626,7 +625,7 @@ exports.importProcesses = async (req, res) => {
 /**
  * 导出工序 Excel
  */
-exports.exportProcesses = (req, res) => {
+exports.exportProcesses = async (req, res) => {
   try {
     const { ids } = req.body;
     
@@ -663,7 +662,7 @@ exports.exportProcesses = (req, res) => {
       });
     });
     
-    const workbook = ExcelGenerator.generateProcessExcel(processes);
+    const workbook = await ExcelGenerator.generateProcessExcel(processes);
     
     const fileName = `工序清单_${Date.now()}.xlsx`;
     const filePath = path.join(__dirname, '../temp', fileName);
@@ -673,7 +672,7 @@ exports.exportProcesses = (req, res) => {
       fs.mkdirSync(tempDir, { recursive: true });
     }
     
-    XLSX.writeFile(workbook, filePath);
+    await workbook.xlsx.writeFile(filePath);
     
     res.download(filePath, fileName, (err) => {
       if (fs.existsSync(filePath)) {
@@ -695,9 +694,9 @@ exports.exportProcesses = (req, res) => {
 /**
  * 下载工序导入模板
  */
-exports.downloadProcessTemplate = (req, res) => {
+exports.downloadProcessTemplate = async (req, res) => {
   try {
-    const workbook = ExcelGenerator.generateProcessTemplate();
+    const workbook = await ExcelGenerator.generateProcessTemplate();
     
     const fileName = '工序导入模板.xlsx';
     const filePath = path.join(__dirname, '../temp', fileName);
@@ -707,7 +706,7 @@ exports.downloadProcessTemplate = (req, res) => {
       fs.mkdirSync(tempDir, { recursive: true });
     }
     
-    XLSX.writeFile(workbook, filePath);
+    await workbook.xlsx.writeFile(filePath);
     
     res.download(filePath, fileName, (err) => {
       if (fs.existsSync(filePath)) {
@@ -742,7 +741,7 @@ exports.importPackagingMaterials = async (req, res) => {
     filePath = req.file.path;
     console.log('开始解析包材文件:', filePath);
     
-    const result = ExcelParser.parsePackagingMaterialExcel(filePath);
+    const result = await ExcelParser.parsePackagingMaterialExcel(filePath);
     console.log('解析结果:', result);
     
     if (!result.success) {
@@ -878,7 +877,7 @@ exports.importPackagingMaterials = async (req, res) => {
 /**
  * 导出包材 Excel
  */
-exports.exportPackagingMaterials = (req, res) => {
+exports.exportPackagingMaterials = async (req, res) => {
   try {
     const { ids } = req.body;
     
@@ -917,7 +916,7 @@ exports.exportPackagingMaterials = (req, res) => {
       });
     });
     
-    const workbook = ExcelGenerator.generatePackagingMaterialExcel(materials);
+    const workbook = await ExcelGenerator.generatePackagingMaterialExcel(materials);
     
     const fileName = `包材清单_${Date.now()}.xlsx`;
     const filePath = path.join(__dirname, '../temp', fileName);
@@ -927,7 +926,7 @@ exports.exportPackagingMaterials = (req, res) => {
       fs.mkdirSync(tempDir, { recursive: true });
     }
     
-    XLSX.writeFile(workbook, filePath);
+    await workbook.xlsx.writeFile(filePath);
     
     res.download(filePath, fileName, (err) => {
       if (fs.existsSync(filePath)) {
@@ -949,9 +948,9 @@ exports.exportPackagingMaterials = (req, res) => {
 /**
  * 下载包材导入模板
  */
-exports.downloadPackagingMaterialTemplate = (req, res) => {
+exports.downloadPackagingMaterialTemplate = async (req, res) => {
   try {
-    const workbook = ExcelGenerator.generatePackagingMaterialTemplate();
+    const workbook = await ExcelGenerator.generatePackagingMaterialTemplate();
     
     const fileName = '包材导入模板.xlsx';
     const filePath = path.join(__dirname, '../temp', fileName);
@@ -961,7 +960,7 @@ exports.downloadPackagingMaterialTemplate = (req, res) => {
       fs.mkdirSync(tempDir, { recursive: true });
     }
     
-    XLSX.writeFile(workbook, filePath);
+    await workbook.xlsx.writeFile(filePath);
     
     res.download(filePath, fileName, (err) => {
       if (fs.existsSync(filePath)) {

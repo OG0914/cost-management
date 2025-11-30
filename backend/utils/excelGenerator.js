@@ -2,25 +2,35 @@
  * Excel 生成工具
  */
 
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 
 class ExcelGenerator {
   /**
    * 生成原料 Excel
    */
-  static generateMaterialExcel(materials) {
-    const data = materials.map(m => ({
-      '品号': m.item_no,
-      '原料名称': m.name,
-      '单位': m.unit,
-      '单价': m.price,
-      '币别': m.currency,
-      '更新时间': m.updated_at
-    }));
+  static async generateMaterialExcel(materials) {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('原料清单');
     
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, '原料清单');
+    worksheet.columns = [
+      { header: '品号', key: 'item_no', width: 15 },
+      { header: '原料名称', key: 'name', width: 20 },
+      { header: '单位', key: 'unit', width: 10 },
+      { header: '单价', key: 'price', width: 12 },
+      { header: '币别', key: 'currency', width: 10 },
+      { header: '更新时间', key: 'updated_at', width: 20 }
+    ];
+    
+    materials.forEach(m => {
+      worksheet.addRow({
+        item_no: m.item_no,
+        name: m.name,
+        unit: m.unit,
+        price: m.price,
+        currency: m.currency,
+        updated_at: m.updated_at
+      });
+    });
     
     return workbook;
   }
@@ -29,18 +39,27 @@ class ExcelGenerator {
    * 生成工序 Excel
    * 列顺序：型号、配置、包装方式、工序、单价
    */
-  static generateProcessExcel(processes) {
-    const data = processes.map(p => ({
-      '型号': p.model_name,
-      '配置': p.config_name,
-      '包装方式': p.packaging_method,
-      '工序': p.process_name,
-      '单价': p.unit_price
-    }));
+  static async generateProcessExcel(processes) {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('工序清单');
     
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, '工序清单');
+    worksheet.columns = [
+      { header: '型号', key: 'model_name', width: 15 },
+      { header: '配置', key: 'config_name', width: 20 },
+      { header: '包装方式', key: 'packaging_method', width: 40 },
+      { header: '工序', key: 'process_name', width: 20 },
+      { header: '单价', key: 'unit_price', width: 12 }
+    ];
+    
+    processes.forEach(p => {
+      worksheet.addRow({
+        model_name: p.model_name,
+        config_name: p.config_name,
+        packaging_method: p.packaging_method,
+        process_name: p.process_name,
+        unit_price: p.unit_price
+      });
+    });
     
     return workbook;
   }
@@ -49,20 +68,31 @@ class ExcelGenerator {
    * 生成包材 Excel
    * 列顺序：型号、配置、包装方式、包材名称、基本用量、单价、纸箱体积
    */
-  static generatePackagingMaterialExcel(materials) {
-    const data = materials.map(m => ({
-      '型号': m.model_name,
-      '配置': m.config_name,
-      '包装方式': m.packaging_method,
-      '包材名称': m.material_name,
-      '基本用量': m.basic_usage,
-      '单价': m.unit_price,
-      '纸箱体积': m.carton_volume || ''
-    }));
+  static async generatePackagingMaterialExcel(materials) {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('包材清单');
     
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, '包材清单');
+    worksheet.columns = [
+      { header: '型号', key: 'model_name', width: 15 },
+      { header: '配置', key: 'config_name', width: 20 },
+      { header: '包装方式', key: 'packaging_method', width: 40 },
+      { header: '包材名称', key: 'material_name', width: 20 },
+      { header: '基本用量', key: 'basic_usage', width: 12 },
+      { header: '单价', key: 'unit_price', width: 12 },
+      { header: '纸箱体积', key: 'carton_volume', width: 12 }
+    ];
+    
+    materials.forEach(m => {
+      worksheet.addRow({
+        model_name: m.model_name,
+        config_name: m.config_name,
+        packaging_method: m.packaging_method,
+        material_name: m.material_name,
+        basic_usage: m.basic_usage,
+        unit_price: m.unit_price,
+        carton_volume: m.carton_volume || ''
+      });
+    });
     
     return workbook;
   }
@@ -70,20 +100,25 @@ class ExcelGenerator {
   /**
    * 生成原料导入模板
    */
-  static generateMaterialTemplate() {
-    const data = [
-      {
-        '品号': 'MAT001',
-        '原料名称': '示例原料',
-        '单位': 'kg',
-        '单价': 10.5,
-        '币别': 'CNY'
-      }
+  static async generateMaterialTemplate() {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('原料导入模板');
+    
+    worksheet.columns = [
+      { header: '品号', key: 'item_no', width: 15 },
+      { header: '原料名称', key: 'name', width: 20 },
+      { header: '单位', key: 'unit', width: 10 },
+      { header: '单价', key: 'price', width: 12 },
+      { header: '币别', key: 'currency', width: 10 }
     ];
     
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, '原料导入模板');
+    worksheet.addRow({
+      item_no: 'MAT001',
+      name: '示例原料',
+      unit: 'kg',
+      price: 10.5,
+      currency: 'CNY'
+    });
     
     return workbook;
   }
@@ -92,20 +127,25 @@ class ExcelGenerator {
    * 生成工序导入模板
    * 列顺序：型号、配置、包装方式、工序、单价
    */
-  static generateProcessTemplate() {
-    const data = [
-      {
-        '型号': 'MODEL-001',
-        '配置': '标准配置',
-        '包装方式': '10pc/bag, 10bags/box, 24boxes/carton',
-        '工序': '示例工序',
-        '单价': 5.0
-      }
+  static async generateProcessTemplate() {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('工序导入模板');
+    
+    worksheet.columns = [
+      { header: '型号', key: 'model_name', width: 15 },
+      { header: '配置', key: 'config_name', width: 20 },
+      { header: '包装方式', key: 'packaging_method', width: 40 },
+      { header: '工序', key: 'process_name', width: 20 },
+      { header: '单价', key: 'unit_price', width: 12 }
     ];
     
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, '工序导入模板');
+    worksheet.addRow({
+      model_name: 'MODEL-001',
+      config_name: '标准配置',
+      packaging_method: '10pc/bag, 10bags/box, 24boxes/carton',
+      process_name: '示例工序',
+      unit_price: 5.0
+    });
     
     return workbook;
   }
@@ -114,22 +154,29 @@ class ExcelGenerator {
    * 生成包材导入模板
    * 列顺序：型号、配置、包装方式、包材名称、基本用量、单价、纸箱体积
    */
-  static generatePackagingMaterialTemplate() {
-    const data = [
-      {
-        '型号': 'MODEL-001',
-        '配置': '标准配置',
-        '包装方式': '10pc/bag, 10bags/box, 24boxes/carton',
-        '包材名称': '示例包材',
-        '基本用量': 100,
-        '单价': 10.5,
-        '纸箱体积': 0.05
-      }
+  static async generatePackagingMaterialTemplate() {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('包材导入模板');
+    
+    worksheet.columns = [
+      { header: '型号', key: 'model_name', width: 15 },
+      { header: '配置', key: 'config_name', width: 20 },
+      { header: '包装方式', key: 'packaging_method', width: 40 },
+      { header: '包材名称', key: 'material_name', width: 20 },
+      { header: '基本用量', key: 'basic_usage', width: 12 },
+      { header: '单价', key: 'unit_price', width: 12 },
+      { header: '纸箱体积', key: 'carton_volume', width: 12 }
     ];
     
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, '包材导入模板');
+    worksheet.addRow({
+      model_name: 'MODEL-001',
+      config_name: '标准配置',
+      packaging_method: '10pc/bag, 10bags/box, 24boxes/carton',
+      material_name: '示例包材',
+      basic_usage: 100,
+      unit_price: 10.5,
+      carton_volume: 0.05
+    });
     
     return workbook;
   }
