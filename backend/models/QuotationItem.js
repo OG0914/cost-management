@@ -16,8 +16,8 @@ class QuotationItem {
     const stmt = db.prepare(`
       INSERT INTO quotation_items (
         quotation_id, category, item_name, usage_amount, 
-        unit_price, subtotal, is_changed, original_value, material_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        unit_price, subtotal, is_changed, original_value, material_id, after_overhead
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
     const result = stmt.run(
@@ -29,7 +29,8 @@ class QuotationItem {
       data.subtotal,
       data.is_changed || 0,
       data.original_value || null,
-      data.material_id || null
+      data.material_id || null,
+      data.after_overhead || 0
     );
     
     return result.lastInsertRowid;
@@ -46,8 +47,8 @@ class QuotationItem {
     const stmt = db.prepare(`
       INSERT INTO quotation_items (
         quotation_id, category, item_name, usage_amount, 
-        unit_price, subtotal, is_changed, original_value, material_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        unit_price, subtotal, is_changed, original_value, material_id, after_overhead
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const transaction = db.transaction((itemList) => {
@@ -61,7 +62,8 @@ class QuotationItem {
           item.subtotal,
           item.is_changed || 0,
           item.original_value || null,
-          item.material_id || null
+          item.material_id || null,
+          item.after_overhead || 0
         );
       }
     });
@@ -192,7 +194,7 @@ class QuotationItem {
 
     const allowedFields = [
       'item_name', 'usage_amount', 'unit_price', 
-      'subtotal', 'is_changed', 'original_value', 'material_id'
+      'subtotal', 'is_changed', 'original_value', 'material_id', 'after_overhead'
     ];
 
     allowedFields.forEach(field => {

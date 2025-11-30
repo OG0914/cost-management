@@ -161,6 +161,7 @@ CREATE TABLE IF NOT EXISTS quotation_items (
   is_changed BOOLEAN DEFAULT 0,
   original_value REAL,
   material_id INTEGER,
+  after_overhead BOOLEAN DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (quotation_id) REFERENCES quotations(id) ON DELETE CASCADE,
   FOREIGN KEY (material_id) REFERENCES materials(id)

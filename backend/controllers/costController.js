@@ -190,8 +190,14 @@ const calculateQuotation = async (req, res) => {
         }
 
         // 计算明细总计
+        // 原料总计：不包含管销后算的原料
         const materialTotal = items
-            .filter(item => item.category === 'material')
+            .filter(item => item.category === 'material' && !item.after_overhead)
+            .reduce((sum, item) => sum + item.subtotal, 0);
+
+        // 管销后算的原料总计
+        const afterOverheadMaterialTotal = items
+            .filter(item => item.category === 'material' && item.after_overhead)
             .reduce((sum, item) => sum + item.subtotal, 0);
 
         const processTotal = items
@@ -213,7 +219,8 @@ const calculateQuotation = async (req, res) => {
             freightTotal: freight_total || 0,
             quantity,
             salesType: sales_type,
-            includeFreightInBase: req.body.include_freight_in_base !== false
+            includeFreightInBase: req.body.include_freight_in_base !== false,
+            afterOverheadMaterialTotal
         });
 
         res.json(success(calculation, '计算成功'));
@@ -262,8 +269,14 @@ const updateQuotation = async (req, res) => {
         const freight_per_unit = freight_total / quantity;
 
         // 计算明细总计
+        // 原料总计：不包含管销后算的原料
         const materialTotal = items
-            .filter(item => item.category === 'material')
+            .filter(item => item.category === 'material' && !item.after_overhead)
+            .reduce((sum, item) => sum + item.subtotal, 0);
+
+        // 管销后算的原料总计
+        const afterOverheadMaterialTotal = items
+            .filter(item => item.category === 'material' && item.after_overhead)
             .reduce((sum, item) => sum + item.subtotal, 0);
 
         const processTotal = items
@@ -285,7 +298,8 @@ const updateQuotation = async (req, res) => {
             freightTotal: freight_total,
             quantity,
             salesType: sales_type,
-            includeFreightInBase: req.body.include_freight_in_base !== false
+            includeFreightInBase: req.body.include_freight_in_base !== false,
+            afterOverheadMaterialTotal
         });
 
         console.log('更新报价单 - 计算结果:', {
@@ -460,14 +474,25 @@ const getQuotationDetail = async (req, res) => {
         const calculatorConfig = SystemConfig.getCalculatorConfig();
         const calculator = new CostCalculator(calculatorConfig);
 
+        // 计算原料总计（不含管销后算的原料）
+        const materialTotal = items.material.items
+            .filter(item => !item.after_overhead)
+            .reduce((sum, item) => sum + item.subtotal, 0);
+
+        // 管销后算的原料总计
+        const afterOverheadMaterialTotal = items.material.items
+            .filter(item => item.after_overhead)
+            .reduce((sum, item) => sum + item.subtotal, 0);
+
         const calculation = calculator.calculateQuotation({
-            materialTotal: items.material.total,
+            materialTotal,
             processTotal: items.process.total, // 原始工序总计，不需要手动乘以工价系数
             packagingTotal: items.packaging.total,
             freightTotal: quotation.freight_total,
             quantity: quotation.quantity,
             salesType: quotation.sales_type,
-            includeFreightInBase: quotation.include_freight_in_base !== false
+            includeFreightInBase: quotation.include_freight_in_base !== false,
+            afterOverheadMaterialTotal
         });
 
         // 为了前端显示，将工序总计乘以工价系数

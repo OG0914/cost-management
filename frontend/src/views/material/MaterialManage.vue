@@ -45,8 +45,23 @@
         </div>
       </template>
 
+      <!-- 搜索栏 -->
+      <div class="filter-bar">
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索品号、原料名称"
+          clearable
+          @input="handleSearch"
+          style="width: 300px"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+      </div>
+
       <!-- 数据表格 -->
-      <el-table :data="materials" border stripe @selection-change="handleSelectionChange">
+      <el-table :data="filteredMaterials" border stripe @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="item_no" label="品号" width="120" />
         <el-table-column prop="name" label="原料名称" />
@@ -123,7 +138,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Upload, Download, ArrowLeft, Delete } from '@element-plus/icons-vue'
+import { Plus, Upload, Download, ArrowLeft, Delete, Search } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { formatNumber } from '../../utils/format'
@@ -137,12 +152,14 @@ const goBack = () => {
 }
 
 const materials = ref([])
+const filteredMaterials = ref([])
 const selectedMaterials = ref([])
 const models = ref([])
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增原料')
 const isEdit = ref(false)
 const loading = ref(false)
+const searchKeyword = ref('')
 
 const form = reactive({
   id: null,
@@ -176,10 +193,27 @@ const fetchMaterials = async () => {
     const response = await request.get('/materials')
     if (response.success) {
       materials.value = response.data
+      handleSearch() // 初始化过滤
     }
   } catch (error) {
     ElMessage.error('获取原料列表失败')
   }
+}
+
+// 搜索过滤
+const handleSearch = () => {
+  let result = materials.value
+
+  // 关键词搜索（品号或原料名称）
+  if (searchKeyword.value) {
+    const keyword = searchKeyword.value.toLowerCase()
+    result = result.filter(item => 
+      item.item_no.toLowerCase().includes(keyword) || 
+      item.name.toLowerCase().includes(keyword)
+    )
+  }
+
+  filteredMaterials.value = result
 }
 
 // 新增
@@ -397,6 +431,12 @@ onMounted(() => {
 .card-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+}
+
+.filter-bar {
+  margin-bottom: 16px;
+  display: flex;
   align-items: center;
 }
 </style>

@@ -33,11 +33,13 @@ class CostCalculator {
    * @param {number} params.packagingTotal - 包材总价
    * @param {number} params.freightCost - 运费成本（运费总价 ÷ 数量）
    * @param {boolean} params.includeFreight - 是否将运费计入基础成本价（默认true）
+   * @param {number} params.afterOverheadMaterialTotal - 管销后算的原料总价（默认0）
    * @returns {number} 基础成本价
    */
-  calculateBaseCost({ materialTotal, processTotal, packagingTotal, freightCost, includeFreight = true }) {
+  calculateBaseCost({ materialTotal, processTotal, packagingTotal, freightCost, includeFreight = true, afterOverheadMaterialTotal = 0 }) {
     // 工序总计需要乘以工价系数
     const adjustedProcessTotal = processTotal * this.processCoefficient;
+    // 基础成本价不包含管销后算的原料
     let baseCost = materialTotal + adjustedProcessTotal + packagingTotal;
     if (includeFreight) {
       baseCost += freightCost;
@@ -112,13 +114,14 @@ class CostCalculator {
    * 完整计算报价单
    * 
    * @param {Object} params - 计算参数
-   * @param {number} params.materialTotal - 原料总价
+   * @param {number} params.materialTotal - 原料总价（不含管销后算的原料）
    * @param {number} params.processTotal - 工价总价
    * @param {number} params.packagingTotal - 包材总价
    * @param {number} params.freightTotal - 运费总价
    * @param {number} params.quantity - 购买数量
    * @param {string} params.salesType - 销售类型（'domestic' 或 'export'）
    * @param {boolean} params.includeFreightInBase - 是否将运费计入基础成本价（默认true）
+   * @param {number} params.afterOverheadMaterialTotal - 管销后算的原料总价（默认0）
    * @returns {Object} 完整的报价计算结果
    */
   calculateQuotation(params) {
@@ -129,19 +132,21 @@ class CostCalculator {
       freightTotal,
       quantity,
       salesType,
-      includeFreightInBase = true
+      includeFreightInBase = true,
+      afterOverheadMaterialTotal = 0
     } = params;
 
     // 计算运费成本（每片）
     const freightCost = freightTotal / quantity;
 
-    // 计算基础成本价
+    // 计算基础成本价（不含管销后算的原料）
     const baseCost = this.calculateBaseCost({
       materialTotal,
       processTotal,
       packagingTotal,
       freightCost,
-      includeFreight: includeFreightInBase
+      includeFreight: includeFreightInBase,
+      afterOverheadMaterialTotal
     });
 
     // 计算管销价
@@ -152,7 +157,8 @@ class CostCalculator {
       overheadPrice,
       freightCost,
       salesType,
-      includeFreightInBase
+      includeFreightInBase,
+      afterOverheadMaterialTotal
     };
 
     // 根据销售类型计算最终价格
@@ -161,12 +167,13 @@ class CostCalculator {
       let domesticPrice;
       if (includeFreightInBase) {
         // 运费已计入基础成本价
-        // 公式：管销价 × (1 + 增值税率)
-        domesticPrice = this.calculateDomesticPrice(overheadPrice);
+        // 公式：管销价 × (1 + 增值税率) + 管销后算的原料
+        domesticPrice = this.calculateDomesticPrice(overheadPrice) + afterOverheadMaterialTotal;
+        domesticPrice = this._round(domesticPrice, 4);
       } else {
         // 运费未计入基础成本价，需要在管销价基础上加运费再计算含税价
-        // 公式：(管销价 + 运费) × (1 + 增值税率)
-        domesticPrice = (overheadPrice + freightCost) * (1 + this.vatRate);
+        // 公式：(管销价 + 运费) × (1 + 增值税率) + 管销后算的原料
+        domesticPrice = (overheadPrice + freightCost) * (1 + this.vatRate) + afterOverheadMaterialTotal;
         domesticPrice = this._round(domesticPrice, 4);
       }
       const profitTiers = this.generateProfitTiers(domesticPrice);
@@ -182,13 +189,14 @@ class CostCalculator {
       let exportPrice, insurancePrice;
       if (includeFreightInBase) {
         // 运费已计入基础成本价
-        // 公式：管销价 ÷ 汇率
-        exportPrice = this.calculateExportPrice(overheadPrice);
+        // 公式：管销价 ÷ 汇率 + 管销后算的原料
+        exportPrice = this.calculateExportPrice(overheadPrice) + afterOverheadMaterialTotal;
+        exportPrice = this._round(exportPrice, 4);
         insurancePrice = this.calculateInsurancePrice(exportPrice);
       } else {
         // 运费未计入基础成本价，需要在管销价基础上加运费再计算
-        // 公式：(管销价 + 运费) ÷ 汇率
-        exportPrice = (overheadPrice + freightCost) / this.exchangeRate;
+        // 公式：(管销价 + 运费) ÷ 汇率 + 管销后算的原料
+        exportPrice = (overheadPrice + freightCost) / this.exchangeRate + afterOverheadMaterialTotal;
         exportPrice = this._round(exportPrice, 4);
         insurancePrice = this.calculateInsurancePrice(exportPrice);
       }

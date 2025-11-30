@@ -298,6 +298,20 @@
         </template>
 
         <el-table :data="form.materials" border style="width: 100%">
+          <el-table-column width="60" align="center">
+            <template #header>
+              <el-tooltip content="勾选后，该原料将在管销价计算后再加入成本" placement="top">
+                <span style="cursor: help;">管销后算</span>
+              </el-tooltip>
+            </template>
+            <template #default="{ row }">
+              <el-checkbox 
+                v-model="row.after_overhead" 
+                @change="calculateCost"
+                :disabled="row.from_standard && !editMode.materials"
+              />
+            </template>
+          </el-table-column>
           <el-table-column type="index" label="序号" width="60" />
           <el-table-column label="原料名称" min-width="200">
             <template #default="{ row, $index }">
@@ -364,8 +378,10 @@
         </el-table>
 
         <div class="total-row">
-          <span>原料总计：</span>
-          <span class="total-value">{{ formatNumber(materialTotal) }}</span>
+          <span>原料总计（管销前）：</span>
+          <span class="total-value">{{ formatNumber(materialBeforeOverheadTotal) }}</span>
+          <span style="margin-left: 20px; color: #909399;">管销后算：</span>
+          <span class="total-value" style="color: #E6A23C;">{{ formatNumber(materialAfterOverheadTotal) }}</span>
         </div>
       </el-card>
 
@@ -581,6 +597,11 @@
           <el-descriptions-item label="管销价">
             {{ formatNumber(calculation.overheadPrice) || '' }}
           </el-descriptions-item>
+          <el-descriptions-item label="管销后算原料" v-if="calculation.afterOverheadMaterialTotal > 0">
+            <span style="color: #E6A23C; font-weight: bold;">
+              {{ formatNumber(calculation.afterOverheadMaterialTotal) || '' }}
+            </span>
+          </el-descriptions-item>
           <el-descriptions-item label="汇率（CNY/USD）" v-if="form.sales_type === 'export'">
             {{ formatNumber(calculation.exchangeRate) || '' }}
           </el-descriptions-item>
@@ -751,8 +772,16 @@ const filteredPackagingConfigs = computed(() => {
 })
 
 // 计算总计
-const materialTotal = computed(() => {
-  return form.materials.reduce((sum, item) => sum + item.subtotal, 0)
+const materialBeforeOverheadTotal = computed(() => {
+  return form.materials
+    .filter(item => !item.after_overhead)
+    .reduce((sum, item) => sum + item.subtotal, 0)
+})
+
+const materialAfterOverheadTotal = computed(() => {
+  return form.materials
+    .filter(item => item.after_overhead)
+    .reduce((sum, item) => sum + item.subtotal, 0)
 })
 
 const processTotal = computed(() => {
@@ -1122,7 +1151,8 @@ const addMaterialRow = () => {
     unit_price: null,
     subtotal: 0,
     is_changed: 1,
-    from_standard: false
+    from_standard: false,
+    after_overhead: false
   })
 }
 
@@ -1407,7 +1437,8 @@ const loadQuotationData = async (id, isCopy = false) => {
         unit_price: item.unit_price,
         subtotal: item.subtotal,
         is_changed: item.is_changed || 0,
-        from_standard: true // 标记为标准数据，这样会显示为文本而不是下拉框
+        from_standard: true, // 标记为标准数据，这样会显示为文本而不是下拉框
+        after_overhead: item.after_overhead || false
       }))
       
       form.processes = items.process.items.map(item => ({

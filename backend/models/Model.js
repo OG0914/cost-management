@@ -93,15 +93,33 @@ class Model {
     return stmt.run(regulation_id, model_name, remark, is_active, id);
   }
 
-  // 删除型号（软删除）
+  // 删除型号（硬删除，级联删除相关数据）
   static delete(id) {
     const db = dbManager.getDatabase();
-    const stmt = db.prepare(`
-      UPDATE models
-      SET is_active = 0, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
-    return stmt.run(id);
+    
+    // 使用事务确保数据一致性
+    const deleteTransaction = db.transaction(() => {
+      // 删除相关的原料数据
+      db.prepare('DELETE FROM materials WHERE model_id = ?').run(id);
+      
+      // 删除相关的工序数据
+      db.prepare('DELETE FROM processes WHERE model_id = ?').run(id);
+      
+      // 删除相关的包材数据
+      db.prepare('DELETE FROM packaging WHERE model_id = ?').run(id);
+      
+      // 删除相关的包装配置及其工序配置
+      const packagingConfigs = db.prepare('SELECT id FROM packaging_configs WHERE model_id = ?').all(id);
+      for (const config of packagingConfigs) {
+        db.prepare('DELETE FROM process_configs WHERE packaging_config_id = ?').run(config.id);
+      }
+      db.prepare('DELETE FROM packaging_configs WHERE model_id = ?').run(id);
+      
+      // 最后删除型号本身
+      db.prepare('DELETE FROM models WHERE id = ?').run(id);
+    });
+    
+    return deleteTransaction();
   }
 
   // 检查型号是否被报价单使用
