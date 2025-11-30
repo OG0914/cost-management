@@ -762,7 +762,13 @@ const freightCalculation = ref(null)
 const systemConfig = ref({
   fobShenzhenExchangeRate: 7.1, // 默认值
   fcl20FreightUsd: 840, // 20尺整柜运费（美金）
-  fcl40FreightUsd: 940  // 40尺整柜运费（美金）
+  fcl40FreightUsd: 940,  // 40尺整柜运费（美金）
+  lclBaseFreight1_3: 800,
+  lclBaseFreight4_10: 1000,
+  lclBaseFreight11_15: 1500,
+  lclHandlingCharge: 500,
+  lclCfsPerCbm: 170,
+  lclDocumentFee: 500
 })
 
 // 过滤后的包装配置列表
@@ -963,9 +969,30 @@ const calculateShippingInfo = () => {
     return
   }
   
-  // 计算箱数
-  const cartons = Math.ceil(form.quantity / shippingInfo.pcsPerCarton)
+  // 计算箱数（精确值）
+  const exactCartons = form.quantity / shippingInfo.pcsPerCarton
+  const cartons = Math.ceil(exactCartons)
   shippingInfo.cartons = cartons
+  
+  // 检查是否除不尽，如果除不尽则提示用户更准确的数量
+  if (exactCartons !== cartons) {
+    // 计算建议的准确数量
+    const suggestedQuantity = cartons * shippingInfo.pcsPerCarton
+    
+    // 获取包装配置信息用于提示
+    const selectedConfig = packagingConfigs.value.find(c => c.id === form.packaging_config_id)
+    let packagingInfo = ''
+    if (selectedConfig) {
+      packagingInfo = `${selectedConfig.pc_per_bag}pc/bag, ${selectedConfig.bags_per_box}bags/box, ${selectedConfig.boxes_per_carton}boxes/carton`
+    }
+    
+    ElMessage.warning({
+      message: `当前数量 ${form.quantity} 除不尽！\n包装配置：${packagingInfo}\n建议数量为 ${suggestedQuantity}pcs（${cartons}箱 × ${shippingInfo.pcsPerCarton}pcs/箱），这样后续运费计算会更准确。`,
+      duration: 8000,
+      showClose: true,
+      dangerouslyUseHTMLString: false
+    })
+  }
   
   // 计算CBM（如果有外箱材积）
   if (shippingInfo.cartonVolume && shippingInfo.cartonVolume > 0) {
@@ -1049,24 +1076,24 @@ const calculateFOBFreight = () => {
     const cbm = parseFloat(shippingInfo.cbm)
     const ceiledCBM = Math.ceil(cbm)
     
-    // 基础运费
+    // 基础运费（从系统配置读取）
     let baseFreight = 0
     if (ceiledCBM >= 1 && ceiledCBM <= 3) {
-      baseFreight = 800
+      baseFreight = systemConfig.value.lclBaseFreight1_3
     } else if (ceiledCBM > 3 && ceiledCBM <= 10) {
-      baseFreight = 1000
+      baseFreight = systemConfig.value.lclBaseFreight4_10
     } else if (ceiledCBM > 10 && ceiledCBM <= 15) {
-      baseFreight = 1500
+      baseFreight = systemConfig.value.lclBaseFreight11_15
     } else if (ceiledCBM > 15) {
       // 超过15CBM，可以提示用户或使用其他计算方式
       ElMessage.warning('CBM超过15，建议选择整柜运输或联系物流确认运费')
       return
     }
     
-    // 固定费用
-    const handlingCharge = 500
-    const cfs = 170 * ceiledCBM
-    const documentFee = 500
+    // 固定费用（从系统配置读取）
+    const handlingCharge = systemConfig.value.lclHandlingCharge
+    const cfs = systemConfig.value.lclCfsPerCbm * ceiledCBM
+    const documentFee = systemConfig.value.lclDocumentFee
     
     // 总运费
     const totalFreight = baseFreight + handlingCharge + cfs + documentFee
@@ -1520,6 +1547,12 @@ const loadSystemConfig = async () => {
       systemConfig.value.fobShenzhenExchangeRate = response.data.fob_shenzhen_exchange_rate || 7.1
       systemConfig.value.fcl20FreightUsd = response.data.fcl_20_freight_usd || 840
       systemConfig.value.fcl40FreightUsd = response.data.fcl_40_freight_usd || 940
+      systemConfig.value.lclBaseFreight1_3 = response.data.lcl_base_freight_1_3 || 800
+      systemConfig.value.lclBaseFreight4_10 = response.data.lcl_base_freight_4_10 || 1000
+      systemConfig.value.lclBaseFreight11_15 = response.data.lcl_base_freight_11_15 || 1500
+      systemConfig.value.lclHandlingCharge = response.data.lcl_handling_charge || 500
+      systemConfig.value.lclCfsPerCbm = response.data.lcl_cfs_per_cbm || 170
+      systemConfig.value.lclDocumentFee = response.data.lcl_document_fee || 500
     }
   } catch (error) {
     console.error('加载系统配置失败:', error)

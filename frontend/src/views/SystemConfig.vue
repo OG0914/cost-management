@@ -13,123 +13,130 @@
       </div>
 
       <div class="card-body">
-        <el-form :model="configForm" label-width="150px" :disabled="!authStore.isAdmin">
+        <el-form :model="configForm" label-width="230px" :disabled="!authStore.isAdmin">
           <!-- 管销率 -->
           <el-form-item label="管销率">
-            <el-input-number
-              v-model="configForm.overhead_rate"
-              :min="0"
-              :max="1"
-              :step="0.01"
-              :precision="2"
+            <el-input
+              v-model.number="configForm.overhead_rate"
               style="width: 200px"
             />
-            <span class="config-hint">（默认 0.2，即 20%）</span>
-            
           </el-form-item>
 
           <!-- 增值税率 -->
           <el-form-item label="增值税率">
-            <el-input-number
-              v-model="configForm.vat_rate"
-              :min="0"
-              :max="1"
-              :step="0.01"
-              :precision="2"
+            <el-input
+              v-model.number="configForm.vat_rate"
               style="width: 200px"
             />
-            <span class="config-hint">（默认 0.13，即 13%）</span>
-            
           </el-form-item>
 
           <!-- 保险率 -->
           <el-form-item label="保险率">
-            <el-input-number
-              v-model="configForm.insurance_rate"
-              :min="0"
-              :max="1"
-              :step="0.001"
-              :precision="3"
+            <el-input
+              v-model.number="configForm.insurance_rate"
               style="width: 200px"
             />
-            <span class="config-hint">（默认 0.003，即 0.3%）</span>
-            
           </el-form-item>
 
           <!-- 汇率 -->
-          <el-form-item label="汇率（CNY/USD）">
-            <el-input-number
-              v-model="configForm.exchange_rate"
-              :min="0.01"
-              :step="0.1"
-              :precision="2"
+          <el-form-item label="汇率 （CNY/USD）">
+            <el-input
+              v-model.number="configForm.exchange_rate"
               style="width: 200px"
             />
-            <span class="config-hint">（默认 7.2）</span>
-            
           </el-form-item>
 
           <!-- 工价系数 -->
           <el-form-item label="工价系数">
-            <el-input-number
-              v-model="configForm.process_coefficient"
-              :min="0.01"
-              :step="0.01"
-              :precision="2"
+            <el-input
+              v-model.number="configForm.process_coefficient"
               style="width: 200px"
             />
-            <span class="config-hint">（默认 1.56）</span>
-            
           </el-form-item>
 
           <!-- FOB深圳运费汇率 -->
-          <el-form-item label="FOB深圳运费汇率">
-            <el-input-number
-              v-model="configForm.fob_shenzhen_exchange_rate"
-              :min="0.01"
-              :step="0.1"
-              :precision="2"
+          <el-form-item label="FOB深圳运费汇率（CNY/USD）">
+            <el-input
+              v-model.number="configForm.fob_shenzhen_exchange_rate"
               style="width: 200px"
             />
-            <span class="config-hint">（默认 7.1）</span>
-            
           </el-form-item>
 
           <!-- 20尺整柜运费 -->
           <el-form-item label="20尺整柜运费（美金）">
-            <el-input-number
-              v-model="configForm.fcl_20_freight_usd"
-              :min="0"
-              :step="10"
-              :precision="0"
+            <el-input
+              v-model.number="configForm.fcl_20_freight_usd"
               style="width: 200px"
             />
-            <span class="config-hint">（默认 $840）</span>
-            
           </el-form-item>
 
           <!-- 40尺整柜运费 -->
           <el-form-item label="40尺整柜运费（美金）">
-            <el-input-number
-              v-model="configForm.fcl_40_freight_usd"
-              :min="0"
-              :step="10"
-              :precision="0"
+            <el-input
+              v-model.number="configForm.fcl_40_freight_usd"
               style="width: 200px"
             />
-            <span class="config-hint">（默认 $940）</span>
-            
           </el-form-item>
+
+          <!-- 散货运费配置 -->
+          <el-divider content-position="left">散货LCL运费配置</el-divider>
+
+          <!-- 散货基础运费 1-3 CBM -->
+          <el-form-item label="散货基础运费 1-3 CBM">
+            <el-input
+              v-model.number="configForm.lcl_base_freight_1_3"
+              style="width: 200px"
+            />
+          </el-form-item>
+
+          <!-- 散货基础运费 4-10 CBM -->
+          <el-form-item label="散货基础运费 4-10 CBM">
+            <el-input
+              v-model.number="configForm.lcl_base_freight_4_10"
+              style="width: 200px"
+            />
+          </el-form-item>
+
+          <!-- 散货基础运费 11-15 CBM -->
+          <el-form-item label="散货基础运费 11-15 CBM">
+            <el-input
+              v-model.number="configForm.lcl_base_freight_11_15"
+              style="width: 200px"
+            />
+          </el-form-item>
+
+          <!-- 散货操作费 -->
+          <el-form-item label="散货操作费 Handling charge">
+            <el-input
+              v-model.number="configForm.lcl_handling_charge"
+              style="width: 200px"
+            />
+          </el-form-item>
+
+          <!-- 散货拼箱费 -->
+          <el-form-item label="散货拼箱费（CFS） 每CBM">
+            <el-input
+              v-model.number="configForm.lcl_cfs_per_cbm"
+              style="width: 200px"
+            />
+          </el-form-item>
+
+          <!-- 散货文件费 -->
+          <el-form-item label="散货文件费">
+            <el-input
+              v-model.number="configForm.lcl_document_fee"
+              style="width: 200px"
+            />
+          </el-form-item>
+
+          <el-divider />
 
           <!-- 利润区间 -->
           <el-form-item label="利润区间">
             <div class="profit-tiers-container">
               <div v-for="(tier, index) in configForm.profit_tiers" :key="index" class="profit-tier-item">
-                <el-input-number
-                  v-model="configForm.profit_tiers[index]"
-                  :min="0"
-                  :step="0.01"
-                  :precision="2"
+                <el-input
+                  v-model.number="configForm.profit_tiers[index]"
                   style="width: 150px"
                 />
                 <span class="tier-percentage">{{ (tier * 100).toFixed(0) }}%</span>
@@ -208,6 +215,12 @@ const configForm = reactive({
   fob_shenzhen_exchange_rate: 7.1,
   fcl_20_freight_usd: 840,
   fcl_40_freight_usd: 940,
+  lcl_base_freight_1_3: 800,
+  lcl_base_freight_4_10: 1000,
+  lcl_base_freight_11_15: 1500,
+  lcl_handling_charge: 500,
+  lcl_cfs_per_cbm: 170,
+  lcl_document_fee: 500,
   profit_tiers: [0.05, 0.10, 0.25, 0.50]
 });
 
@@ -337,12 +350,6 @@ onMounted(() => {
 
 .card-body {
   padding: 24px 20px;
-}
-
-.config-hint {
-  margin-left: 12px;
-  color: #6b7280;
-  font-size: 14px;
 }
 
 .config-description {

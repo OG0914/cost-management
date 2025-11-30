@@ -160,6 +160,14 @@ class SystemConfig {
       exchangeRate: parseFloat(this.getValue('exchange_rate')) || 7.2,
       processCoefficient: parseFloat(this.getValue('process_coefficient')) || 1.56,
       fobShenzhenExchangeRate: parseFloat(this.getValue('fob_shenzhen_exchange_rate')) || 7.1,
+      fcl20FreightUsd: parseFloat(this.getValue('fcl_20_freight_usd')) || 840,
+      fcl40FreightUsd: parseFloat(this.getValue('fcl_40_freight_usd')) || 940,
+      lclBaseFreight1_3: parseFloat(this.getValue('lcl_base_freight_1_3')) || 800,
+      lclBaseFreight4_10: parseFloat(this.getValue('lcl_base_freight_4_10')) || 1000,
+      lclBaseFreight11_15: parseFloat(this.getValue('lcl_base_freight_11_15')) || 1500,
+      lclHandlingCharge: parseFloat(this.getValue('lcl_handling_charge')) || 500,
+      lclCfsPerCbm: parseFloat(this.getValue('lcl_cfs_per_cbm')) || 170,
+      lclDocumentFee: parseFloat(this.getValue('lcl_document_fee')) || 500,
       profitTiers: this.getValue('profit_tiers') || [0.05, 0.10, 0.25, 0.50]
     };
   }
