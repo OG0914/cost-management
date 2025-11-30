@@ -4,7 +4,7 @@
       <div class="card-header">
         <div class="header-left">
           <el-button @click="$router.back()" :icon="ArrowLeft">返回</el-button>
-          <span class="header-title">系统配置管理</span>
+          <span class="header-title">参数配置管理</span>
         </div>
         <el-button type="primary" @click="handleSave" :loading="saving" v-if="authStore.isAdmin">
           <el-icon><Check /></el-icon>
@@ -61,6 +61,9 @@
               style="width: 200px"
             />
           </el-form-item>
+
+          <!-- 整柜运费配置 -->
+          <el-divider content-position="left">整柜FCL运费配置</el-divider>
 
           <!-- 20尺整柜运费 -->
           <el-form-item label="20尺整柜运费（美金）">
@@ -129,7 +132,9 @@
             />
           </el-form-item>
 
-          <el-divider />
+
+          <!-- 利润区间配置 -->
+          <el-divider content-position="left">利润区间配置</el-divider>
 
           <!-- 利润区间 -->
           <el-form-item label="利润区间">
