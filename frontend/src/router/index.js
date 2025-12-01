@@ -85,6 +85,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/cost/compare',
+    name: 'CostCompare',
+    component: () => import('../views/cost/CostCompare.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/home',
     name: 'Home',
     component: () => import('../views/Home.vue'),

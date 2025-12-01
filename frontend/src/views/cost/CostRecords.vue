@@ -6,7 +6,17 @@
           <el-button icon="ArrowLeft" @click="goBack">返回</el-button>
           <h2>报价单记录</h2>
         </div>
-        <el-button type="primary" icon="Plus" @click="goToAdd">新增报价单</el-button>
+        <div class="header-right">
+          <el-button 
+            type="success" 
+            icon="DataAnalysis" 
+            @click="goToCompare"
+            :disabled="selectedQuotations.length < 2"
+          >
+            对比模式 ({{ selectedQuotations.length }})
+          </el-button>
+          <el-button type="primary" icon="Plus" @click="goToAdd">新增报价单</el-button>
+        </div>
       </div>
     </el-card>
 
@@ -47,7 +57,8 @@
       </el-form>
 
       <!-- 数据表格 -->
-      <el-table :data="quotations" border v-loading="loading">
+      <el-table :data="quotations" border v-loading="loading" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" :selectable="checkSelectable" />
         <el-table-column prop="quotation_no" label="报价单编号" width="180" />
         <el-table-column prop="sales_type" label="类型" width="80">
           <template #default="{ row }">
@@ -124,7 +135,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, Plus } from '@element-plus/icons-vue'
+import { ArrowLeft, Plus, DataAnalysis } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { formatNumber } from '@/utils/format'
 import { getUser } from '@/utils/auth'
@@ -140,6 +151,7 @@ const searchForm = reactive({
 
 const quotations = ref([])
 const loading = ref(false)
+const selectedQuotations = ref([])
 
 const pagination = reactive({
   page: 1,
@@ -299,6 +311,38 @@ const deleteQuotation = async (id) => {
   }
 }
 
+// 处理选择变化
+const handleSelectionChange = (selection) => {
+  selectedQuotations.value = selection
+}
+
+// 检查是否可选择（只允许选择已审核或已提交的报价单）
+const checkSelectable = (row) => {
+  return row.status === 'approved' || row.status === 'submitted'
+}
+
+// 进入对比模式
+const goToCompare = () => {
+  if (selectedQuotations.value.length < 2) {
+    ElMessage.warning('请至少选择2个报价单进行对比')
+    return
+  }
+  
+  if (selectedQuotations.value.length > 4) {
+    ElMessage.warning('最多只能同时对比4个报价单')
+    return
+  }
+  
+  // 提取选中的报价单ID
+  const ids = selectedQuotations.value.map(q => q.id).join(',')
+  
+  // 跳转到对比页面
+  router.push({
+    path: '/cost/compare',
+    query: { ids }
+  })
+}
+
 onMounted(() => {
   loadQuotations()
 })
@@ -323,6 +367,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 15px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .header-left h2 {
