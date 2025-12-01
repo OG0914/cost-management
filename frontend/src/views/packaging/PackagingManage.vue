@@ -96,7 +96,7 @@
       :title="isEdit ? '编辑包装配置' : '新增包装配置'"
       width="800px"
     >
-      <el-form :model="form" ref="formRef" label-width="120px">
+      <el-form :model="form" ref="formRef" label-width="140px">
         <el-form-item label="型号" required>
           <el-select 
             v-model="form.model_id" 
@@ -120,16 +120,16 @@
 
         <el-divider content-position="left">包装方式</el-divider>
 
-        <el-form-item label="每袋数量（只）" required>
-          <el-input-number v-model="form.pc_per_bag" :min="1" :controls="false" style="width: 100%" />
+        <el-form-item label="每袋数量（pcs）" required>
+          <el-input-number v-model="form.pc_per_bag" :min="1" :controls="false" style="width: 200px" />
         </el-form-item>
 
-        <el-form-item label="每盒袋数（袋）" required>
-          <el-input-number v-model="form.bags_per_box" :min="1" :controls="false" style="width: 100%" />
+        <el-form-item label="每盒袋数（bags）" required>
+          <el-input-number v-model="form.bags_per_box" :min="1" :controls="false" style="width: 200px" />
         </el-form-item>
 
-        <el-form-item label="每箱盒数（盒）" required>
-          <el-input-number v-model="form.boxes_per_carton" :min="1" :controls="false" style="width: 100%" />
+        <el-form-item label="每箱盒数（boxes）" required>
+          <el-input-number v-model="form.boxes_per_carton" :min="1" :controls="false" style="width: 200px" />
         </el-form-item>
 
         <el-form-item label="状态" v-if="isEdit">
@@ -152,9 +152,24 @@
 
         <el-table :data="form.materials" border style="margin-bottom: 20px" show-summary :summary-method="getSummaries">
           <el-table-column label="序号" width="60" type="index" />
-          <el-table-column label="包材名称" min-width="150">
+          <el-table-column label="包材名称" min-width="200">
             <template #default="{ row }">
-              <el-input v-model="row.material_name" placeholder="请输入包材名称" size="small" />
+              <el-autocomplete
+                v-model="row.material_name"
+                :fetch-suggestions="queryMaterials"
+                placeholder="输入关键字搜索原料"
+                size="small"
+                style="width: 100%"
+                @select="(item) => handleSelectMaterial(row, item)"
+                clearable
+              >
+                <template #default="{ item }">
+                  <div class="material-option">
+                    <span class="material-name">{{ item.name }}</span>
+                    <span class="material-price">¥{{ formatNumber(item.price) }}/{{ item.unit }}</span>
+                  </div>
+                </template>
+              </el-autocomplete>
             </template>
           </el-table-column>
           <el-table-column label="基本用量" width="120">
@@ -286,6 +301,7 @@ const packagingConfigs = ref([]);
 const selectedConfigs = ref([]);
 const selectedModelId = ref(null);
 const loading = ref(false);
+const allMaterials = ref([]); // 所有原料列表
 
 // 对话框
 const dialogVisible = ref(false);
@@ -372,6 +388,42 @@ const loadModels = async () => {
   } catch (error) {
     // 错误已在拦截器处理
   }
+};
+
+// 加载所有原料
+const loadMaterials = async () => {
+  try {
+    const response = await request.get('/materials');
+    if (response.success) {
+      allMaterials.value = response.data;
+    }
+  } catch (error) {
+    console.error('加载原料失败:', error);
+  }
+};
+
+// 搜索原料（用于自动完成）
+const queryMaterials = (queryString, cb) => {
+  if (!queryString) {
+    cb(allMaterials.value.slice(0, 20)); // 默认显示前20条
+    return;
+  }
+  
+  const results = allMaterials.value.filter(material => {
+    const query = queryString.toLowerCase();
+    return (
+      material.name.toLowerCase().includes(query) ||
+      material.item_no.toLowerCase().includes(query)
+    );
+  });
+  
+  cb(results.slice(0, 20)); // 最多显示20条结果
+};
+
+// 选择原料后自动填充单价
+const handleSelectMaterial = (row, material) => {
+  row.material_name = material.name;
+  row.unit_price = material.price;
 };
 
 // 加载包装配置
@@ -664,6 +716,7 @@ const handleExport = async () => {
 
 onMounted(() => {
   loadModels();
+  loadMaterials();
   loadPackagingConfigs();
 });
 </script>
@@ -742,5 +795,23 @@ onMounted(() => {
 
 .text-right {
   text-align: right;
+}
+
+.material-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.material-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.material-price {
+  color: #909399;
+  font-size: 12px;
+  margin-left: 12px;
 }
 </style>
