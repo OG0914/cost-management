@@ -41,11 +41,10 @@ CREATE TABLE IF NOT EXISTS materials (
   unit TEXT NOT NULL,
   price REAL NOT NULL,
   currency TEXT NOT NULL DEFAULT 'CNY',
-  model_id INTEGER,
+  manufacturer TEXT,
   usage_amount REAL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (model_id) REFERENCES models(id)
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 工序表
@@ -216,7 +215,7 @@ INSERT OR IGNORE INTO users (username, password, role, real_name, email) VALUES
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_models_regulation_id ON models(regulation_id);
 CREATE INDEX IF NOT EXISTS idx_materials_item_no ON materials(item_no);
-CREATE INDEX IF NOT EXISTS idx_materials_model_id ON materials(model_id);
+CREATE INDEX IF NOT EXISTS idx_materials_manufacturer ON materials(manufacturer);
 CREATE INDEX IF NOT EXISTS idx_processes_model_id ON processes(model_id);
 CREATE INDEX IF NOT EXISTS idx_packaging_model_id ON packaging(model_id);
 CREATE INDEX IF NOT EXISTS idx_packaging_configs_model_id ON packaging_configs(model_id);

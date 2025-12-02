@@ -63,9 +63,9 @@
       <!-- 数据表格 -->
       <el-table :data="filteredModels" border stripe @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="regulation_name" label="法规类别" width="150" />
-        <el-table-column prop="model_name" label="型号名称" />
-        <el-table-column prop="model_category" label="型号分类" />
+        <el-table-column prop="regulation_name" label="法规类别" width="150" sortable />
+        <el-table-column prop="model_name" label="型号名称" sortable />
+        <el-table-column prop="model_category" label="型号分类" sortable />
         <el-table-column prop="is_active" label="状态" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="row.is_active ? 'success' : 'danger'" class="status-tag">
@@ -73,7 +73,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180" />
+        <el-table-column prop="created_at" label="创建时间" width="180" sortable />
         <el-table-column label="操作" width="200" v-if="authStore.isAdmin">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleEdit(row)">编辑</el-button>

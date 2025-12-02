@@ -19,11 +19,11 @@ const getAllMaterials = (req, res, next) => {
   }
 };
 
-// 根据型号获取原料
-const getMaterialsByModel = (req, res, next) => {
+// 根据厂商获取原料
+const getMaterialsByManufacturer = (req, res, next) => {
   try {
-    const { modelId } = req.params;
-    const materials = Material.findByModelId(modelId);
+    const { manufacturer } = req.params;
+    const materials = Material.findByManufacturer(manufacturer);
     res.json(success(materials));
   } catch (err) {
     next(err);
@@ -49,19 +49,13 @@ const getMaterialById = (req, res, next) => {
 // 创建原料
 const createMaterial = (req, res, next) => {
   try {
-    const { item_no, name, unit, price, currency, model_id, usage_amount } = req.body;
+    const { item_no, name, unit, price, currency, manufacturer, usage_amount } = req.body;
     
     if (!item_no || !name || !unit || !price) {
       return res.status(400).json(error('品号、原料名称、单位和单价不能为空', 400));
     }
     
-    // 检查品号是否已存在
-    const existing = Material.findByItemNo(item_no);
-    if (existing) {
-      return res.status(400).json(error('品号已存在', 400));
-    }
-    
-    const id = Material.create({ item_no, name, unit, price, currency, model_id, usage_amount });
+    const id = Material.create({ item_no, name, unit, price, currency, manufacturer, usage_amount });
     res.status(201).json(success({ id }, '创建成功'));
   } catch (err) {
     next(err);
@@ -72,7 +66,7 @@ const createMaterial = (req, res, next) => {
 const updateMaterial = (req, res, next) => {
   try {
     const { id } = req.params;
-    const { item_no, name, unit, price, currency, model_id, usage_amount } = req.body;
+    const { item_no, name, unit, price, currency, manufacturer, usage_amount } = req.body;
     
     const material = Material.findById(id);
     if (!material) {
@@ -83,13 +77,7 @@ const updateMaterial = (req, res, next) => {
       return res.status(400).json(error('品号、原料名称、单位和单价不能为空', 400));
     }
     
-    // 检查品号是否被其他记录使用
-    const existing = Material.findByItemNo(item_no);
-    if (existing && existing.id !== parseInt(id)) {
-      return res.status(400).json(error('品号已被其他原料使用', 400));
-    }
-    
-    Material.update(id, { item_no, name, unit, price, currency, model_id, usage_amount });
+    Material.update(id, { item_no, name, unit, price, currency, manufacturer, usage_amount });
     res.json(success(null, '更新成功'));
   } catch (err) {
     next(err);
@@ -238,7 +226,7 @@ const downloadTemplate = async (req, res, next) => {
 
 module.exports = {
   getAllMaterials,
-  getMaterialsByModel,
+  getMaterialsByManufacturer,
   getMaterialById,
   createMaterial,
   updateMaterial,

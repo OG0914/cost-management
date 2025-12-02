@@ -297,17 +297,31 @@ class Quotation {
     const day = String(now.getDate()).padStart(2, '0');
     const dateStr = `${year}${month}${day}`;
     
-    // 查询今天已有的报价单数量
+    // 查询今天最大的流水号
     const stmt = db.prepare(`
-      SELECT COUNT(*) as count 
+      SELECT quotation_no 
       FROM quotations 
       WHERE quotation_no LIKE ?
+      ORDER BY quotation_no DESC
+      LIMIT 1
     `);
     const result = stmt.get(`MK${dateStr}-%`);
-    const count = result.count + 1;
-    const serial = String(count).padStart(3, '0');
     
-    return `MK${dateStr}-${serial}`;
+    let serial = 1;
+    if (result && result.quotation_no) {
+      // 从最后一个编号中提取流水号并加1
+      const lastSerial = parseInt(result.quotation_no.split('-')[1]);
+      serial = lastSerial + 1;
+    }
+    
+    // 循环检查编号是否存在，直到找到未使用的编号
+    let quotationNo = `MK${dateStr}-${String(serial).padStart(3, '0')}`;
+    while (this.exists(quotationNo)) {
+      serial++;
+      quotationNo = `MK${dateStr}-${String(serial).padStart(3, '0')}`;
+    }
+    
+    return quotationNo;
   }
 
   /**

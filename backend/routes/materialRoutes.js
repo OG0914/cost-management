@@ -38,8 +38,8 @@ router.use(verifyToken);
 // 获取所有原料
 router.get('/', materialController.getAllMaterials);
 
-// 根据型号获取原料
-router.get('/model/:modelId', materialController.getMaterialsByModel);
+// 根据厂商获取原料
+router.get('/manufacturer/:manufacturer', materialController.getMaterialsByManufacturer);
 
 // 获取单个原料
 router.get('/:id', materialController.getMaterialById);

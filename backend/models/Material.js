@@ -9,25 +9,21 @@ class Material {
   static findAll() {
     const db = dbManager.getDatabase();
     const stmt = db.prepare(`
-      SELECT m.*, mo.model_name
-      FROM materials m
-      LEFT JOIN models mo ON m.model_id = mo.id
-      ORDER BY m.created_at DESC
+      SELECT * FROM materials
+      ORDER BY created_at DESC
     `);
     return stmt.all();
   }
 
-  // 根据型号 ID 获取原料
-  static findByModelId(modelId) {
+  // 根据厂商获取原料
+  static findByManufacturer(manufacturer) {
     const db = dbManager.getDatabase();
     const stmt = db.prepare(`
-      SELECT m.*, mo.model_name
-      FROM materials m
-      LEFT JOIN models mo ON m.model_id = mo.id
-      WHERE m.model_id = ?
-      ORDER BY m.created_at DESC
+      SELECT * FROM materials
+      WHERE manufacturer = ?
+      ORDER BY created_at DESC
     `);
-    return stmt.all(modelId);
+    return stmt.all(manufacturer);
   }
 
   // 根据 ID 查找原料
@@ -40,7 +36,7 @@ class Material {
   // 创建原料
   static create(data) {
     const db = dbManager.getDatabase();
-    const { item_no, name, unit, price, currency, model_id, usage_amount } = data;
+    const { item_no, name, unit, price, currency, manufacturer, usage_amount } = data;
     
     console.log('Material.create 接收到的数据:', {
       item_no,
@@ -48,12 +44,12 @@ class Material {
       unit,
       price,
       currency,
-      model_id,
+      manufacturer,
       usage_amount
     });
     
     const stmt = db.prepare(`
-      INSERT INTO materials (item_no, name, unit, price, currency, model_id, usage_amount)
+      INSERT INTO materials (item_no, name, unit, price, currency, manufacturer, usage_amount)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     
@@ -63,7 +59,7 @@ class Material {
       unit,
       price,
       currency || 'CNY',
-      model_id || null,
+      manufacturer || null,
       usage_amount || null
     );
     return result.lastInsertRowid;
@@ -73,7 +69,7 @@ class Material {
   static batchCreate(materials) {
     const db = dbManager.getDatabase();
     const stmt = db.prepare(`
-      INSERT INTO materials (item_no, name, unit, price, currency, model_id, usage_amount)
+      INSERT INTO materials (item_no, name, unit, price, currency, manufacturer, usage_amount)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     
@@ -85,7 +81,7 @@ class Material {
           item.unit,
           item.price,
           item.currency || 'CNY',
-          item.model_id || null,
+          item.manufacturer || null,
           item.usage_amount || null
         );
       }
@@ -97,7 +93,7 @@ class Material {
   // 更新原料
   static update(id, data) {
     const db = dbManager.getDatabase();
-    const { item_no, name, unit, price, currency, model_id, usage_amount } = data;
+    const { item_no, name, unit, price, currency, manufacturer, usage_amount } = data;
     
     // 记录价格历史
     const oldMaterial = this.findById(id);
@@ -107,11 +103,11 @@ class Material {
     
     const stmt = db.prepare(`
       UPDATE materials
-      SET item_no = ?, name = ?, unit = ?, price = ?, currency = ?, model_id = ?, usage_amount = ?, updated_at = CURRENT_TIMESTAMP
+      SET item_no = ?, name = ?, unit = ?, price = ?, currency = ?, manufacturer = ?, usage_amount = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `);
     
-    return stmt.run(item_no, name, unit, price, currency, model_id, usage_amount, id);
+    return stmt.run(item_no, name, unit, price, currency, manufacturer, usage_amount, id);
   }
 
   // 删除原料

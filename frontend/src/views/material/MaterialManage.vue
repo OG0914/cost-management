@@ -72,7 +72,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="currency" label="币别" width="100" />
-        <el-table-column prop="model_name" label="绑定型号" width="150" />
+        <el-table-column prop="manufacturer" label="厂商" width="150" />
         <el-table-column prop="updated_at" label="更新时间" width="180" />
         <el-table-column label="操作" width="200" v-if="canEdit">
           <template #default="{ row }">
@@ -109,21 +109,8 @@
             <el-option label="欧元（EUR）" value="EUR" />
           </el-select>
         </el-form-item>
-        <el-form-item label="绑定型号">
-          <el-select 
-            v-model="form.model_id" 
-            clearable 
-            filterable
-            placeholder="可选，输入关键字搜索" 
-            style="width: 100%"
-          >
-            <el-option
-              v-for="model in models"
-              :key="model.id"
-              :label="model.model_name"
-              :value="model.id"
-            />
-          </el-select>
+        <el-form-item label="厂商">
+          <el-input v-model="form.manufacturer" placeholder="请输入厂商名称（可选）" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -154,7 +141,6 @@ const goBack = () => {
 const materials = ref([])
 const filteredMaterials = ref([])
 const selectedMaterials = ref([])
-const models = ref([])
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增原料')
 const isEdit = ref(false)
@@ -168,24 +154,12 @@ const form = reactive({
   unit: '',
   price: null,
   currency: 'CNY',
-  model_id: null,
+  manufacturer: '',
   usage_amount: null
 })
 
 // 是否可编辑（管理员或采购）
 const canEdit = computed(() => authStore.isAdmin || authStore.isPurchaser)
-
-// 获取型号列表
-const fetchModels = async () => {
-  try {
-    const response = await request.get('/models/active')
-    if (response.success) {
-      models.value = response.data
-    }
-  } catch (error) {
-    // 错误已在拦截器处理
-  }
-}
 
 // 获取原料列表
 const fetchMaterials = async () => {
@@ -226,7 +200,7 @@ const handleAdd = () => {
   form.unit = ''
   form.price = null
   form.currency = 'CNY'
-  form.model_id = null
+  form.manufacturer = ''
   form.usage_amount = null
   dialogVisible.value = true
 }
@@ -241,7 +215,7 @@ const handleEdit = (row) => {
   form.unit = row.unit
   form.price = row.price
   form.currency = row.currency
-  form.model_id = row.model_id
+  form.manufacturer = row.manufacturer || ''
   form.usage_amount = row.usage_amount
   dialogVisible.value = true
 }
@@ -410,7 +384,6 @@ const handleDownloadTemplate = async () => {
 }
 
 onMounted(() => {
-  fetchModels()
   fetchMaterials()
 })
 </script>

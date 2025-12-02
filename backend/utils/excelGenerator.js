@@ -18,6 +18,7 @@ class ExcelGenerator {
       { header: '单位', key: 'unit', width: 10 },
       { header: '单价', key: 'price', width: 12 },
       { header: '币别', key: 'currency', width: 10 },
+      { header: '厂商', key: 'manufacturer', width: 20 },
       { header: '更新时间', key: 'updated_at', width: 20 }
     ];
     
@@ -28,6 +29,7 @@ class ExcelGenerator {
         unit: m.unit,
         price: m.price,
         currency: m.currency,
+        manufacturer: m.manufacturer || '',
         updated_at: m.updated_at
       });
     });
@@ -137,7 +139,8 @@ class ExcelGenerator {
       { header: '原料名称', key: 'name', width: 20 },
       { header: '单位', key: 'unit', width: 10 },
       { header: '单价', key: 'price', width: 12 },
-      { header: '币别', key: 'currency', width: 10 }
+      { header: '币别', key: 'currency', width: 10 },
+      { header: '厂商', key: 'manufacturer', width: 20 }
     ];
     
     worksheet.addRow({
@@ -145,7 +148,8 @@ class ExcelGenerator {
       name: '示例原料',
       unit: 'kg',
       price: 10.5,
-      currency: 'CNY'
+      currency: 'CNY',
+      manufacturer: '示例厂商'
     });
     
     return workbook;

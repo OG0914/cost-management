@@ -313,7 +313,7 @@
             </template>
           </el-table-column>
           <el-table-column type="index" label="序号" width="60" />
-          <el-table-column label="原料名称" min-width="200">
+          <el-table-column label="原料名称" min-width="250">
             <template #default="{ row, $index }">
               <el-select
                 v-if="!row.from_standard || editMode.materials"
@@ -327,13 +327,20 @@
                 <el-option
                   v-for="material in allMaterials"
                   :key="material.id"
-                  :label="`${material.name} (${material.item_no})`"
+                  :label="`${material.name} (${material.item_no})${material.manufacturer ? ' - ' + material.manufacturer : ''}`"
                   :value="material.id"
                 >
-                  <span>{{ material.name }}</span>
-                  <span style="float: right; color: #8492a6; font-size: 13px">
-                    ¥{{ material.price }}/{{ material.unit }}
-                  </span>
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                      <span>{{ material.name }}</span>
+                      <span v-if="material.manufacturer" style="color: #909399; font-size: 12px; margin-left: 8px;">
+                        [{{ material.manufacturer }}]
+                      </span>
+                    </div>
+                    <span style="color: #8492a6; font-size: 13px; margin-left: 12px;">
+                      ¥{{ material.price }}/{{ material.unit }}
+                    </span>
+                  </div>
                 </el-option>
               </el-select>
               <span v-else>{{ row.item_name }}</span>

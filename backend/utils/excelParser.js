@@ -7,7 +7,7 @@ const ExcelJS = require('exceljs');
 class ExcelParser {
   /**
    * 解析原料 Excel
-   * 期望列：品号、原料名称、单位、单价、币别
+   * 期望列：品号、原料名称、单位、单价、币别、厂商
    */
   static async parseMaterialExcel(filePath) {
     try {
@@ -79,7 +79,7 @@ class ExcelParser {
           unit: String(getValue(row['单位']) || getValue(row['unit']) || ''),
           price: parseFloat(getValue(row['单价']) || getValue(row['price']) || 0),
           currency: String(getValue(row['币别']) || getValue(row['currency']) || 'CNY'),
-          model_id: null,
+          manufacturer: String(getValue(row['厂商']) || getValue(row['manufacturer']) || '').trim() || null,
           usage_amount: null
         };
         
