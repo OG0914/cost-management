@@ -42,7 +42,7 @@ const login = async (req, res, next) => {
         role: user.role
       },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
     );
 
     // 返回用户信息和 token（不包含密码）

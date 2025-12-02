@@ -4,33 +4,33 @@
 
 // 获取 Token
 export function getToken() {
-  return localStorage.getItem('token')
+  return sessionStorage.getItem('token')
 }
 
 // 设置 Token
 export function setToken(token) {
-  localStorage.setItem('token', token)
+  sessionStorage.setItem('token', token)
 }
 
 // 移除 Token
 export function removeToken() {
-  localStorage.removeItem('token')
+  sessionStorage.removeItem('token')
 }
 
 // 获取用户信息
 export function getUser() {
-  const userStr = localStorage.getItem('user')
+  const userStr = sessionStorage.getItem('user')
   return userStr ? JSON.parse(userStr) : null
 }
 
 // 设置用户信息
 export function setUser(user) {
-  localStorage.setItem('user', JSON.stringify(user))
+  sessionStorage.setItem('user', JSON.stringify(user))
 }
 
 // 移除用户信息
 export function removeUser() {
-  localStorage.removeItem('user')
+  sessionStorage.removeItem('user')
 }
 
 // 清除所有认证信息
