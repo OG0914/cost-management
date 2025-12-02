@@ -45,6 +45,46 @@ const migrations = [
     table: 'quotation_items',
     check: (columns) => !columns.includes('material_id'),
     sql: 'ALTER TABLE quotation_items ADD COLUMN material_id INTEGER REFERENCES materials(id)'
+  },
+  {
+    name: '将 models.remark 重命名为 model_category',
+    table: 'models',
+    check: (columns) => columns.includes('remark') && !columns.includes('model_category'),
+    sql: `
+      PRAGMA foreign_keys=OFF;
+      
+      BEGIN TRANSACTION;
+      
+      -- 创建新表
+      CREATE TABLE models_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        regulation_id INTEGER NOT NULL,
+        model_name TEXT NOT NULL,
+        model_category TEXT,
+        is_active BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (regulation_id) REFERENCES regulations(id)
+      );
+      
+      -- 复制数据
+      INSERT INTO models_new (id, regulation_id, model_name, model_category, is_active, created_at, updated_at)
+      SELECT id, regulation_id, model_name, remark, is_active, created_at, updated_at
+      FROM models;
+      
+      -- 删除旧表
+      DROP TABLE models;
+      
+      -- 重命名新表
+      ALTER TABLE models_new RENAME TO models;
+      
+      -- 重建索引
+      CREATE INDEX idx_models_regulation_id ON models(regulation_id);
+      
+      COMMIT;
+      
+      PRAGMA foreign_keys=ON;
+    `
   }
 ];
 

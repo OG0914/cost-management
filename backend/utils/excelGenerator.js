@@ -47,7 +47,7 @@ class ExcelGenerator {
     worksheet.columns = [
       { header: '法规类别', key: 'regulation_name', width: 20 },
       { header: '型号名称', key: 'model_name', width: 25 },
-      { header: '备注', key: 'remark', width: 30 },
+      { header: '型号分类', key: 'model_category', width: 30 },
       { header: '状态', key: 'is_active', width: 10 },
       { header: '创建时间', key: 'created_at', width: 20 }
     ];
@@ -56,7 +56,7 @@ class ExcelGenerator {
       worksheet.addRow({
         regulation_name: m.regulation_name,
         model_name: m.model_name,
-        remark: m.remark || '',
+        model_category: m.model_category || '',
         is_active: m.is_active ? '激活' : '禁用',
         created_at: m.created_at
       });
@@ -165,13 +165,13 @@ class ExcelGenerator {
     worksheet.columns = [
       { header: '法规类别', key: 'regulation_name', width: 20 },
       { header: '型号名称', key: 'model_name', width: 25 },
-      { header: '备注', key: 'remark', width: 30 }
+      { header: '型号分类', key: 'model_category', width: 30 }
     ];
     
     worksheet.addRow({
       regulation_name: 'CE',
       model_name: 'MODEL-001',
-      remark: '示例型号'
+      model_category: '口罩'
     });
     
     return workbook;

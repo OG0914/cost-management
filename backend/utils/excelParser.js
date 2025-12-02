@@ -112,7 +112,7 @@ class ExcelParser {
 
   /**
    * 解析型号 Excel
-   * 期望列：法规类别、型号名称、备注
+   * 期望列：法规类别、型号名称、型号分类
    */
   static async parseModelExcel(filePath) {
     try {
@@ -171,7 +171,7 @@ class ExcelParser {
         const model = {
           regulation_name: String(getValue(row['法规类别']) || getValue(row['regulation_name']) || '').trim(),
           model_name: String(getValue(row['型号名称']) || getValue(row['model_name']) || '').trim(),
-          remark: String(getValue(row['备注']) || getValue(row['remark']) || '')
+          model_category: String(getValue(row['型号分类']) || getValue(row['model_category']) || '').trim() || null
         };
         
         models.push(model);

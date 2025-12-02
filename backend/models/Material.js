@@ -91,14 +91,14 @@ class Material {
   }
 
   // 更新原料
-  static update(id, data) {
+  static update(id, data, userId = null) {
     const db = dbManager.getDatabase();
     const { item_no, name, unit, price, currency, manufacturer, usage_amount } = data;
     
     // 记录价格历史
     const oldMaterial = this.findById(id);
-    if (oldMaterial && oldMaterial.price !== price) {
-      this.recordPriceHistory(id, oldMaterial.price, price);
+    if (oldMaterial && oldMaterial.price !== price && userId) {
+      this.recordPriceHistory(id, oldMaterial.price, price, userId);
     }
     
     const stmt = db.prepare(`
@@ -132,13 +132,13 @@ class Material {
   }
 
   // 记录价格历史
-  static recordPriceHistory(materialId, oldPrice, newPrice) {
+  static recordPriceHistory(materialId, oldPrice, newPrice, userId) {
     const db = dbManager.getDatabase();
     const stmt = db.prepare(`
       INSERT INTO price_history (item_type, item_id, old_price, new_price, changed_by)
-      VALUES ('material', ?, ?, ?, 1)
+      VALUES ('material', ?, ?, ?, ?)
     `);
-    stmt.run(materialId, oldPrice, newPrice);
+    stmt.run(materialId, oldPrice, newPrice, userId);
   }
 
   // 获取价格历史

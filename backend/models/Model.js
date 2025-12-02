@@ -80,29 +80,29 @@ class Model {
   // 创建型号
   static create(data) {
     const db = dbManager.getDatabase();
-    const { regulation_id, model_name, remark } = data;
+    const { regulation_id, model_name, model_category } = data;
     
     const stmt = db.prepare(`
-      INSERT INTO models (regulation_id, model_name, remark)
+      INSERT INTO models (regulation_id, model_name, model_category)
       VALUES (?, ?, ?)
     `);
     
-    const result = stmt.run(regulation_id, model_name, remark || null);
+    const result = stmt.run(regulation_id, model_name, model_category || null);
     return result.lastInsertRowid;
   }
 
   // 更新型号
   static update(id, data) {
     const db = dbManager.getDatabase();
-    const { regulation_id, model_name, remark, is_active } = data;
+    const { regulation_id, model_name, model_category, is_active } = data;
     
     const stmt = db.prepare(`
       UPDATE models
-      SET regulation_id = ?, model_name = ?, remark = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
+      SET regulation_id = ?, model_name = ?, model_category = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `);
     
-    return stmt.run(regulation_id, model_name, remark, is_active, id);
+    return stmt.run(regulation_id, model_name, model_category, is_active, id);
   }
 
   // 删除型号（硬删除，级联删除相关数据）

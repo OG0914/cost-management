@@ -77,7 +77,7 @@ const updateMaterial = (req, res, next) => {
       return res.status(400).json(error('品号、原料名称、单位和单价不能为空', 400));
     }
     
-    Material.update(id, { item_no, name, unit, price, currency, manufacturer, usage_amount });
+    Material.update(id, { item_no, name, unit, price, currency, manufacturer, usage_amount }, req.user?.id);
     res.json(success(null, '更新成功'));
   } catch (err) {
     next(err);
