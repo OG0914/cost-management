@@ -36,6 +36,34 @@ class ExcelGenerator {
   }
 
   /**
+   * 生成型号 Excel
+   */
+  static async generateModelExcel(models) {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('型号清单');
+    
+    worksheet.columns = [
+      { header: '法规类别', key: 'regulation_name', width: 20 },
+      { header: '型号名称', key: 'model_name', width: 25 },
+      { header: '备注', key: 'remark', width: 30 },
+      { header: '状态', key: 'is_active', width: 10 },
+      { header: '创建时间', key: 'created_at', width: 20 }
+    ];
+    
+    models.forEach(m => {
+      worksheet.addRow({
+        regulation_name: m.regulation_name,
+        model_name: m.model_name,
+        remark: m.remark || '',
+        is_active: m.is_active ? '激活' : '禁用',
+        created_at: m.created_at
+      });
+    });
+    
+    return workbook;
+  }
+
+  /**
    * 生成工序 Excel
    * 列顺序：型号、配置、包装方式、工序、单价
    */
@@ -118,6 +146,28 @@ class ExcelGenerator {
       unit: 'kg',
       price: 10.5,
       currency: 'CNY'
+    });
+    
+    return workbook;
+  }
+
+  /**
+   * 生成型号导入模板
+   */
+  static async generateModelTemplate() {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('型号导入模板');
+    
+    worksheet.columns = [
+      { header: '法规类别', key: 'regulation_name', width: 20 },
+      { header: '型号名称', key: 'model_name', width: 25 },
+      { header: '备注', key: 'remark', width: 30 }
+    ];
+    
+    worksheet.addRow({
+      regulation_name: 'CE',
+      model_name: 'MODEL-001',
+      remark: '示例型号'
     });
     
     return workbook;

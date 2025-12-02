@@ -12,15 +12,57 @@
       <template #header>
         <div class="card-header">
           <span>型号管理</span>
-          <el-button type="primary" @click="handleAdd" v-if="authStore.isAdmin">
-            <el-icon><Plus /></el-icon>
-            新增型号
-          </el-button>
+          <el-space v-if="authStore.isAdmin">
+            <el-button type="success" @click="handleDownloadTemplate">
+              <el-icon><Download /></el-icon>
+              下载模板
+            </el-button>
+            <el-upload
+              action="#"
+              :auto-upload="false"
+              :on-change="handleFileChange"
+              :show-file-list="false"
+              accept=".xlsx,.xls"
+            >
+              <el-button type="warning">
+                <el-icon><Upload /></el-icon>
+                导入Excel
+              </el-button>
+            </el-upload>
+            <el-button type="info" @click="handleExport">
+              <el-icon><Download /></el-icon>
+              导出Excel
+            </el-button>
+            <el-button type="danger" @click="handleBatchDelete" :disabled="selectedModels.length === 0">
+              <el-icon><Delete /></el-icon>
+              批量删除
+            </el-button>
+            <el-button type="primary" @click="handleAdd">
+              <el-icon><Plus /></el-icon>
+              新增型号
+            </el-button>
+          </el-space>
         </div>
       </template>
 
+      <!-- 搜索栏 -->
+      <div class="filter-bar">
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索型号名称、法规类别"
+          clearable
+          @input="handleSearch"
+          style="width: 300px"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+      </div>
+
       <!-- 数据表格 -->
-      <el-table :data="models" border stripe>
+      <el-table :data="filteredModels" border stripe @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" />
         <el-table-column prop="regulation_name" label="法规类别" width="150" />
         <el-table-column prop="model_name" label="型号名称" />
         <el-table-column prop="remark" label="备注" />
@@ -96,7 +138,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, ArrowLeft } from '@element-plus/icons-vue'
+import { Plus, ArrowLeft, Search, Upload, Download, Delete } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 
@@ -109,11 +151,14 @@ const goBack = () => {
 }
 
 const models = ref([])
+const filteredModels = ref([])
+const selectedModels = ref([])
 const regulations = ref([])
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增型号')
 const isEdit = ref(false)
 const loading = ref(false)
+const searchKeyword = ref('')
 
 const form = reactive({
   id: null,
@@ -141,10 +186,27 @@ const fetchModels = async () => {
     const response = await request.get('/models')
     if (response.success) {
       models.value = response.data
+      handleSearch() // 初始化过滤
     }
   } catch (error) {
     ElMessage.error('获取型号列表失败')
   }
+}
+
+// 搜索过滤
+const handleSearch = () => {
+  let result = models.value
+
+  // 关键词搜索（型号名称或法规类别）
+  if (searchKeyword.value) {
+    const keyword = searchKeyword.value.toLowerCase()
+    result = result.filter(item => 
+      item.model_name.toLowerCase().includes(keyword) || 
+      (item.regulation_name && item.regulation_name.toLowerCase().includes(keyword))
+    )
+  }
+
+  filteredModels.value = result
 }
 
 // 新增
@@ -219,6 +281,132 @@ const handleDelete = async (row) => {
   }
 }
 
+// 批量删除
+const handleBatchDelete = async () => {
+  if (selectedModels.value.length === 0) {
+    ElMessage.warning('请先选择要删除的型号')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedModels.value.length} 条型号吗？此操作不可恢复！`, 
+      '批量删除确认', 
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const ids = selectedModels.value.map(item => item.id)
+    
+    let successCount = 0
+    let failCount = 0
+    
+    for (const id of ids) {
+      try {
+        await request.delete(`/models/${id}`)
+        successCount++
+      } catch (error) {
+        failCount++
+      }
+    }
+    
+    if (successCount > 0) {
+      ElMessage.success(`成功删除 ${successCount} 条型号${failCount > 0 ? `，失败 ${failCount} 条` : ''}`)
+      fetchModels()
+    } else {
+      ElMessage.error('删除失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      // 错误已在拦截器处理
+    }
+  }
+}
+
+// 文件选择
+const handleFileChange = async (file) => {
+  const formData = new FormData()
+  formData.append('file', file.raw)
+
+  try {
+    const response = await request.post('/models/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    
+    if (response.success) {
+      const { created, updated, errors } = response.data
+      let message = `导入成功！创建 ${created} 条，更新 ${updated} 条`
+      if (errors && errors.length > 0) {
+        message += `\n${errors.slice(0, 3).join('\n')}`
+        if (errors.length > 3) {
+          message += `\n...还有 ${errors.length - 3} 条错误`
+        }
+      }
+      ElMessage.success(message)
+      fetchModels()
+    }
+  } catch (error) {
+    // 错误已在拦截器处理
+  }
+}
+
+// 选择变化
+const handleSelectionChange = (selection) => {
+  selectedModels.value = selection
+}
+
+// 导出
+const handleExport = async () => {
+  if (selectedModels.value.length === 0) {
+    ElMessage.warning('请先选择要导出的数据')
+    return
+  }
+
+  try {
+    const ids = selectedModels.value.map(item => item.id)
+    const response = await request.post('/models/export/excel', 
+      { ids },
+      { responseType: 'blob' }
+    )
+    
+    const url = window.URL.createObjectURL(new Blob([response]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `型号清单_${Date.now()}.xlsx`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    ElMessage.success('导出成功')
+  } catch (error) {
+    ElMessage.error('导出失败')
+  }
+}
+
+// 下载模板
+const handleDownloadTemplate = async () => {
+  try {
+    const response = await request.get('/models/template/download', {
+      responseType: 'blob'
+    })
+    
+    const url = window.URL.createObjectURL(new Blob([response]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', '型号导入模板.xlsx')
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    ElMessage.success('下载成功')
+  } catch (error) {
+    ElMessage.error('下载失败')
+  }
+}
+
 onMounted(() => {
   fetchRegulations()
   fetchModels()
@@ -247,5 +435,11 @@ onMounted(() => {
 .status-tag {
   min-width: 48px;
   text-align: center;
+}
+
+.filter-bar {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
 }
 </style>

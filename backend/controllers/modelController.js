@@ -3,7 +3,12 @@
  */
 
 const Model = require('../models/Model');
+const Regulation = require('../models/Regulation');
+const ExcelParser = require('../utils/excelParser');
+const ExcelGenerator = require('../utils/excelGenerator');
 const { success, error } = require('../utils/response');
+const path = require('path');
+const fs = require('fs');
 
 // 获取所有型号
 const getAllModels = (req, res, next) => {
@@ -112,6 +117,154 @@ const deleteModel = (req, res, next) => {
   }
 };
 
+// 导入型号 Excel
+const importModels = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json(error('请上传文件', 400));
+    }
+    
+    const filePath = req.file.path;
+    const result = await ExcelParser.parseModelExcel(filePath);
+    
+    // 删除临时文件
+    fs.unlinkSync(filePath);
+    
+    if (!result.success) {
+      return res.status(400).json(error('文件解析失败', 400, result.errors));
+    }
+    
+    // 导入数据
+    let created = 0;
+    let updated = 0;
+    const errors = [];
+    
+    result.data.forEach((modelData, index) => {
+      try {
+        // 查找法规ID
+        const regulation = Regulation.findByName(modelData.regulation_name);
+        if (!regulation) {
+          errors.push(`第 ${index + 2} 行：法规类别"${modelData.regulation_name}"不存在`);
+          return;
+        }
+        
+        // 检查型号是否已存在（根据法规ID和型号名称）
+        const existing = Model.findByRegulationAndName(regulation.id, modelData.model_name);
+        
+        if (existing) {
+          // 更新已存在的型号
+          Model.update(existing.id, {
+            regulation_id: regulation.id,
+            model_name: modelData.model_name,
+            remark: modelData.remark || existing.remark,
+            is_active: 1
+          });
+          updated++;
+        } else {
+          // 创建新型号
+          Model.create({
+            regulation_id: regulation.id,
+            model_name: modelData.model_name,
+            remark: modelData.remark || ''
+          });
+          created++;
+        }
+      } catch (err) {
+        errors.push(`第 ${index + 2} 行：${err.message}`);
+      }
+    });
+    
+    res.json(success({
+      total: result.total,
+      valid: result.valid,
+      created,
+      updated,
+      errors
+    }, '导入完成'));
+  } catch (err) {
+    // 清理临时文件
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    next(err);
+  }
+};
+
+// 导出型号 Excel
+const exportModels = async (req, res, next) => {
+  try {
+    const { ids } = req.body;
+    
+    let models;
+    if (ids && ids.length > 0) {
+      // 导出选中的数据
+      models = ids.map(id => Model.findById(id)).filter(m => m !== null);
+    } else {
+      // 如果没有指定ID，导出所有数据
+      models = Model.findAll();
+    }
+    
+    if (models.length === 0) {
+      return res.status(400).json(error('没有可导出的数据', 400));
+    }
+    
+    const workbook = await ExcelGenerator.generateModelExcel(models);
+    
+    // 生成文件
+    const fileName = `型号清单_${Date.now()}.xlsx`;
+    const filePath = path.join(__dirname, '../temp', fileName);
+    
+    // 确保 temp 目录存在
+    const tempDir = path.join(__dirname, '../temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    
+    await workbook.xlsx.writeFile(filePath);
+    
+    // 发送文件
+    res.download(filePath, fileName, (err) => {
+      // 删除临时文件
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      if (err) {
+        next(err);
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 下载导入模板
+const downloadTemplate = async (req, res, next) => {
+  try {
+    const workbook = await ExcelGenerator.generateModelTemplate();
+    
+    const fileName = '型号导入模板.xlsx';
+    const filePath = path.join(__dirname, '../temp', fileName);
+    
+    const tempDir = path.join(__dirname, '../temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    
+    await workbook.xlsx.writeFile(filePath);
+    
+    res.download(filePath, fileName, (err) => {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      if (err) {
+        next(err);
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getAllModels,
   getActiveModels,
@@ -119,5 +272,8 @@ module.exports = {
   getModelById,
   createModel,
   updateModel,
-  deleteModel
+  deleteModel,
+  importModels,
+  exportModels,
+  downloadTemplate
 };

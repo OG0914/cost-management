@@ -65,6 +65,18 @@ class Model {
     return stmt.get(modelName);
   }
 
+  // 根据法规ID和型号名称查找
+  static findByRegulationAndName(regulationId, modelName) {
+    const db = dbManager.getDatabase();
+    const stmt = db.prepare(`
+      SELECT m.*, r.name as regulation_name
+      FROM models m
+      LEFT JOIN regulations r ON m.regulation_id = r.id
+      WHERE m.regulation_id = ? AND m.model_name = ?
+    `);
+    return stmt.get(regulationId, modelName);
+  }
+
   // 创建型号
   static create(data) {
     const db = dbManager.getDatabase();

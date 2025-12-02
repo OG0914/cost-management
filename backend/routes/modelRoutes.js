@@ -4,9 +4,23 @@
 
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
 const modelController = require('../controllers/modelController');
 const { verifyToken } = require('../middleware/auth');
 const { isAdmin } = require('../middleware/roleCheck');
+
+// 配置文件上传
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, '../uploads'));
+  },
+  filename: (req, file, cb) => {
+    cb(null, `model_${Date.now()}_${file.originalname}`);
+  }
+});
+
+const upload = multer({ storage });
 
 // 所有路由都需要认证
 router.use(verifyToken);
@@ -27,5 +41,10 @@ router.get('/:id', modelController.getModelById);
 router.post('/', isAdmin, modelController.createModel);
 router.put('/:id', isAdmin, modelController.updateModel);
 router.delete('/:id', isAdmin, modelController.deleteModel);
+
+// 导入导出功能（仅管理员）
+router.post('/import', isAdmin, upload.single('file'), modelController.importModels);
+router.post('/export/excel', isAdmin, modelController.exportModels);
+router.get('/template/download', isAdmin, modelController.downloadTemplate);
 
 module.exports = router;

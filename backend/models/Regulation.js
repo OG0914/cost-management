@@ -72,6 +72,13 @@ class Regulation {
     return stmt.run(id);
   }
 
+  // 根据名称查找法规
+  static findByName(name) {
+    const db = dbManager.getDatabase();
+    const stmt = db.prepare('SELECT * FROM regulations WHERE name = ?');
+    return stmt.get(name);
+  }
+
   // 检查法规名称是否存在
   static existsByName(name, excludeId = null) {
     const db = dbManager.getDatabase();

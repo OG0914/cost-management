@@ -111,6 +111,91 @@ class ExcelParser {
   }
 
   /**
+   * 解析型号 Excel
+   * 期望列：法规类别、型号名称、备注
+   */
+  static async parseModelExcel(filePath) {
+    try {
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.readFile(filePath);
+      const worksheet = workbook.worksheets[0];
+      
+      const data = [];
+      const headers = [];
+      
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) {
+          // 读取表头
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            headers[colNumber] = cell.value;
+          });
+        } else {
+          // 读取数据行
+          const rowData = {};
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            if (headers[colNumber]) {
+              rowData[headers[colNumber]] = cell.value;
+            }
+          });
+          // 只添加非空行
+          if (Object.keys(rowData).length > 0) {
+            data.push(rowData);
+          }
+        }
+      });
+      
+      const models = [];
+      const errors = [];
+      
+      data.forEach((row, index) => {
+        const rowNum = index + 2;
+        
+        // 验证必填字段
+        if (!row['法规类别'] && !row['regulation_name']) {
+          errors.push(`第 ${rowNum} 行：缺少法规类别`);
+          return;
+        }
+        if (!row['型号名称'] && !row['model_name']) {
+          errors.push(`第 ${rowNum} 行：缺少型号名称`);
+          return;
+        }
+        
+        // 处理富文本对象
+        const getValue = (value) => {
+          if (value && typeof value === 'object' && value.richText) {
+            return value.richText.map(t => t.text).join('');
+          }
+          return value;
+        };
+        
+        const model = {
+          regulation_name: String(getValue(row['法规类别']) || getValue(row['regulation_name']) || '').trim(),
+          model_name: String(getValue(row['型号名称']) || getValue(row['model_name']) || '').trim(),
+          remark: String(getValue(row['备注']) || getValue(row['remark']) || '')
+        };
+        
+        models.push(model);
+      });
+      
+      return {
+        success: errors.length === 0,
+        data: models,
+        errors,
+        total: data.length,
+        valid: models.length
+      };
+    } catch (error) {
+      return {
+        success: false,
+        data: [],
+        errors: [error.message],
+        total: 0,
+        valid: 0
+      };
+    }
+  }
+
+  /**
    * 解析工序 Excel
    * 期望列：型号、配置、包装方式、工序、单价
    */

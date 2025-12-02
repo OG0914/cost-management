@@ -56,10 +56,14 @@ router.post('/packaging-materials', checkRole('admin', 'producer', 'purchaser'),
 router.put('/packaging-materials/:id', checkRole('admin', 'producer', 'purchaser'), processController.updatePackagingMaterial);
 router.delete('/packaging-materials/:id', checkRole('admin', 'producer', 'purchaser'), processController.deletePackagingMaterial);
 
-// 工序 Excel 导出
+// 工序 Excel 导入导出
+router.post('/process-configs/import', upload.single('file'), checkRole('admin', 'producer'), processController.importProcesses);
 router.post('/process-configs/export/excel', checkRole('admin', 'producer'), processController.exportProcesses);
+router.get('/process-configs/template/download', checkRole('admin', 'producer'), processController.downloadProcessTemplate);
 
-// 包材 Excel 导出
+// 包材 Excel 导入导出
+router.post('/packaging-materials/import', upload.single('file'), checkRole('admin', 'producer', 'purchaser'), processController.importPackagingMaterials);
 router.post('/packaging-materials/export/excel', checkRole('admin', 'producer', 'purchaser'), processController.exportPackagingMaterials);
+router.get('/packaging-materials/template/download', checkRole('admin', 'producer', 'purchaser'), processController.downloadPackagingMaterialTemplate);
 
 module.exports = router;

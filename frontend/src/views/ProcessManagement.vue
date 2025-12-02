@@ -13,6 +13,22 @@
         <div class="card-header">
           <span>工序管理</span>
           <el-space v-if="canEdit">
+            <el-button type="success" @click="handleDownloadTemplate">
+              <el-icon><Download /></el-icon>
+              下载模板
+            </el-button>
+            <el-upload
+              action="#"
+              :auto-upload="false"
+              :on-change="handleFileChange"
+              :show-file-list="false"
+              accept=".xlsx,.xls"
+            >
+              <el-button type="warning">
+                <el-icon><Upload /></el-icon>
+                导入Excel
+              </el-button>
+            </el-upload>
             <el-button type="info" @click="handleExport">
               <el-icon><Download /></el-icon>
               导出Excel
@@ -115,7 +131,7 @@
         </el-form-item>
         
         <el-form-item label="配置名称" required>
-          <el-input v-model="form.config_name" placeholder="如：标准包装" />
+          <el-input v-model="form.config_name" placeholder="如：C5标准包装" />
         </el-form-item>
 
         <el-divider content-position="left">包装方式</el-divider>
@@ -221,7 +237,7 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, ArrowLeft, Download, Delete } from '@element-plus/icons-vue';
+import { Plus, ArrowLeft, Download, Delete, Upload } from '@element-plus/icons-vue';
 import request from '../utils/request';
 import { useAuthStore } from '../store/auth';
 import { useConfigStore } from '../store/config';
@@ -549,6 +565,33 @@ const handleSelectionChange = (selection) => {
   selectedConfigs.value = selection;
 };
 
+// 文件选择
+const handleFileChange = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file.raw);
+
+  try {
+    const response = await request.post('/processes/process-configs/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    
+    if (response.success) {
+      const { created, updated, errors } = response.data;
+      let message = `导入成功！创建 ${created} 条，更新 ${updated} 条`;
+      if (errors && errors.length > 0) {
+        message += `\n${errors.slice(0, 3).join('\n')}`;
+        if (errors.length > 3) {
+          message += `\n...还有 ${errors.length - 3} 条错误`;
+        }
+      }
+      ElMessage.success(message);
+      loadPackagingConfigs();
+    }
+  } catch (error) {
+    // 错误已在拦截器处理
+  }
+};
+
 // 导出
 const handleExport = async () => {
   if (selectedConfigs.value.length === 0) {
@@ -574,6 +617,27 @@ const handleExport = async () => {
     ElMessage.success('导出成功');
   } catch (error) {
     ElMessage.error('导出失败');
+  }
+};
+
+// 下载模板
+const handleDownloadTemplate = async () => {
+  try {
+    const response = await request.get('/processes/process-configs/template/download', {
+      responseType: 'blob'
+    });
+    
+    const url = window.URL.createObjectURL(new Blob([response]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', '工序导入模板.xlsx');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    ElMessage.success('下载成功');
+  } catch (error) {
+    ElMessage.error('下载失败');
   }
 };
 
