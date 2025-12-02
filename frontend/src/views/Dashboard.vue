@@ -57,7 +57,7 @@
             <h4>系统管理</h4>
             <el-space wrap>
               <el-button type="danger" @click="$router.push('/users')" v-if="authStore.isAdmin">用户管理</el-button>
-              <el-button type="primary" @click="$router.push('/config')">系统配置</el-button>
+              <el-button type="primary" @click="$router.push('/config')">参数配置</el-button>
             </el-space>
           </div>
         </div>

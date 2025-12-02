@@ -65,7 +65,7 @@
         <el-table-column type="selection" width="55" />
         <el-table-column prop="regulation_name" label="法规类别" width="150" />
         <el-table-column prop="model_name" label="型号名称" />
-        <el-table-column prop="remark" label="备注" />
+        <el-table-column prop="model_category" label="型号分类" />
         <el-table-column prop="is_active" label="状态" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="row.is_active ? 'success' : 'danger'" class="status-tag">
@@ -108,12 +108,10 @@
         <el-form-item label="型号名称" required>
           <el-input v-model="form.model_name" placeholder="请输入型号名称" />
         </el-form-item>
-        <el-form-item label="备注">
+        <el-form-item label="型号分类">
           <el-input
-            v-model="form.remark"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入备注"
+            v-model="form.model_category"
+            placeholder="请输入型号分类（如：口罩、半面罩）"
           />
         </el-form-item>
         <el-form-item label="状态" v-if="isEdit">
@@ -164,7 +162,7 @@ const form = reactive({
   id: null,
   regulation_id: null,
   model_name: '',
-  remark: '',
+  model_category: '',
   is_active: 1
 })
 
@@ -216,7 +214,7 @@ const handleAdd = () => {
   form.id = null
   form.regulation_id = null
   form.model_name = ''
-  form.remark = ''
+  form.model_category = ''
   form.is_active = 1
   dialogVisible.value = true
 }
@@ -228,7 +226,7 @@ const handleEdit = (row) => {
   form.id = row.id
   form.regulation_id = row.regulation_id
   form.model_name = row.model_name
-  form.remark = row.remark
+  form.model_category = row.model_category
   form.is_active = row.is_active
   dialogVisible.value = true
 }

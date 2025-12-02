@@ -60,13 +60,13 @@ const getModelById = (req, res, next) => {
 // 创建型号
 const createModel = (req, res, next) => {
   try {
-    const { regulation_id, model_name, remark } = req.body;
+    const { regulation_id, model_name, model_category } = req.body;
     
     if (!regulation_id || !model_name) {
       return res.status(400).json(error('法规类别和型号名称不能为空', 400));
     }
     
-    const id = Model.create({ regulation_id, model_name, remark });
+    const id = Model.create({ regulation_id, model_name, model_category });
     res.status(201).json(success({ id }, '创建成功'));
   } catch (err) {
     next(err);
@@ -77,7 +77,7 @@ const createModel = (req, res, next) => {
 const updateModel = (req, res, next) => {
   try {
     const { id } = req.params;
-    const { regulation_id, model_name, remark, is_active } = req.body;
+    const { regulation_id, model_name, model_category, is_active } = req.body;
     
     const model = Model.findById(id);
     if (!model) {
@@ -88,7 +88,7 @@ const updateModel = (req, res, next) => {
       return res.status(400).json(error('法规类别和型号名称不能为空', 400));
     }
     
-    Model.update(id, { regulation_id, model_name, remark, is_active: is_active !== undefined ? is_active : 1 });
+    Model.update(id, { regulation_id, model_name, model_category, is_active: is_active !== undefined ? is_active : 1 });
     res.json(success(null, '更新成功'));
   } catch (err) {
     next(err);
@@ -156,7 +156,7 @@ const importModels = async (req, res, next) => {
           Model.update(existing.id, {
             regulation_id: regulation.id,
             model_name: modelData.model_name,
-            remark: modelData.remark || existing.remark,
+            model_category: modelData.model_category || existing.model_category,
             is_active: 1
           });
           updated++;
@@ -165,7 +165,7 @@ const importModels = async (req, res, next) => {
           Model.create({
             regulation_id: regulation.id,
             model_name: modelData.model_name,
-            remark: modelData.remark || ''
+            model_category: modelData.model_category || ''
           });
           created++;
         }
