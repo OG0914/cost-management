@@ -227,6 +227,37 @@ class CostCalculator {
   _round(value, decimals = 4) {
     return Math.round(value * Math.pow(10, decimals)) / Math.pow(10, decimals);
   }
+
+  /**
+   * 计算原料小计（应用原料系数）
+   * 公式：原料小计 = 用量 × 单价 ÷ 原料系数
+   * 
+   * @param {number} usageAmount - 用量
+   * @param {number} unitPrice - 单价
+   * @param {number} materialCoefficient - 原料系数（口罩=0.97，半面罩=0.99）
+   * @returns {number} 原料小计
+   */
+  static calculateMaterialSubtotal(usageAmount, unitPrice, materialCoefficient = 1) {
+    if (!materialCoefficient || materialCoefficient === 0) {
+      materialCoefficient = 1;
+    }
+    const subtotal = (usageAmount * unitPrice) / materialCoefficient;
+    return Math.round(subtotal * Math.pow(10, 4)) / Math.pow(10, 4);
+  }
+
+  /**
+   * 根据型号分类获取原料系数
+   * 
+   * @param {string} modelCategory - 型号分类（口罩、半面罩等）
+   * @param {Object} coefficients - 原料系数配置对象
+   * @returns {number} 原料系数，默认返回1
+   */
+  static getMaterialCoefficient(modelCategory, coefficients = {}) {
+    if (!modelCategory || !coefficients) {
+      return 1;
+    }
+    return coefficients[modelCategory] || 1;
+  }
 }
 
 module.exports = CostCalculator;

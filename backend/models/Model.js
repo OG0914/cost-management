@@ -141,6 +141,44 @@ class Model {
     const result = stmt.get(id);
     return result.count > 0;
   }
+
+  // 根据型号分类和法规ID获取型号
+  static findByModelCategoryAndRegulation(modelCategory, regulationId) {
+    const db = dbManager.getDatabase();
+    const stmt = db.prepare(`
+      SELECT m.*, r.name as regulation_name
+      FROM models m
+      LEFT JOIN regulations r ON m.regulation_id = r.id
+      WHERE m.model_category = ? AND m.regulation_id = ? AND m.is_active = 1
+      ORDER BY m.created_at DESC
+    `);
+    return stmt.all(modelCategory, regulationId);
+  }
+
+  // 根据型号分类获取型号
+  static findByModelCategory(modelCategory) {
+    const db = dbManager.getDatabase();
+    const stmt = db.prepare(`
+      SELECT m.*, r.name as regulation_name
+      FROM models m
+      LEFT JOIN regulations r ON m.regulation_id = r.id
+      WHERE m.model_category = ? AND m.is_active = 1
+      ORDER BY m.created_at DESC
+    `);
+    return stmt.all(modelCategory);
+  }
+
+  // 获取所有型号分类（去重）
+  static getAllCategories() {
+    const db = dbManager.getDatabase();
+    const stmt = db.prepare(`
+      SELECT DISTINCT model_category 
+      FROM models 
+      WHERE model_category IS NOT NULL AND model_category != '' AND is_active = 1
+      ORDER BY model_category
+    `);
+    return stmt.all().map(row => row.model_category);
+  }
 }
 
 module.exports = Model;

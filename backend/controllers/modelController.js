@@ -10,10 +10,23 @@ const { success, error } = require('../utils/response');
 const path = require('path');
 const fs = require('fs');
 
-// 获取所有型号
+// 获取所有型号（支持 model_category 和 regulation_id 过滤）
 const getAllModels = (req, res, next) => {
   try {
-    const models = Model.findAll();
+    const { model_category, regulation_id } = req.query;
+    
+    let models;
+    if (model_category && regulation_id) {
+      // 同时按型号分类和法规过滤
+      models = Model.findByModelCategoryAndRegulation(model_category, regulation_id);
+    } else if (model_category) {
+      // 只按型号分类过滤
+      models = Model.findByModelCategory(model_category);
+    } else {
+      // 获取所有型号
+      models = Model.findAll();
+    }
+    
     res.json(success(models));
   } catch (err) {
     next(err);
@@ -265,6 +278,16 @@ const downloadTemplate = async (req, res, next) => {
   }
 };
 
+// 获取所有型号分类
+const getModelCategories = (req, res, next) => {
+  try {
+    const categories = Model.getAllCategories();
+    res.json(success(categories));
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getAllModels,
   getActiveModels,
@@ -275,5 +298,6 @@ module.exports = {
   deleteModel,
   importModels,
   exportModels,
-  downloadTemplate
+  downloadTemplate,
+  getModelCategories
 };

@@ -25,8 +25,11 @@ const upload = multer({ storage });
 // 所有路由都需要认证
 router.use(verifyToken);
 
-// 获取所有型号
+// 获取所有型号（支持 model_category 和 regulation_id 查询参数过滤）
 router.get('/', modelController.getAllModels);
+
+// 获取所有型号分类
+router.get('/categories', modelController.getModelCategories);
 
 // 获取激活的型号
 router.get('/active', modelController.getActiveModels);

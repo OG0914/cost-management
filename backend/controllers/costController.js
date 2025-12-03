@@ -6,6 +6,7 @@
 const Quotation = require('../models/Quotation');
 const QuotationItem = require('../models/QuotationItem');
 const SystemConfig = require('../models/SystemConfig');
+const Model = require('../models/Model');
 const CostCalculator = require('../utils/costCalculator');
 const { success, error, paginated } = require('../utils/response');
 const dbManager = require('../db/database');
@@ -42,13 +43,49 @@ const createQuotation = async (req, res) => {
             return res.status(400).json(error('数量必须大于0', 400));
         }
 
+        // 获取原料系数
+        let materialCoefficient = 1;
+        const model = Model.findById(model_id);
+        if (model && model.model_category) {
+            const coefficients = SystemConfig.getValue('material_coefficients') || {};
+            materialCoefficient = CostCalculator.getMaterialCoefficient(model.model_category, coefficients);
+        }
+
         // 计算运费成本
         const freight_per_unit = freight_total / quantity;
 
-        // 计算明细总计
+        // 计算明细总计（应用原料系数）
+        // 原料总计：不包含管销后算的原料
         const materialTotal = items
-            .filter(item => item.category === 'material')
-            .reduce((sum, item) => sum + item.subtotal, 0);
+            .filter(item => item.category === 'material' && !item.after_overhead)
+            .reduce((sum, item) => {
+                // 如果前端已经传递了应用系数后的subtotal，直接使用
+                if (item.coefficient_applied) {
+                    return sum + item.subtotal;
+                }
+                // 使用原料系数重新计算小计
+                const subtotal = CostCalculator.calculateMaterialSubtotal(
+                    item.usage_amount || 0,
+                    item.unit_price || 0,
+                    materialCoefficient
+                );
+                return sum + subtotal;
+            }, 0);
+
+        // 管销后算的原料总计
+        const afterOverheadMaterialTotal = items
+            .filter(item => item.category === 'material' && item.after_overhead)
+            .reduce((sum, item) => {
+                if (item.coefficient_applied) {
+                    return sum + item.subtotal;
+                }
+                const subtotal = CostCalculator.calculateMaterialSubtotal(
+                    item.usage_amount || 0,
+                    item.unit_price || 0,
+                    materialCoefficient
+                );
+                return sum + subtotal;
+            }, 0);
 
         const processTotal = items
             .filter(item => item.category === 'process')
@@ -69,7 +106,8 @@ const createQuotation = async (req, res) => {
             freightTotal: freight_total,
             quantity,
             salesType: sales_type,
-            includeFreightInBase: req.body.include_freight_in_base !== false
+            includeFreightInBase: req.body.include_freight_in_base !== false,
+            afterOverheadMaterialTotal
         });
 
         // 生成报价单编号
@@ -188,7 +226,8 @@ const calculateQuotation = async (req, res) => {
             quantity,
             freight_total,
             sales_type,
-            items
+            items,
+            model_id
         } = req.body;
 
         // 数据验证
@@ -196,16 +235,49 @@ const calculateQuotation = async (req, res) => {
             return res.status(400).json(error('缺少必填字段', 400));
         }
 
+        // 获取原料系数
+        let materialCoefficient = 1;
+        if (model_id) {
+            const model = Model.findById(model_id);
+            if (model && model.model_category) {
+                const coefficients = SystemConfig.getValue('material_coefficients') || {};
+                materialCoefficient = CostCalculator.getMaterialCoefficient(model.model_category, coefficients);
+            }
+        }
+
         // 计算明细总计
-        // 原料总计：不包含管销后算的原料
+        // 原料总计：不包含管销后算的原料，应用原料系数
         const materialTotal = items
             .filter(item => item.category === 'material' && !item.after_overhead)
-            .reduce((sum, item) => sum + item.subtotal, 0);
+            .reduce((sum, item) => {
+                // 如果前端已经传递了应用系数后的subtotal，直接使用
+                // 否则重新计算（兼容旧版本）
+                if (item.coefficient_applied) {
+                    return sum + item.subtotal;
+                }
+                // 使用原料系数重新计算小计
+                const subtotal = CostCalculator.calculateMaterialSubtotal(
+                    item.usage_amount || 0,
+                    item.unit_price || 0,
+                    materialCoefficient
+                );
+                return sum + subtotal;
+            }, 0);
 
-        // 管销后算的原料总计
+        // 管销后算的原料总计（同样应用原料系数）
         const afterOverheadMaterialTotal = items
             .filter(item => item.category === 'material' && item.after_overhead)
-            .reduce((sum, item) => sum + item.subtotal, 0);
+            .reduce((sum, item) => {
+                if (item.coefficient_applied) {
+                    return sum + item.subtotal;
+                }
+                const subtotal = CostCalculator.calculateMaterialSubtotal(
+                    item.usage_amount || 0,
+                    item.unit_price || 0,
+                    materialCoefficient
+                );
+                return sum + subtotal;
+            }, 0);
 
         const processTotal = items
             .filter(item => item.category === 'process')
@@ -229,6 +301,9 @@ const calculateQuotation = async (req, res) => {
             includeFreightInBase: req.body.include_freight_in_base !== false,
             afterOverheadMaterialTotal
         });
+
+        // 返回结果中包含原料系数信息
+        calculation.materialCoefficient = materialCoefficient;
 
         res.json(success(calculation, '计算成功'));
 
@@ -272,19 +347,47 @@ const updateQuotation = async (req, res) => {
             return res.status(400).json(error('当前状态不允许编辑', 400));
         }
 
+        // 获取原料系数（使用报价单关联的型号）
+        let materialCoefficient = 1;
+        const model = Model.findById(quotation.model_id);
+        if (model && model.model_category) {
+            const coefficients = SystemConfig.getValue('material_coefficients') || {};
+            materialCoefficient = CostCalculator.getMaterialCoefficient(model.model_category, coefficients);
+        }
+
         // 计算运费成本
         const freight_per_unit = freight_total / quantity;
 
-        // 计算明细总计
+        // 计算明细总计（应用原料系数）
         // 原料总计：不包含管销后算的原料
         const materialTotal = items
             .filter(item => item.category === 'material' && !item.after_overhead)
-            .reduce((sum, item) => sum + item.subtotal, 0);
+            .reduce((sum, item) => {
+                if (item.coefficient_applied) {
+                    return sum + item.subtotal;
+                }
+                const subtotal = CostCalculator.calculateMaterialSubtotal(
+                    item.usage_amount || 0,
+                    item.unit_price || 0,
+                    materialCoefficient
+                );
+                return sum + subtotal;
+            }, 0);
 
         // 管销后算的原料总计
         const afterOverheadMaterialTotal = items
             .filter(item => item.category === 'material' && item.after_overhead)
-            .reduce((sum, item) => sum + item.subtotal, 0);
+            .reduce((sum, item) => {
+                if (item.coefficient_applied) {
+                    return sum + item.subtotal;
+                }
+                const subtotal = CostCalculator.calculateMaterialSubtotal(
+                    item.usage_amount || 0,
+                    item.unit_price || 0,
+                    materialCoefficient
+                );
+                return sum + subtotal;
+            }, 0);
 
         const processTotal = items
             .filter(item => item.category === 'process')
@@ -483,12 +586,21 @@ const getQuotationDetail = async (req, res) => {
         // 查询报价单明细
         const items = QuotationItem.getGroupedByCategory(id);
 
+        // 获取原料系数
+        let materialCoefficient = 1;
+        const model = Model.findById(quotation.model_id);
+        if (model && model.model_category) {
+            const coefficients = SystemConfig.getValue('material_coefficients') || {};
+            materialCoefficient = CostCalculator.getMaterialCoefficient(model.model_category, coefficients);
+        }
+
         // 重新计算以获取利润区间
         // 注意：工序总计传入原始值，计算器内部会自动乘以工价系数
         const calculatorConfig = SystemConfig.getCalculatorConfig();
         const calculator = new CostCalculator(calculatorConfig);
 
         // 计算原料总计（不含管销后算的原料）
+        // 注意：数据库中存储的subtotal已经是应用系数后的值，直接使用
         const materialTotal = items.material.items
             .filter(item => !item.after_overhead)
             .reduce((sum, item) => sum + item.subtotal, 0);
@@ -508,6 +620,9 @@ const getQuotationDetail = async (req, res) => {
             includeFreightInBase: quotation.include_freight_in_base !== false,
             afterOverheadMaterialTotal
         });
+
+        // 返回原料系数信息
+        calculation.materialCoefficient = materialCoefficient;
 
         // 工序总计已包含工价系数，直接显示
         items.process.displayTotal = items.process.total;
@@ -591,6 +706,7 @@ const getPackagingConfigs = async (req, res) => {
                 pc.boxes_per_carton,
                 pc.is_active,
                 m.model_name,
+                m.model_category,
                 m.regulation_id,
                 r.name as regulation_name
             FROM packaging_configs pc
@@ -682,6 +798,20 @@ const getPackagingConfigDetails = async (req, res) => {
     }
 };
 
+/**
+ * 获取原料系数配置
+ * GET /api/cost/material-coefficients
+ */
+const getMaterialCoefficients = async (req, res) => {
+    try {
+        const coefficients = SystemConfig.getValue('material_coefficients');
+        res.json(success(coefficients || { '口罩': 0.97, '半面罩': 0.99 }));
+    } catch (err) {
+        console.error('获取原料系数配置失败:', err);
+        res.status(500).json(error('获取原料系数配置失败: ' + err.message, 500));
+    }
+};
+
 module.exports = {
     createQuotation,
     getModelStandardData,
@@ -692,5 +822,6 @@ module.exports = {
     submitQuotation,
     getQuotationList,
     getQuotationDetail,
-    deleteQuotation
+    deleteQuotation,
+    getMaterialCoefficients
 };

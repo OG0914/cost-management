@@ -39,6 +39,7 @@ app.use('/api/materials', require('./routes/materialRoutes'));
 app.use('/api/processes', require('./routes/processRoutes'));
 app.use('/api/config', require('./routes/configRoutes'));
 app.use('/api/cost', require('./routes/costRoutes'));
+app.use('/api/standard-costs', require('./routes/standardCostRoutes'));
 // app.use('/api/packaging', require('./routes/packagingRoutes'));
 // app.use('/api/report', require('./routes/reportRoutes'));
 // app.use('/api/dashboard', require('./routes/dashboardRoutes'));

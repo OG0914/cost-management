@@ -15,10 +15,16 @@
           >
             对比模式 ({{ selectedQuotations.length }})
           </el-button>
-          <el-button type="primary" icon="Plus" @click="goToAdd">新增报价单</el-button>
+          <el-button type="primary" icon="Plus" @click="showCategoryModal">新增报价单</el-button>
         </div>
       </div>
     </el-card>
+
+    <!-- 产品类别选择弹窗 -->
+    <ProductCategoryModal
+      v-model="categoryModalVisible"
+      @confirm="onCategoryConfirm"
+    />
 
     <el-card>
       <!-- 搜索筛选 -->
@@ -139,8 +145,12 @@ import { ArrowLeft, Plus, DataAnalysis } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { formatNumber } from '@/utils/format'
 import { getUser } from '@/utils/auth'
+import ProductCategoryModal from '@/components/ProductCategoryModal.vue'
 
 const router = useRouter()
+
+// 产品类别选择弹窗
+const categoryModalVisible = ref(false)
 
 const searchForm = reactive({
   customer_name: '',
@@ -228,7 +238,20 @@ const goBack = () => {
   router.push('/dashboard')
 }
 
-// 新增报价单
+// 显示产品类别选择弹窗
+const showCategoryModal = () => {
+  categoryModalVisible.value = true
+}
+
+// 产品类别选择确认
+const onCategoryConfirm = (category) => {
+  router.push({
+    path: '/cost/add',
+    query: { model_category: category }
+  })
+}
+
+// 新增报价单（直接跳转，不选择类别）
 const goToAdd = () => {
   router.push('/cost/add')
 }

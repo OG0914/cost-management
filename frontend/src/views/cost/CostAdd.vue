@@ -710,12 +710,20 @@ const isEditMode = computed(() => {
   return !!route.params.id
 })
 
+// 当前选择的产品类别
+const currentModelCategory = ref('')
+
+// 原料系数
+const materialCoefficient = ref(1)
+
 // 页面标题
 const pageTitle = computed(() => {
   if (route.params.id) {
     return '编辑报价单'
   } else if (route.query.copyFrom) {
     return '复制报价单'
+  } else if (currentModelCategory.value) {
+    return `新增报价单 - ${currentModelCategory.value}`
   } else {
     return '新增报价单'
   }
@@ -795,10 +803,18 @@ const systemConfig = ref({
   lclDocumentFee: 500
 })
 
-// 过滤后的包装配置列表
+// 过滤后的包装配置列表（根据法规和产品类别过滤）
 const filteredPackagingConfigs = computed(() => {
   if (!form.regulation_id) return []
-  return packagingConfigs.value.filter(c => c.regulation_id === form.regulation_id)
+  
+  let filtered = packagingConfigs.value.filter(c => c.regulation_id === form.regulation_id)
+  
+  // 如果有产品类别参数，进一步按 model_category 过滤
+  if (currentModelCategory.value) {
+    filtered = filtered.filter(c => c.model_category === currentModelCategory.value)
+  }
+  
+  return filtered
 })
 
 // 计算总计
@@ -905,6 +921,19 @@ const onPackagingConfigChange = async () => {
       
       // 设置 model_id
       form.model_id = config.model_id
+      
+      // 根据包装配置的 model_category 更新原料系数
+      const selectedConfig = packagingConfigs.value.find(c => c.id === form.packaging_config_id)
+      if (selectedConfig && selectedConfig.model_category) {
+        currentModelCategory.value = selectedConfig.model_category
+        // 从缓存中获取原料系数，如果缓存为空则重新加载
+        if (Object.keys(materialCoefficientsCache.value).length === 0) {
+          await loadMaterialCoefficients()
+        } else if (materialCoefficientsCache.value[selectedConfig.model_category]) {
+          materialCoefficient.value = materialCoefficientsCache.value[selectedConfig.model_category]
+          console.log(`更新原料系数: ${selectedConfig.model_category} = ${materialCoefficient.value}`)
+        }
+      }
       
       console.log('工序数据:', processes)
       console.log('包材数据:', materials)
@@ -1178,8 +1207,17 @@ const calculateItemSubtotal = (row) => {
     row.subtotal = (row.usage_amount && row.usage_amount !== 0) 
       ? (row.unit_price || 0) / row.usage_amount 
       : 0
+  } else if (row.category === 'material') {
+    // 原料：用量 * 单价 / 原料系数
+    const coefficient = materialCoefficient.value || 1
+    const rawSubtotal = (row.usage_amount || 0) * (row.unit_price || 0)
+    row.subtotal = coefficient !== 0 ? rawSubtotal / coefficient : rawSubtotal
+    // 四舍五入到4位小数
+    row.subtotal = Math.round(row.subtotal * 10000) / 10000
+    // 标记已应用系数
+    row.coefficient_applied = true
   } else {
-    // 原料和工序：用量 * 单价
+    // 工序：用量 * 单价
     row.subtotal = (row.usage_amount || 0) * (row.unit_price || 0)
   }
   calculateCost()
@@ -1298,6 +1336,7 @@ const calculateCost = async () => {
       freight_total: form.freight_total || 0,
       sales_type: form.sales_type,
       include_freight_in_base: form.include_freight_in_base,
+      model_id: form.model_id, // 传递model_id用于获取原料系数
       items
     })
 
@@ -1717,6 +1756,33 @@ const removeCustomProfitTier = (customIndex) => {
   }
 }
 
+// 原料系数配置缓存
+const materialCoefficientsCache = ref({})
+
+// 加载原料系数配置
+const loadMaterialCoefficients = async () => {
+  try {
+    const res = await request.get('/cost/material-coefficients')
+    if (res.success && res.data) {
+      // 缓存所有系数配置
+      materialCoefficientsCache.value = res.data
+      console.log('原料系数配置:', res.data)
+      
+      // 根据当前产品类别获取对应的原料系数
+      if (currentModelCategory.value && res.data[currentModelCategory.value]) {
+        materialCoefficient.value = res.data[currentModelCategory.value]
+        console.log(`当前产品类别: ${currentModelCategory.value}, 原料系数: ${materialCoefficient.value}`)
+      } else {
+        materialCoefficient.value = 1
+        console.log('未找到对应的原料系数，使用默认值 1')
+      }
+    }
+  } catch (error) {
+    console.error('加载原料系数配置失败:', error)
+    materialCoefficient.value = 1
+  }
+}
+
 // 初始化
 onMounted(async () => {
   // 加载系统配置（包括工价系数）
@@ -1725,6 +1791,19 @@ onMounted(async () => {
   await loadRegulations()
   await loadPackagingConfigs()
   await loadAllMaterials()
+  
+  // 始终加载原料系数配置（缓存起来）
+  await loadMaterialCoefficients()
+  
+  // 获取产品类别参数
+  if (route.query.model_category) {
+    currentModelCategory.value = route.query.model_category
+    // 根据产品类别设置原料系数
+    if (materialCoefficientsCache.value[route.query.model_category]) {
+      materialCoefficient.value = materialCoefficientsCache.value[route.query.model_category]
+      console.log(`从URL参数设置原料系数: ${route.query.model_category} = ${materialCoefficient.value}`)
+    }
+  }
   
   // 检查是否是编辑模式
   if (route.params.id) {

@@ -91,6 +91,47 @@ const migrations = [
     table: 'quotations',
     check: (columns) => !columns.includes('custom_profit_tiers'),
     sql: 'ALTER TABLE quotations ADD COLUMN custom_profit_tiers TEXT'
+  },
+  {
+    name: '添加原料系数配置',
+    table: 'system_config',
+    check: (columns, db) => {
+      const exists = db.prepare("SELECT 1 FROM system_config WHERE config_key = 'material_coefficients'").get();
+      return !exists;
+    },
+    sql: `INSERT INTO system_config (config_key, config_value, description) VALUES ('material_coefficients', '{"口罩": 0.97, "半面罩": 0.99}', '原料系数配置，按型号分类映射')`
+  },
+  {
+    name: '创建标准成本表',
+    table: 'standard_costs',
+    check: (columns, db) => {
+      const exists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='standard_costs'").get();
+      return !exists;
+    },
+    sql: `
+      CREATE TABLE standard_costs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        packaging_config_id INTEGER NOT NULL,
+        quotation_id INTEGER NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1,
+        is_current BOOLEAN DEFAULT 1,
+        base_cost REAL NOT NULL,
+        overhead_price REAL NOT NULL,
+        domestic_price REAL,
+        export_price REAL,
+        quantity INTEGER NOT NULL,
+        currency TEXT DEFAULT 'CNY',
+        sales_type TEXT NOT NULL,
+        set_by INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (packaging_config_id) REFERENCES packaging_configs(id),
+        FOREIGN KEY (quotation_id) REFERENCES quotations(id),
+        FOREIGN KEY (set_by) REFERENCES users(id),
+        UNIQUE(packaging_config_id, version)
+      );
+      CREATE INDEX idx_standard_costs_packaging_config ON standard_costs(packaging_config_id);
+      CREATE INDEX idx_standard_costs_is_current ON standard_costs(is_current);
+    `
   }
 ];
 
@@ -115,17 +156,16 @@ try {
       `).get(migration.table);
       
       if (!tableExists) {
-        console.log(`⚠ 表 ${migration.table} 不存在，跳过相关迁移`);
-        skippedCount++;
-        continue;
+        // 表不存在时，设置空数组，让 check 函数决定是否需要创建表
+        tableColumns[migration.table] = [];
+      } else {
+        const columns = db.prepare(`PRAGMA table_info(${migration.table})`).all();
+        tableColumns[migration.table] = columns.map(col => col.name);
       }
-      
-      const columns = db.prepare(`PRAGMA table_info(${migration.table})`).all();
-      tableColumns[migration.table] = columns.map(col => col.name);
     }
     
     // 检查是否需要应用迁移
-    if (migration.check(tableColumns[migration.table])) {
+    if (migration.check(tableColumns[migration.table], db)) {
       console.log(`✓ 应用迁移: ${migration.name}`);
       db.exec(migration.sql);
       appliedCount++;

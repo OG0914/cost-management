@@ -31,6 +31,9 @@ const isProducer = checkRole('admin', 'producer');
 // 检查是否为审核人
 const isReviewer = checkRole('admin', 'reviewer');
 
+// 检查是否为管理员或审核人
+const isAdminOrReviewer = checkRole('admin', 'reviewer');
+
 // 检查是否为业务员
 const isSalesperson = checkRole('admin', 'salesperson');
 
@@ -43,6 +46,7 @@ module.exports = {
   isPurchaser,
   isProducer,
   isReviewer,
+  isAdminOrReviewer,
   isSalesperson,
   canRead
 };

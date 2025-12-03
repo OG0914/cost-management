@@ -63,4 +63,8 @@ router.get('/packaging-configs/:configId/details', costController.getPackagingCo
 // 权限：所有登录用户
 router.post('/calculate', costController.calculateQuotation);
 
+// 获取原料系数配置
+// 权限：所有登录用户
+router.get('/material-coefficients', costController.getMaterialCoefficients);
+
 module.exports = router;
