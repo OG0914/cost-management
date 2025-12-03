@@ -85,6 +85,12 @@ const migrations = [
       
       PRAGMA foreign_keys=ON;
     `
+  },
+  {
+    name: '添加 quotations.custom_profit_tiers 字段',
+    table: 'quotations',
+    check: (columns) => !columns.includes('custom_profit_tiers'),
+    sql: 'ALTER TABLE quotations ADD COLUMN custom_profit_tiers TEXT'
   }
 ];
 

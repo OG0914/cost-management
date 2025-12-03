@@ -39,7 +39,7 @@
             </el-button>
             <el-button type="primary" @click="showCreateDialog">
               <el-icon><Plus /></el-icon>
-              新增包装配置
+              新增工序配置
             </el-button>
           </el-space>
         </div>
@@ -73,9 +73,9 @@
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="model_name" label="型号" width="120" />
-        <el-table-column prop="config_name" label="配置名称" width="150" />
-        <el-table-column label="包装方式" min-width="250">
+        <el-table-column prop="model_name" label="型号" width="150" />
+        <el-table-column prop="config_name" label="配置名称" width="160" />
+        <el-table-column label="包装方式" min-width="300">
           <template #default="{ row }">
             <span class="packaging-info">
               {{ row.pc_per_bag }}pc/bag, {{ row.bags_per_box }}bags/box, {{ row.boxes_per_carton }}boxes/carton
@@ -94,8 +94,8 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column label="操作" width="350" fixed="right">
+        <el-table-column prop="created_at" label="创建时间" width="160" />
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <el-button size="small" type="success" @click="viewProcesses(row)">查看</el-button>
             <el-button size="small" type="primary" @click="editConfig(row)" v-if="canEdit">编辑</el-button>
@@ -109,7 +109,7 @@
     <!-- 创建/编辑包装配置对话框 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="isEdit ? '编辑包装配置' : '新增包装配置'"
+      :title="isEdit ? '编辑包装配置' : '新增工序配置'"
       width="700px"
     >
       <el-form :model="form" ref="formRef" label-width="120px">
@@ -137,15 +137,15 @@
         <el-divider content-position="left">包装方式</el-divider>
 
         <el-form-item label="每袋数量（只）" required>
-          <el-input-number v-model="form.pc_per_bag" :min="1" :controls="false" style="width: 100%" />
+          <el-input-number v-model="form.pc_per_bag" :min="1" :controls="false" style="width: 200px" />
         </el-form-item>
 
         <el-form-item label="每盒袋数（袋）" required>
-          <el-input-number v-model="form.bags_per_box" :min="1" :controls="false" style="width: 100%" />
+          <el-input-number v-model="form.bags_per_box" :min="1" :controls="false" style="width: 200px" />
         </el-form-item>
 
         <el-form-item label="每箱盒数（盒）" required>
-          <el-input-number v-model="form.boxes_per_carton" :min="1" :controls="false" style="width: 100%" />
+          <el-input-number v-model="form.boxes_per_carton" :min="1" :controls="false" style="width: 200px" />
         </el-form-item>
 
         <el-form-item label="状态" v-if="isEdit">

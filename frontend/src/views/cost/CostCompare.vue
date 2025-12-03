@@ -46,9 +46,10 @@
                 <div class="profit-title">利润区间报价</div>
                 <div class="profit-list">
                   <div 
-                    v-for="tier in compareData.calculations[quotation.id]?.profitTiers || []" 
+                    v-for="tier in getAllProfitTiers(quotation)" 
                     :key="`profit-${quotation.id}-${tier.profitPercentage}`"
                     class="profit-item"
+                    :class="{ 'custom-tier': tier.isCustom }"
                   >
                     <span class="profit-rate">{{ tier.profitPercentage }}</span>
                     <span class="profit-price">{{ formatNumber(tier.price) }} {{ quotation.currency }}</span>
@@ -316,6 +317,33 @@ const getStatusText = (status) => {
   return textMap[status] || status
 }
 
+// 获取所有利润档位（系统+自定义）
+const getAllProfitTiers = (quotation) => {
+  const systemTiers = compareData.calculations[quotation.id]?.profitTiers || []
+  
+  // 解析自定义利润档位
+  let customTiers = []
+  if (quotation.custom_profit_tiers) {
+    try {
+      customTiers = JSON.parse(quotation.custom_profit_tiers).map(tier => ({
+        ...tier,
+        isCustom: true
+      }))
+    } catch (e) {
+      console.error('解析自定义利润档位失败:', e)
+    }
+  }
+  
+  // 合并并排序
+  const allTiers = [
+    ...systemTiers.map(t => ({ ...t, isCustom: false })),
+    ...customTiers
+  ]
+  allTiers.sort((a, b) => a.profitRate - b.profitRate)
+  
+  return allTiers
+}
+
 // 加载对比数据
 const loadCompareData = async () => {
   const ids = route.query.ids
@@ -408,44 +436,186 @@ const handlePrint = () => {
     return
   }
 
-  // 获取当前页面的样式
-  const styles = Array.from(document.styleSheets)
-    .map(styleSheet => {
-      try {
-        return Array.from(styleSheet.cssRules)
-          .map(rule => rule.cssText)
-          .join('\n')
-      } catch (e) {
-        return ''
-      }
-    })
-    .join('\n')
+  // 克隆内容并移除操作按钮
+  const clonedCard = overviewCard.cloneNode(true)
+  const actionsDiv = clonedCard.querySelector('.overview-actions')
+  if (actionsDiv) {
+    actionsDiv.remove()
+  }
 
-  // 构建打印内容
+  // 构建打印内容 - 使用简化的样式
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
     <head>
       <title>报价单对比 - ${new Date().toLocaleDateString()}</title>
+      <meta charset="UTF-8">
       <style>
-        ${styles}
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        
         body {
-          margin: 20px;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+          padding: 20px;
+          font-size: 14px;
+          line-height: 1.6;
+          color: #303133;
         }
-        .overview-actions {
-          display: none !important;
+        
+        h1 {
+          text-align: center;
+          margin-bottom: 20px;
+          font-size: 24px;
+          color: #303133;
         }
+        
+        h4 {
+          margin-bottom: 10px;
+          font-size: 16px;
+          color: #303133;
+        }
+        
+        .section-title {
+          font-size: 16px;
+          font-weight: bold;
+          color: #303133;
+          margin-bottom: 15px;
+        }
+        
+        .config-list {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 15px;
+          margin-top: 15px;
+        }
+        
+        .config-item {
+          background: white;
+          border: 2px solid #e4e7ed;
+          border-radius: 8px;
+          padding: 15px;
+          page-break-inside: avoid;
+        }
+        
+        .config-number {
+          font-size: 12px;
+          color: #909399;
+          margin-bottom: 8px;
+        }
+        
+        .config-details {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        
+        .config-name {
+          font-size: 18px;
+          color: #409eff;
+          margin-bottom: 2px;
+          font-weight: bold;
+        }
+        
+        .config-subtitle {
+          font-size: 14px;
+          color: #606266;
+          margin-bottom: 8px;
+        }
+        
+        .config-spec,
+        .config-quantity {
+          font-size: 13px;
+          color: #606266;
+        }
+        
+        .config-price {
+          font-size: 14px;
+          color: #303133;
+          margin-top: 8px;
+          padding-top: 8px;
+          border-top: 1px solid #e4e7ed;
+        }
+        
+        .price-value {
+          font-size: 16px;
+          font-weight: bold;
+          color: #e6a23c;
+          margin-left: 5px;
+        }
+        
+        .config-profit {
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px solid #e4e7ed;
+        }
+        
+        .profit-title {
+          font-size: 12px;
+          color: #909399;
+          margin-bottom: 8px;
+        }
+        
+        .profit-list {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        
+        .profit-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 13px;
+          padding: 4px 0;
+        }
+        
+        .profit-item.custom-tier {
+          background-color: #fef0e6;
+          padding: 4px 8px;
+          border-radius: 4px;
+          margin: 2px 0;
+        }
+        
+        .profit-rate {
+          color: #606266;
+        }
+        
+        .profit-item.custom-tier .profit-rate {
+          color: #E6A23C;
+          font-weight: 600;
+        }
+        
+        .profit-price {
+          color: #67c23a;
+          font-weight: 500;
+        }
+        
+        .profit-item.custom-tier .profit-price {
+          color: #E6A23C;
+        }
+        
         @media print {
           body {
-            margin: 0;
+            padding: 10px;
+          }
+          
+          .config-item {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          
+          @page {
+            margin: 1cm;
           }
         }
       </style>
     </head>
     <body>
-      <h1 style="text-align: center; margin-bottom: 20px;">报价单对比分析</h1>
-      ${overviewCard.outerHTML}
+      <h1>报价单对比分析</h1>
+      ${clonedCard.innerHTML}
     </body>
     </html>
   `)
@@ -686,6 +856,22 @@ onMounted(() => {
 .profit-price {
   color: #67c23a;
   font-weight: 500;
+}
+
+.profit-item.custom-tier {
+  background-color: #fef0e6;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin: 2px 0;
+}
+
+.profit-item.custom-tier .profit-rate {
+  color: #E6A23C;
+  font-weight: 600;
+}
+
+.profit-item.custom-tier .profit-price {
+  color: #E6A23C;
 }
 
 .overview-actions {

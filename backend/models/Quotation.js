@@ -19,8 +19,8 @@ class Quotation {
         quotation_no, customer_name, customer_region, model_id, regulation_id,
         quantity, freight_total, freight_per_unit, sales_type, shipping_method, port,
         base_cost, overhead_price, final_price, currency, status, created_by, 
-        packaging_config_id, include_freight_in_base
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        packaging_config_id, include_freight_in_base, custom_profit_tiers
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
     const result = stmt.run(
@@ -42,7 +42,8 @@ class Quotation {
       data.status || 'draft',
       data.created_by,
       data.packaging_config_id || null,
-      data.include_freight_in_base !== false ? 1 : 0
+      data.include_freight_in_base !== false ? 1 : 0,
+      data.custom_profit_tiers || null
     );
     
     return result.lastInsertRowid;
@@ -196,7 +197,7 @@ class Quotation {
       'quantity', 'freight_total', 'freight_per_unit', 'sales_type',
       'shipping_method', 'port',
       'base_cost', 'overhead_price', 'final_price', 'currency', 
-      'packaging_config_id', 'include_freight_in_base'
+      'packaging_config_id', 'include_freight_in_base', 'custom_profit_tiers'
     ];
 
     allowedFields.forEach(field => {

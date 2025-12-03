@@ -192,7 +192,7 @@
         <!-- 利润区间报价表 -->
         <div class="profit-tiers" v-if="calculation && calculation.profitTiers">
           <h4>利润区间报价</h4>
-          <el-table :data="calculation.profitTiers" border style="width: 100%">
+          <el-table :data="allProfitTiers" border style="width: 100%">
             <el-table-column label="利润率" prop="profitPercentage" width="120" />
             <el-table-column label="报价" width="150">
               <template #default="{ row }">
@@ -201,30 +201,11 @@
             </el-table-column>
             <el-table-column label="说明">
               <template #default="{ row }">
-                在基础价格上增加 {{ row.profitPercentage }} 利润
+                <span v-if="!row.isCustom">在基础价格上增加 {{ row.profitPercentage }} 利润</span>
+                <span v-else style="color: #E6A23C;">自定义利润档位</span>
               </template>
             </el-table-column>
           </el-table>
-
-          <!-- 自定义利润 -->
-          <div class="custom-profit-section">
-            <h4>自定义利润</h4>
-            <div class="custom-profit-input">
-              <span class="label">利润率：</span>
-              <el-input
-                v-model.number="customProfitRate"
-                type="number"
-                placeholder="请输入利润率（如：0.35 表示 35%）"
-                style="width: 280px"
-                @input="calculateCustomProfit"
-                clearable
-              />
-              <span class="unit">（0-1000%）</span>
-              <span class="result" v-if="customProfitPrice !== null">
-                报价：<strong>{{ formatNumber(customProfitPrice) }} {{ calculation.currency }}</strong>
-              </span>
-            </div>
-          </div>
         </div>
       </el-card>
     </div>
@@ -253,9 +234,8 @@ const items = ref({
 const calculation = ref(null)
 const loading = ref(false)
 
-// 自定义利润
-const customProfitRate = ref(null)
-const customProfitPrice = ref(null)
+// 自定义利润档位
+const customProfitTiers = ref([])
 
 // 货运信息（箱数和CBM）
 const shippingInfo = reactive({
@@ -268,52 +248,32 @@ const canEdit = computed(() => {
   return quotation.value.status === 'draft' || quotation.value.status === 'rejected'
 })
 
-// 计算自定义利润
-const calculateCustomProfit = () => {
-  // 清空结果
-  customProfitPrice.value = null
-  
-  // 验证输入
-  if (customProfitRate.value === null || customProfitRate.value === undefined || customProfitRate.value === '') {
-    return
+// 合并系统利润档位和自定义档位，并按百分比排序
+const allProfitTiers = computed(() => {
+  if (!calculation.value || !calculation.value.profitTiers) {
+    return []
   }
   
-  // 验证计算结果是否存在
-  if (!calculation.value) {
-    return
-  }
+  // 系统档位
+  const systemTiers = calculation.value.profitTiers.map(tier => ({
+    ...tier,
+    isCustom: false
+  }))
   
-  // 获取基础价格（根据销售类型）
-  let basePrice
-  if (calculation.value.salesType === 'domestic') {
-    // 内销：使用内销价
-    basePrice = calculation.value.domesticPrice
-  } else if (calculation.value.salesType === 'export') {
-    // 外销：使用保险价
-    basePrice = calculation.value.insurancePrice
-  }
+  // 自定义档位
+  const customTiers = customProfitTiers.value.map(tier => ({
+    ...tier,
+    isCustom: true
+  }))
   
-  if (!basePrice) {
-    return
-  }
+  // 合并并排序
+  const allTiers = [...systemTiers, ...customTiers]
+  allTiers.sort((a, b) => a.profitRate - b.profitRate)
   
-  // 转换为数字
-  const rate = parseFloat(customProfitRate.value)
-  
-  // 验证是否为有效数字
-  if (isNaN(rate)) {
-    return
-  }
-  
-  // 验证范围（0-10，即0%-1000%）
-  if (rate < 0 || rate > 10) {
-    ElMessage.warning('利润率范围应在 0-10 之间（0%-1000%）')
-    return
-  }
-  
-  // 计算自定义利润价格：基础价格 × (1 + 利润率)
-  customProfitPrice.value = basePrice * (1 + rate)
-}
+  return allTiers
+})
+
+
 
 // 加载报价单详情
 const loadDetail = async () => {
@@ -331,6 +291,16 @@ const loadDetail = async () => {
       console.log('报价单数据:', quotation.value)
       console.log('明细数据:', items.value)
       console.log('计算数据:', calculation.value)
+      
+      // 加载自定义利润档位
+      if (quotation.value.custom_profit_tiers) {
+        try {
+          customProfitTiers.value = JSON.parse(quotation.value.custom_profit_tiers)
+        } catch (e) {
+          console.error('解析自定义利润档位失败:', e)
+          customProfitTiers.value = []
+        }
+      }
       
       // 计算箱数和CBM
       calculateShippingInfo()

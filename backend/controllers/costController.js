@@ -82,6 +82,12 @@ const createQuotation = async (req, res) => {
             ? calculation.domesticPrice 
             : calculation.insurancePrice;
 
+        // 处理自定义利润档位
+        let customProfitTiersJson = null;
+        if (req.body.custom_profit_tiers && Array.isArray(req.body.custom_profit_tiers) && req.body.custom_profit_tiers.length > 0) {
+            customProfitTiersJson = JSON.stringify(req.body.custom_profit_tiers);
+        }
+
         // 创建报价单
         const quotationId = Quotation.create({
             quotation_no,
@@ -101,6 +107,7 @@ const createQuotation = async (req, res) => {
             final_price,
             currency: calculation.currency,
             include_freight_in_base: req.body.include_freight_in_base !== false,
+            custom_profit_tiers: customProfitTiersJson,
             status: 'draft',
             created_by: req.user.id
         });
@@ -322,6 +329,12 @@ const updateQuotation = async (req, res) => {
             return res.status(500).json(error('价格计算失败', 500));
         }
 
+        // 处理自定义利润档位
+        let customProfitTiersJson = null;
+        if (req.body.custom_profit_tiers && Array.isArray(req.body.custom_profit_tiers) && req.body.custom_profit_tiers.length > 0) {
+            customProfitTiersJson = JSON.stringify(req.body.custom_profit_tiers);
+        }
+
         // 更新报价单
         Quotation.update(id, {
             customer_name,
@@ -337,7 +350,8 @@ const updateQuotation = async (req, res) => {
             final_price,
             currency: calculation.currency,
             packaging_config_id: req.body.packaging_config_id || null,
-            include_freight_in_base: req.body.include_freight_in_base !== false ? 1 : 0
+            include_freight_in_base: req.body.include_freight_in_base !== false ? 1 : 0,
+            custom_profit_tiers: customProfitTiersJson
         });
 
         // 删除旧明细并创建新明细

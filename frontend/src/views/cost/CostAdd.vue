@@ -624,40 +624,58 @@
 
         <!-- 利润区间报价表 -->
         <div class="profit-tiers" v-if="calculation.profitTiers">
-          <h4>利润区间报价</h4>
-          <el-table :data="calculation.profitTiers" border style="width: 100%">
-            <el-table-column label="利润率" prop="profitPercentage" width="120" />
-            <el-table-column label="报价" width="150">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h4 style="margin: 0;">利润区间报价</h4>
+            <el-button type="primary" size="small" @click="addCustomProfitTier">
+              <el-icon><Plus /></el-icon>
+              添加档位
+            </el-button>
+          </div>
+          <el-table :data="allProfitTiers" border style="width: 100%">
+            <el-table-column label="利润率" width="150">
+              <template #default="{ row, $index }">
+                <span v-if="!row.isCustom">{{ row.profitPercentage }}</span>
+                <el-input
+                  v-else
+                  v-model.number="row.originalTier.profitRate"
+                  type="number"
+                  placeholder="如：0.35"
+                  size="small"
+                  @input="updateCustomTierPrice(row.originalTier)"
+                  style="width: 100%"
+                >
+                  <template #append>
+                    <span v-if="row.originalTier.profitRate !== null && row.originalTier.profitRate !== ''">
+                      {{ (row.originalTier.profitRate * 100).toFixed(0) }}%
+                    </span>
+                  </template>
+                </el-input>
+              </template>
+            </el-table-column>
+            <el-table-column label="报价" width="180">
               <template #default="{ row }">
                 {{ formatNumber(row.price) }} {{ calculation.currency }}
               </template>
             </el-table-column>
             <el-table-column label="说明">
               <template #default="{ row }">
-                在基础价格上增加 {{ row.profitPercentage }} 利润
+                <span v-if="!row.isCustom">在基础价格上增加 {{ row.profitPercentage }} 利润</span>
+                <span v-else style="color: #E6A23C;">自定义利润档位</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="80" fixed="right">
+              <template #default="{ row, $index }">
+                <el-button
+                  v-if="row.isCustom"
+                  type="danger"
+                  size="small"
+                  @click="removeCustomProfitTier(row.customIndex)"
+                >
+                  删除
+                </el-button>
               </template>
             </el-table-column>
           </el-table>
-
-          <!-- 自定义利润 -->
-          <div class="custom-profit-section">
-            <h4>自定义利润</h4>
-            <div class="custom-profit-input">
-              <span class="label">利润率：</span>
-              <el-input
-                v-model.number="customProfitRate"
-                type="number"
-                placeholder="请输入利润率（如 0.35 表示 35%）"
-                style="width: 280px"
-                @input="calculateCustomProfit"
-                clearable
-              />
-              <span class="unit">（0-10）</span>
-              <span class="result" v-if="customProfitPrice !== null">
-                报价：<strong>{{ formatNumber(customProfitPrice) }} {{ calculation.currency }}</strong>
-              </span>
-            </div>
-          </div>
         </div>
       </el-card>
 
@@ -677,7 +695,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft } from '@element-plus/icons-vue'
+import { ArrowLeft, Plus } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { formatNumber } from '@/utils/format'
 import { useConfigStore } from '@/store/config'
@@ -750,9 +768,8 @@ const calculation = ref(null)
 const saving = ref(false)
 const submitting = ref(false)
 
-// 自定义利润
-const customProfitRate = ref(null)
-const customProfitPrice = ref(null)
+// 自定义利润档位
+const customProfitTiers = ref([])
 
 // 货运信息（箱数和CBM）
 const shippingInfo = reactive({
@@ -806,6 +823,36 @@ const processTotal = computed(() => {
 
 const packagingTotal = computed(() => {
   return form.packaging.reduce((sum, item) => sum + item.subtotal, 0)
+})
+
+// 合并系统利润档位和自定义档位（不排序，保持添加顺序）
+const allProfitTiers = computed(() => {
+  if (!calculation.value || !calculation.value.profitTiers) {
+    return []
+  }
+  
+  // 系统档位（已排序）
+  const systemTiers = calculation.value.profitTiers.map(tier => ({
+    ...tier,
+    isCustom: false,
+    originalTier: null,
+    customIndex: -1
+  }))
+  
+  // 自定义档位 - 保留对原始对象的引用，保持添加顺序
+  const customTiers = customProfitTiers.value.map((tier, index) => ({
+    profitRate: tier.profitRate,
+    profitPercentage: tier.profitPercentage,
+    price: tier.price,
+    isCustom: true,
+    originalTier: tier, // 保留对原始对象的引用
+    customIndex: index  // 保存在customProfitTiers中的索引
+  }))
+  
+  // 合并但不排序，先显示系统档位，再显示自定义档位
+  const allTiers = [...systemTiers, ...customTiers]
+  
+  return allTiers
 })
 
 // 加载法规列表
@@ -1255,6 +1302,11 @@ const calculateCost = async () => {
 
     if (res.success) {
       calculation.value = res.data
+      
+      // 重新计算所有自定义档位的价格
+      customProfitTiers.value.forEach(tier => {
+        updateCustomTierPrice(tier)
+      })
     }
   } catch (error) {
     console.error('计算成本失败:', error)
@@ -1281,6 +1333,9 @@ const saveDraft = async () => {
 
     const quotationId = route.params.id
     
+    // 准备自定义利润档位数据（过滤空值并排序）
+    const customProfitTiersData = prepareCustomProfitTiersForSave()
+    
     if (quotationId) {
       // 编辑模式：更新报价单
       const res = await request.put(`/cost/quotations/${quotationId}`, {
@@ -1293,6 +1348,7 @@ const saveDraft = async () => {
         shipping_method: form.shipping_method || null,
         port: form.port || null,
         include_freight_in_base: form.include_freight_in_base,
+        custom_profit_tiers: customProfitTiersData,
         items
       })
 
@@ -1314,6 +1370,7 @@ const saveDraft = async () => {
         shipping_method: form.shipping_method || null,
         port: form.port || null,
         include_freight_in_base: form.include_freight_in_base,
+        custom_profit_tiers: customProfitTiersData,
         items
       })
 
@@ -1350,6 +1407,9 @@ const submitQuotation = async () => {
 
     const quotationId = route.params.id
     
+    // 准备自定义利润档位数据（过滤空值并排序）
+    const customProfitTiersData = prepareCustomProfitTiersForSave()
+    
     if (quotationId) {
       // 编辑模式：先更新，再提交
       const updateRes = await request.put(`/cost/quotations/${quotationId}`, {
@@ -1362,6 +1422,7 @@ const submitQuotation = async () => {
         shipping_method: form.shipping_method || null,
         port: form.port || null,
         include_freight_in_base: form.include_freight_in_base,
+        custom_profit_tiers: customProfitTiersData,
         items
       })
 
@@ -1388,6 +1449,7 @@ const submitQuotation = async () => {
         shipping_method: form.shipping_method || null,
         port: form.port || null,
         include_freight_in_base: form.include_freight_in_base,
+        custom_profit_tiers: customProfitTiersData,
         items
       })
 
@@ -1531,6 +1593,21 @@ const loadQuotationData = async (id, isCopy = false) => {
         calculateShippingInfo()
       }
       
+      // 加载自定义利润档位
+      if (quotation.custom_profit_tiers) {
+        try {
+          const customTiers = JSON.parse(quotation.custom_profit_tiers)
+          customProfitTiers.value = customTiers.map(tier => ({
+            profitRate: tier.profitRate,
+            profitPercentage: tier.profitPercentage,
+            price: tier.price
+          }))
+        } catch (e) {
+          console.error('解析自定义利润档位失败:', e)
+          customProfitTiers.value = []
+        }
+      }
+      
       // 计算成本
       calculateCost()
       
@@ -1566,28 +1643,50 @@ const loadSystemConfig = async () => {
   }
 }
 
-// 计算自定义利润
-const calculateCustomProfit = () => {
-  // 清空结果
-  customProfitPrice.value = null
-  
-  // 验证输入
-  if (customProfitRate.value === null || customProfitRate.value === undefined || customProfitRate.value === '') {
+// 准备保存的自定义利润档位数据（过滤空值并排序）
+const prepareCustomProfitTiersForSave = () => {
+  return customProfitTiers.value
+    .filter(tier => tier.profitRate !== null && tier.profitRate !== undefined && tier.profitRate !== '')
+    .map(tier => ({
+      profitRate: tier.profitRate,
+      profitPercentage: tier.profitPercentage,
+      price: tier.price
+    }))
+    .sort((a, b) => a.profitRate - b.profitRate) // 保存时排序
+}
+
+// 添加自定义利润档位
+const addCustomProfitTier = () => {
+  if (!calculation.value) {
+    ElMessage.warning('请先完成基础信息填写')
     return
   }
   
-  // 验证计算结果是否存在
+  customProfitTiers.value.push({
+    profitRate: null, // 不设置默认值
+    profitPercentage: '',
+    price: 0
+  })
+}
+
+// 更新自定义档位价格
+const updateCustomTierPrice = (tier) => {
   if (!calculation.value) {
+    return
+  }
+  
+  // 如果利润率为空或无效，清空价格和百分比
+  if (tier.profitRate === null || tier.profitRate === undefined || tier.profitRate === '') {
+    tier.price = 0
+    tier.profitPercentage = ''
     return
   }
   
   // 获取基础价格（根据销售类型）
   let basePrice
   if (calculation.value.salesType === 'domestic') {
-    // 内销：使用内销价
     basePrice = calculation.value.domesticPrice
   } else if (calculation.value.salesType === 'export') {
-    // 外销：使用保险价
     basePrice = calculation.value.insurancePrice
   }
   
@@ -1595,22 +1694,26 @@ const calculateCustomProfit = () => {
     return
   }
   
-  // 转换为数字
-  const rate = parseFloat(customProfitRate.value)
+  const rate = parseFloat(tier.profitRate)
   
-  // 验证是否为有效数字
-  if (isNaN(rate)) {
+  if (isNaN(rate) || rate < 0 || rate > 10) {
+    tier.price = 0
+    tier.profitPercentage = ''
     return
   }
   
-  // 验证范围（0-10，即0%-1000%）
-  if (rate < 0 || rate > 10) {
-    ElMessage.warning('利润率范围应在 0-10 之间')
-    return
-  }
+  // 更新百分比显示
+  tier.profitPercentage = `${(rate * 100).toFixed(0)}%`
   
-  // 计算自定义利润价格：基础价格 × (1 + 利润率)
-  customProfitPrice.value = basePrice * (1 + rate)
+  // 计算价格
+  tier.price = basePrice * (1 + rate)
+}
+
+// 删除自定义利润档位
+const removeCustomProfitTier = (customIndex) => {
+  if (customIndex >= 0 && customIndex < customProfitTiers.value.length) {
+    customProfitTiers.value.splice(customIndex, 1)
+  }
 }
 
 // 初始化
