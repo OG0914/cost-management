@@ -509,8 +509,8 @@ const getQuotationDetail = async (req, res) => {
             afterOverheadMaterialTotal
         });
 
-        // 为了前端显示，将工序总计乘以工价系数
-        items.process.displayTotal = items.process.total * calculatorConfig.processCoefficient;
+        // 工序总计已包含工价系数，直接显示
+        items.process.displayTotal = items.process.total;
 
         res.json(success({
             quotation,

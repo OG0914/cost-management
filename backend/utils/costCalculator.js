@@ -25,11 +25,12 @@ class CostCalculator {
 
   /**
    * 计算基础成本价
-   * 公式：成本价 = 原料总价 + 工价总价（系数倍数） + 包材总价 + 运费成本（可选）
+   * 公式：成本价 = 原料总价 + 工价总价 + 包材总价 + 运费成本（可选）
+   * 注意：工序单价在配置时已包含工价系数，此处不再重复乘以系数
    * 
    * @param {Object} params - 计算参数
    * @param {number} params.materialTotal - 原料总价
-   * @param {number} params.processTotal - 工价总价（原始值，会自动乘以工价系数）
+   * @param {number} params.processTotal - 工价总价（已包含工价系数）
    * @param {number} params.packagingTotal - 包材总价
    * @param {number} params.freightCost - 运费成本（运费总价 ÷ 数量）
    * @param {boolean} params.includeFreight - 是否将运费计入基础成本价（默认true）
@@ -37,10 +38,9 @@ class CostCalculator {
    * @returns {number} 基础成本价
    */
   calculateBaseCost({ materialTotal, processTotal, packagingTotal, freightCost, includeFreight = true, afterOverheadMaterialTotal = 0 }) {
-    // 工序总计需要乘以工价系数
-    const adjustedProcessTotal = processTotal * this.processCoefficient;
+    // 工序总计已包含工价系数，不再重复乘以系数
     // 基础成本价不包含管销后算的原料
-    let baseCost = materialTotal + adjustedProcessTotal + packagingTotal;
+    let baseCost = materialTotal + processTotal + packagingTotal;
     if (includeFreight) {
       baseCost += freightCost;
     }

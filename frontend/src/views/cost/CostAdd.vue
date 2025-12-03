@@ -479,7 +479,7 @@
 
         <div class="total-row">
           <span>工序总计：</span>
-          <span class="total-value">{{ formatNumber(processTotal) }}</span>
+          <span class="total-value">{{ formatNumber(processSubtotal) }}</span>
         </div>
       </el-card>
 
@@ -594,7 +594,7 @@
           <span class="section-title">成本计算</span>
         </template>
 
-        <el-descriptions :column="2" border>
+        <el-descriptions :column="1" border direction="vertical">
           <el-descriptions-item label="运费成本（每片）">
             {{ formatNumber(calculation.freightCost) || '' }}
           </el-descriptions-item>
@@ -814,12 +814,13 @@ const materialAfterOverheadTotal = computed(() => {
     .reduce((sum, item) => sum + item.subtotal, 0)
 })
 
-const processTotal = computed(() => {
-  // 工序总和（显示时乘以工价系数，但发送给后端时使用原始值）
-  const sum = form.processes.reduce((sum, item) => sum + item.subtotal, 0)
-  const coefficient = configStore.getProcessCoefficient()
-  return sum * coefficient
+// 工序总计（工序单价已包含工价系数）
+const processSubtotal = computed(() => {
+  return form.processes.reduce((sum, item) => sum + item.subtotal, 0)
 })
+
+// 保留processTotal用于兼容性
+const processTotal = processSubtotal
 
 const packagingTotal = computed(() => {
   return form.packaging.reduce((sum, item) => sum + item.subtotal, 0)

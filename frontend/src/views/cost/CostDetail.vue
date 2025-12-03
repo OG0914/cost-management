@@ -115,11 +115,7 @@
         </el-table>
         
         <div class="total-row">
-          <span>工序小计：</span>
-          <span class="total-value">{{ formatNumber(items.process.total / configStore.getProcessCoefficient()) }}</span>
-        </div>
-        <div class="total-row">
-          <span>工序总计（含{{ configStore.getProcessCoefficient() }}系数）：</span>
+          <span>工序总计：</span>
           <span class="total-value">{{ formatNumber(items.process.total) }}</span>
         </div>
       </el-card>
@@ -168,7 +164,7 @@
           <span class="section-title">成本计算</span>
         </template>
         
-        <el-descriptions :column="2" border>
+        <el-descriptions :column="1" border direction="vertical">
           <el-descriptions-item label="运费成本（每片）">
             {{ formatNumber(quotation.freight_per_unit) }}
           </el-descriptions-item>
@@ -181,11 +177,11 @@
           <el-descriptions-item label="运费计入成本">
             {{ quotation.include_freight_in_base ? '是' : '否' }}
           </el-descriptions-item>
-          <el-descriptions-item :label="quotation.sales_type === 'domestic' ? '最终成本价（含13%增值税）' : '最终成本价（不含增值税）'">
-            {{ formatNumber(quotation.final_price) }} {{ quotation.currency }}
-          </el-descriptions-item>
           <el-descriptions-item label="汇率（CNY/USD）" v-if="quotation.sales_type === 'export' && calculation">
             {{ formatNumber(calculation.exchangeRate) }}
+          </el-descriptions-item>
+          <el-descriptions-item :label="quotation.sales_type === 'domestic' ? '最终成本价（含13%增值税）' : '最终成本价（不含增值税）'">
+            {{ formatNumber(quotation.final_price) }} {{ quotation.currency }}
           </el-descriptions-item>
         </el-descriptions>
 
