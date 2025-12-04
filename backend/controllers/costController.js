@@ -97,6 +97,18 @@ const createQuotation = async (req, res) => {
 
         // 获取系统配置并计算报价
         const calculatorConfig = SystemConfig.getCalculatorConfig();
+        
+        // 如果请求中包含 vat_rate，验证并覆盖全局配置
+        let vatRateToSave = null;
+        if (req.body.vat_rate !== undefined && req.body.vat_rate !== null) {
+            const vatRate = parseFloat(req.body.vat_rate);
+            if (isNaN(vatRate) || vatRate < 0 || vatRate > 1) {
+                return res.status(400).json(error('增值税率必须在 0 到 1 之间', 400));
+            }
+            calculatorConfig.vatRate = vatRate;
+            vatRateToSave = vatRate;
+        }
+        
         const calculator = new CostCalculator(calculatorConfig);
 
         const calculation = calculator.calculateQuotation({
@@ -109,6 +121,9 @@ const createQuotation = async (req, res) => {
             includeFreightInBase: req.body.include_freight_in_base !== false,
             afterOverheadMaterialTotal
         });
+        
+        // 在计算结果中包含实际使用的增值税率
+        calculation.vatRate = calculatorConfig.vatRate;
 
         // 生成报价单编号
         const quotation_no = Quotation.generateQuotationNo();
@@ -146,6 +161,7 @@ const createQuotation = async (req, res) => {
             currency: calculation.currency,
             include_freight_in_base: req.body.include_freight_in_base !== false,
             custom_profit_tiers: customProfitTiersJson,
+            vat_rate: vatRateToSave,
             status: 'draft',
             created_by: req.user.id
         });
@@ -289,6 +305,15 @@ const calculateQuotation = async (req, res) => {
 
         // 获取系统配置并计算报价
         const calculatorConfig = SystemConfig.getCalculatorConfig();
+        
+        // 如果请求中包含 vat_rate，验证并覆盖全局配置
+        if (req.body.vat_rate !== undefined && req.body.vat_rate !== null) {
+            const vatRate = parseFloat(req.body.vat_rate);
+            if (!isNaN(vatRate) && vatRate >= 0 && vatRate <= 1) {
+                calculatorConfig.vatRate = vatRate;
+            }
+        }
+        
         const calculator = new CostCalculator(calculatorConfig);
 
         const calculation = calculator.calculateQuotation({
@@ -302,8 +327,9 @@ const calculateQuotation = async (req, res) => {
             afterOverheadMaterialTotal
         });
 
-        // 返回结果中包含原料系数信息
+        // 返回结果中包含原料系数信息和实际使用的增值税率
         calculation.materialCoefficient = materialCoefficient;
+        calculation.vatRate = calculatorConfig.vatRate;
 
         res.json(success(calculation, '计算成功'));
 
@@ -399,6 +425,18 @@ const updateQuotation = async (req, res) => {
 
         // 获取系统配置并计算报价
         const calculatorConfig = SystemConfig.getCalculatorConfig();
+        
+        // 如果请求中包含 vat_rate，验证并覆盖全局配置
+        let vatRateToSave = null;
+        if (req.body.vat_rate !== undefined && req.body.vat_rate !== null) {
+            const vatRate = parseFloat(req.body.vat_rate);
+            if (isNaN(vatRate) || vatRate < 0 || vatRate > 1) {
+                return res.status(400).json(error('增值税率必须在 0 到 1 之间', 400));
+            }
+            calculatorConfig.vatRate = vatRate;
+            vatRateToSave = vatRate;
+        }
+        
         const calculator = new CostCalculator(calculatorConfig);
 
         const calculation = calculator.calculateQuotation({
@@ -411,6 +449,9 @@ const updateQuotation = async (req, res) => {
             includeFreightInBase: req.body.include_freight_in_base !== false,
             afterOverheadMaterialTotal
         });
+        
+        // 在计算结果中包含实际使用的增值税率
+        calculation.vatRate = calculatorConfig.vatRate;
 
         console.log('更新报价单 - 计算结果:', {
             salesType: sales_type,
@@ -454,7 +495,8 @@ const updateQuotation = async (req, res) => {
             currency: calculation.currency,
             packaging_config_id: req.body.packaging_config_id || null,
             include_freight_in_base: req.body.include_freight_in_base !== false ? 1 : 0,
-            custom_profit_tiers: customProfitTiersJson
+            custom_profit_tiers: customProfitTiersJson,
+            vat_rate: vatRateToSave
         });
 
         // 删除旧明细并创建新明细
@@ -602,6 +644,12 @@ const getQuotationDetail = async (req, res) => {
         // 重新计算以获取利润区间
         // 注意：工序总计传入原始值，计算器内部会自动乘以工价系数
         const calculatorConfig = SystemConfig.getCalculatorConfig();
+        
+        // 如果报价单保存了自定义增值税率，使用该值
+        if (quotation.vat_rate !== null && quotation.vat_rate !== undefined) {
+            calculatorConfig.vatRate = quotation.vat_rate;
+        }
+        
         const calculator = new CostCalculator(calculatorConfig);
 
         // 计算原料总计（不含管销后算的原料）
@@ -626,8 +674,9 @@ const getQuotationDetail = async (req, res) => {
             afterOverheadMaterialTotal
         });
 
-        // 返回原料系数信息
+        // 返回原料系数信息和实际使用的增值税率
         calculation.materialCoefficient = materialCoefficient;
+        calculation.vatRate = calculatorConfig.vatRate;
 
         // 工序总计已包含工价系数，直接显示
         items.process.displayTotal = items.process.total;

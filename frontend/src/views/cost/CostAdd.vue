@@ -88,6 +88,24 @@
             </el-form-item>
           </el-col>
 
+          <el-col :span="8" v-if="form.sales_type === 'domestic'">
+            <el-form-item label="增值税率" prop="vat_rate">
+              <el-input-number
+                v-model="form.vat_rate"
+                :min="0"
+                :max="1"
+                :precision="2"
+                :step="0.01"
+                :controls="false"
+                @change="calculateCost"
+                style="width: 100%"
+              />
+              <div style="color: #909399; font-size: 12px; margin-top: 5px;">
+                当前: {{ ((form.vat_rate || 0) * 100).toFixed(0) }}%，系统默认: {{ ((configStore.config.vat_rate || 0.13) * 100).toFixed(0) }}%
+              </div>
+            </el-form-item>
+          </el-col>
+
           <el-col :span="8" v-if="form.sales_type === 'export'">
             <el-form-item label="货运方式" prop="shipping_method">
               <el-radio-group v-model="form.shipping_method" @change="onShippingMethodChange">
@@ -612,7 +630,7 @@
           <el-descriptions-item label="汇率（CNY/USD）" v-if="form.sales_type === 'export'">
             {{ formatNumber(calculation.exchangeRate) || '' }}
           </el-descriptions-item>
-          <el-descriptions-item :label="form.sales_type === 'domestic' ? '最终成本价（含13%增值税）' : '最终成本价（不含增值税）'">
+          <el-descriptions-item :label="form.sales_type === 'domestic' ? `最终成本价（含${((form.vat_rate || 0) * 100).toFixed(0)}%增值税）` : '最终成本价（不含增值税）'">
             <span v-if="form.sales_type === 'domestic'">
               {{ formatNumber(calculation.domesticPrice) || '' }} CNY
             </span>
@@ -743,6 +761,7 @@ const form = reactive({
   quantity: null,
   freight_total: null,
   include_freight_in_base: true,
+  vat_rate: null, // 增值税率，null表示使用全局配置
   materials: [],
   processes: [],
   packaging: []
@@ -1339,6 +1358,7 @@ const calculateCost = async () => {
       sales_type: form.sales_type,
       include_freight_in_base: form.include_freight_in_base,
       model_id: form.model_id, // 传递model_id用于获取原料系数
+      vat_rate: form.vat_rate, // 传递自定义增值税率
       items
     })
 
@@ -1390,6 +1410,7 @@ const saveDraft = async () => {
         shipping_method: form.shipping_method || null,
         port: form.port || null,
         include_freight_in_base: form.include_freight_in_base,
+        vat_rate: form.vat_rate,
         custom_profit_tiers: customProfitTiersData,
         items
       })
@@ -1412,6 +1433,7 @@ const saveDraft = async () => {
         shipping_method: form.shipping_method || null,
         port: form.port || null,
         include_freight_in_base: form.include_freight_in_base,
+        vat_rate: form.vat_rate,
         custom_profit_tiers: customProfitTiersData,
         items
       })
@@ -1464,6 +1486,7 @@ const submitQuotation = async () => {
         shipping_method: form.shipping_method || null,
         port: form.port || null,
         include_freight_in_base: form.include_freight_in_base,
+        vat_rate: form.vat_rate,
         custom_profit_tiers: customProfitTiersData,
         items
       })
@@ -1491,6 +1514,7 @@ const submitQuotation = async () => {
         shipping_method: form.shipping_method || null,
         port: form.port || null,
         include_freight_in_base: form.include_freight_in_base,
+        vat_rate: form.vat_rate,
         custom_profit_tiers: customProfitTiersData,
         items
       })
@@ -1565,6 +1589,10 @@ const loadQuotationData = async (id, isCopy = false) => {
       form.quantity = quotation.quantity
       form.freight_total = quotation.freight_total
       form.include_freight_in_base = quotation.include_freight_in_base !== false
+      // 加载增值税率，如果报价单有保存的值则使用，否则使用全局配置
+      form.vat_rate = quotation.vat_rate !== null && quotation.vat_rate !== undefined 
+        ? quotation.vat_rate 
+        : (configStore.config.vat_rate || 0.13)
       
       // 填充明细数据 - 保留完整的数据结构
       form.materials = items.material.items.map(item => ({
@@ -1576,7 +1604,8 @@ const loadQuotationData = async (id, isCopy = false) => {
         subtotal: item.subtotal,
         is_changed: item.is_changed || 0,
         from_standard: true, // 标记为标准数据，这样会显示为文本而不是下拉框
-        after_overhead: item.after_overhead || false
+        after_overhead: item.after_overhead || false,
+        coefficient_applied: true // 数据库中的subtotal已应用原料系数，避免后端重复计算
       }))
       
       form.processes = items.process.items.map(item => ({
@@ -1701,6 +1730,8 @@ const loadStandardCostData = async (id) => {
       form.quantity = standardCost.quantity
       form.freight_total = 0
       form.include_freight_in_base = true
+      // 标准成本复制时使用全局配置的增值税率
+      form.vat_rate = configStore.config.vat_rate || 0.13
       
       // 设置货运信息（用于计算箱数、CBM和运费）
       if (standardCost.pc_per_bag && standardCost.bags_per_box && standardCost.boxes_per_carton) {
@@ -1721,7 +1752,8 @@ const loadStandardCostData = async (id) => {
           subtotal: item.subtotal,
           is_changed: 0,
           from_standard: true,
-          after_overhead: item.after_overhead || false
+          after_overhead: item.after_overhead || false,
+          coefficient_applied: true // 数据库中的subtotal已应用原料系数，避免后端重复计算
         }))
       }
       
@@ -1876,8 +1908,8 @@ const updateCustomTierPrice = (tier) => {
   // 更新百分比显示
   tier.profitPercentage = `${(rate * 100).toFixed(0)}%`
   
-  // 计算价格
-  tier.price = basePrice * (1 + rate)
+  // 计算价格：利润报价 = 基础价 / (1 - 利润率)
+  tier.price = basePrice / (1 - rate)
 }
 
 // 删除自定义利润档位
@@ -1925,6 +1957,9 @@ onMounted(async () => {
   
   // 始终加载原料系数配置（缓存起来）
   await loadMaterialCoefficients()
+  
+  // 初始化增值税率为全局配置的默认值
+  form.vat_rate = configStore.config.vat_rate || 0.13
   
   // 获取产品类别参数
   if (route.query.model_category) {

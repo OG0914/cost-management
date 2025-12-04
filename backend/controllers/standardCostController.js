@@ -60,13 +60,14 @@ const getStandardCostHistory = (req, res, next) => {
   try {
     const { id } = req.params;
     
-    // 先获取当前标准成本以获取 packaging_config_id
+    // 先获取当前标准成本以获取 packaging_config_id 和 sales_type
     const standardCost = StandardCost.findById(id);
     if (!standardCost) {
       return res.status(404).json(error('标准成本不存在', 404));
     }
     
-    const history = StandardCost.getHistory(standardCost.packaging_config_id);
+    // 获取同一 packaging_config_id + sales_type 的历史版本
+    const history = StandardCost.getHistory(standardCost.packaging_config_id, standardCost.sales_type);
     
     res.json(success(history));
   } catch (err) {
@@ -126,7 +127,7 @@ const restoreStandardCost = (req, res, next) => {
   try {
     const { id, version } = req.params;
     
-    // 获取当前标准成本以获取 packaging_config_id
+    // 获取当前标准成本以获取 packaging_config_id 和 sales_type
     const standardCost = StandardCost.findById(id);
     if (!standardCost) {
       return res.status(404).json(error('标准成本不存在', 404));
@@ -134,6 +135,7 @@ const restoreStandardCost = (req, res, next) => {
     
     const newId = StandardCost.restore(
       standardCost.packaging_config_id,
+      standardCost.sales_type,
       parseInt(version),
       req.user.id
     );

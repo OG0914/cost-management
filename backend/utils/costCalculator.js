@@ -97,7 +97,7 @@ class CostCalculator {
 
   /**
    * 生成利润区间报价
-   * 公式：利润报价 = 基础价 × (1 + 利润%)
+   * 公式：利润报价 = 基础价 / (1 - 利润率)
    * 
    * @param {number} basePrice - 基础价格（内销价或外销保险价）
    * @returns {Array<Object>} 利润区间报价数组
@@ -106,7 +106,7 @@ class CostCalculator {
     return this.profitTiers.map(tier => ({
       profitRate: tier,
       profitPercentage: `${(tier * 100).toFixed(0)}%`,
-      price: this._round(basePrice * (1 + tier), 4)
+      price: this._round(basePrice / (1 - tier), 4)
     }));
   }
 

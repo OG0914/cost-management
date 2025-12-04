@@ -123,6 +123,13 @@
                 {{ formatNumber(row.quantity, 0) }}
               </template>
             </el-table-column>
+            <el-table-column prop="sales_type" label="销售类型" width="90">
+              <template #default="{ row }">
+                <el-tag :type="row.sales_type === 'domestic' ? 'success' : 'primary'" size="small">
+                  {{ row.sales_type === 'domestic' ? '内销' : '外销' }}
+                </el-tag>
+              </template>
+            </el-table-column>
             <el-table-column label="最终价格" width="120">
               <template #default="{ row }">
                 {{ formatNumber(row.sales_type === 'domestic' ? row.domestic_price : row.export_price) }} {{ row.currency }}

@@ -188,7 +188,7 @@
           <el-descriptions-item label="汇率（CNY/USD）" v-if="quotation.sales_type === 'export' && calculation">
             {{ formatNumber(calculation.exchangeRate) }}
           </el-descriptions-item>
-          <el-descriptions-item :label="quotation.sales_type === 'domestic' ? '最终成本价（含13%增值税）' : '最终成本价（不含增值税）'">
+          <el-descriptions-item :label="quotation.sales_type === 'domestic' ? `最终成本价（含${((quotation.vat_rate !== null && quotation.vat_rate !== undefined ? quotation.vat_rate : configStore.config.vat_rate || 0.13) * 100).toFixed(0)}%增值税）` : '最终成本价（不含增值税）'">
             {{ formatNumber(quotation.final_price) }} {{ quotation.currency }}
           </el-descriptions-item>
         </el-descriptions>

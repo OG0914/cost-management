@@ -86,49 +86,73 @@ class StandardCost {
   /**
    * 根据包装配置ID查找当前标准成本
    * @param {number} packagingConfigId - 包装配置ID
+   * @param {string} salesType - 销售类型（可选，如果提供则按销售类型过滤）
    * @returns {Object|null} 标准成本对象
    */
-  static findCurrentByPackagingConfigId(packagingConfigId) {
+  static findCurrentByPackagingConfigId(packagingConfigId, salesType = null) {
     const db = dbManager.getDatabase();
-    const stmt = db.prepare(`
-      SELECT * FROM standard_costs 
-      WHERE packaging_config_id = ? AND is_current = 1
-    `);
-    return stmt.get(packagingConfigId);
+    if (salesType) {
+      const stmt = db.prepare(`
+        SELECT * FROM standard_costs 
+        WHERE packaging_config_id = ? AND sales_type = ? AND is_current = 1
+      `);
+      return stmt.get(packagingConfigId, salesType);
+    } else {
+      const stmt = db.prepare(`
+        SELECT * FROM standard_costs 
+        WHERE packaging_config_id = ? AND is_current = 1
+      `);
+      return stmt.get(packagingConfigId);
+    }
   }
 
   /**
    * 获取标准成本的所有历史版本
    * @param {number} packagingConfigId - 包装配置ID
+   * @param {string} salesType - 销售类型（可选）
    * @returns {Array} 历史版本列表
    */
-  static getHistory(packagingConfigId) {
+  static getHistory(packagingConfigId, salesType = null) {
     const db = dbManager.getDatabase();
-    const stmt = db.prepare(`
-      SELECT 
-        sc.*,
-        u.real_name as setter_name
-      FROM standard_costs sc
-      JOIN users u ON sc.set_by = u.id
-      WHERE sc.packaging_config_id = ?
-      ORDER BY sc.version DESC
-    `);
-    return stmt.all(packagingConfigId);
+    if (salesType) {
+      const stmt = db.prepare(`
+        SELECT 
+          sc.*,
+          u.real_name as setter_name
+        FROM standard_costs sc
+        JOIN users u ON sc.set_by = u.id
+        WHERE sc.packaging_config_id = ? AND sc.sales_type = ?
+        ORDER BY sc.version DESC
+      `);
+      return stmt.all(packagingConfigId, salesType);
+    } else {
+      const stmt = db.prepare(`
+        SELECT 
+          sc.*,
+          u.real_name as setter_name
+        FROM standard_costs sc
+        JOIN users u ON sc.set_by = u.id
+        WHERE sc.packaging_config_id = ?
+        ORDER BY sc.version DESC
+      `);
+      return stmt.all(packagingConfigId);
+    }
   }
 
   /**
-   * 获取指定包装配置的最大版本号
+   * 获取指定包装配置和销售类型的最大版本号
    * @param {number} packagingConfigId - 包装配置ID
+   * @param {string} salesType - 销售类型
    * @returns {number} 最大版本号，如果没有则返回0
    */
-  static getMaxVersion(packagingConfigId) {
+  static getMaxVersion(packagingConfigId, salesType) {
     const db = dbManager.getDatabase();
     const stmt = db.prepare(`
       SELECT MAX(version) as max_version 
       FROM standard_costs 
-      WHERE packaging_config_id = ?
+      WHERE packaging_config_id = ? AND sales_type = ?
     `);
-    const result = stmt.get(packagingConfigId);
+    const result = stmt.get(packagingConfigId, salesType);
     return result.max_version || 0;
   }
 
@@ -152,18 +176,18 @@ class StandardCost {
     
     // 使用事务确保数据一致性
     const transaction = db.transaction(() => {
-      // 获取当前最大版本号
-      const maxVersion = this.getMaxVersion(data.packaging_config_id);
+      // 获取当前最大版本号（基于 packaging_config_id + sales_type）
+      const maxVersion = this.getMaxVersion(data.packaging_config_id, data.sales_type);
       const newVersion = maxVersion + 1;
       
-      // 将旧版本标记为非当前
+      // 将同一 packaging_config_id + sales_type 的旧版本标记为非当前
       if (maxVersion > 0) {
         const updateStmt = db.prepare(`
           UPDATE standard_costs 
           SET is_current = 0 
-          WHERE packaging_config_id = ?
+          WHERE packaging_config_id = ? AND sales_type = ?
         `);
-        updateStmt.run(data.packaging_config_id);
+        updateStmt.run(data.packaging_config_id, data.sales_type);
       }
       
       // 插入新版本
@@ -198,19 +222,20 @@ class StandardCost {
   /**
    * 恢复历史版本
    * @param {number} packagingConfigId - 包装配置ID
+   * @param {string} salesType - 销售类型
    * @param {number} version - 要恢复的版本号
    * @param {number} setBy - 操作人ID
    * @returns {number} 新版本的ID
    */
-  static restore(packagingConfigId, version, setBy) {
+  static restore(packagingConfigId, salesType, version, setBy) {
     const db = dbManager.getDatabase();
     
     // 获取要恢复的版本数据
     const stmt = db.prepare(`
       SELECT * FROM standard_costs 
-      WHERE packaging_config_id = ? AND version = ?
+      WHERE packaging_config_id = ? AND sales_type = ? AND version = ?
     `);
-    const oldVersion = stmt.get(packagingConfigId, version);
+    const oldVersion = stmt.get(packagingConfigId, salesType, version);
     
     if (!oldVersion) {
       throw new Error('历史版本不存在');
