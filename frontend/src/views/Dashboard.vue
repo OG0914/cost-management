@@ -41,9 +41,9 @@
             </el-space>
           </div>
 
-          <el-divider />
+          <el-divider v-if="canAccessCost" />
 
-          <div class="nav-section">
+          <div class="nav-section" v-if="canAccessCost">
             <h4>报价单管理</h4>
             <el-space wrap>
               <el-button type="primary" icon="Plus" @click="showCategoryModal">新增报价单</el-button>
@@ -73,7 +73,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Document } from '@element-plus/icons-vue'
@@ -82,6 +82,9 @@ import ProductCategoryModal from '../components/ProductCategoryModal.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
+
+// 权限检查 - 采购人员和生产人员不能访问报价单管理
+const canAccessCost = computed(() => !authStore.isPurchaser && !authStore.isProducer)
 
 // 产品类别选择弹窗
 const categoryModalVisible = ref(false)

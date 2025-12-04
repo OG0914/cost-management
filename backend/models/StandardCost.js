@@ -67,8 +67,10 @@ class StandardCost {
         pc.pc_per_bag,
         pc.bags_per_box,
         pc.boxes_per_carton,
+        pc.model_id,
         m.model_name,
         m.model_category,
+        m.regulation_id,
         r.name as regulation_name,
         u.real_name as setter_name
       FROM standard_costs sc

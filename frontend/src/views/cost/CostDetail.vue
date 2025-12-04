@@ -7,6 +7,14 @@
           <h2>报价单详情</h2>
         </div>
         <div class="header-right">
+          <el-button 
+            v-if="isAdminOrReviewer && quotation.packaging_config_id" 
+            type="success" 
+            @click="setAsStandardCost"
+            :loading="settingStandardCost"
+          >
+            设为标准成本
+          </el-button>
           <el-button type="primary" @click="goToEdit" v-if="canEdit">编辑</el-button>
           <el-button type="warning" @click="copyQuotation">复制</el-button>
         </div>
@@ -216,6 +224,7 @@ import { ArrowLeft } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { formatNumber } from '@/utils/format'
 import { useConfigStore } from '@/store/config'
+import { getUser } from '@/utils/auth'
 
 const router = useRouter()
 const route = useRoute()
@@ -229,6 +238,13 @@ const items = ref({
 })
 const calculation = ref(null)
 const loading = ref(false)
+const settingStandardCost = ref(false)
+
+// 用户权限
+const user = getUser()
+const isAdminOrReviewer = computed(() => {
+  return user && (user.role === 'admin' || user.role === 'reviewer')
+})
 
 // 自定义利润档位
 const customProfitTiers = ref([])
@@ -386,6 +402,43 @@ const copyQuotation = () => {
     query: { copyFrom: route.params.id }
   })
   ElMessage.success('正在复制报价单...')
+}
+
+// 设为标准成本
+const setAsStandardCost = async () => {
+  if (!quotation.value.packaging_config_id) {
+    ElMessage.warning('该报价单没有关联包装配置，无法设为标准成本')
+    return
+  }
+  
+  try {
+    await ElMessageBox.confirm(
+      '确定要将此报价单设为标准成本吗？如果该包装配置已有标准成本，将创建新版本。',
+      '设为标准成本',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'info'
+      }
+    )
+    
+    settingStandardCost.value = true
+    
+    const res = await request.post('/standard-costs', {
+      quotation_id: quotation.value.id
+    })
+    
+    if (res.success) {
+      ElMessage.success('已成功设为标准成本')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('设为标准成本失败:', error)
+      ElMessage.error(error.response?.data?.message || '设为标准成本失败')
+    }
+  } finally {
+    settingStandardCost.value = false
+  }
 }
 
 onMounted(async () => {

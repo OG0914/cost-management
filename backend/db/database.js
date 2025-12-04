@@ -25,6 +25,9 @@ class DatabaseManager {
       // 初始化表结构
       this.initializeTables();
       
+      // 执行迁移
+      this.runMigrations();
+      
       return this.db;
     } catch (error) {
       console.error('数据库初始化失败:', error);
@@ -42,6 +45,51 @@ class DatabaseManager {
       console.log('数据表初始化完成');
     } else {
       console.warn('未找到 seedData.sql 文件');
+    }
+  }
+
+  // 执行数据库迁移
+  runMigrations() {
+    // 创建迁移记录表
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS migrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        executed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    const migrationsDir = path.join(__dirname, 'migrations');
+    if (!fs.existsSync(migrationsDir)) {
+      console.log('迁移目录不存在，跳过迁移');
+      return;
+    }
+
+    // 获取所有迁移文件并排序
+    const migrationFiles = fs.readdirSync(migrationsDir)
+      .filter(f => f.endsWith('.sql'))
+      .sort();
+
+    // 获取已执行的迁移
+    const executedMigrations = this.db.prepare('SELECT name FROM migrations').all().map(r => r.name);
+
+    // 执行未执行的迁移
+    for (const file of migrationFiles) {
+      if (executedMigrations.includes(file)) {
+        continue;
+      }
+
+      const filePath = path.join(migrationsDir, file);
+      const sql = fs.readFileSync(filePath, 'utf8');
+
+      try {
+        this.db.exec(sql);
+        this.db.prepare('INSERT INTO migrations (name) VALUES (?)').run(file);
+        console.log(`迁移执行成功: ${file}`);
+      } catch (error) {
+        console.error(`迁移执行失败: ${file}`, error.message);
+        // 继续执行其他迁移，不中断
+      }
     }
   }
 

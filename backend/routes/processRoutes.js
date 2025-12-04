@@ -51,10 +51,11 @@ router.put('/process-configs/:id', checkRole('admin', 'producer'), processContro
 router.delete('/process-configs/:id', checkRole('admin', 'producer'), processController.deleteProcessConfig);
 
 // 包材配置路由
+// 采购人员可以管理包材，生产人员只能查看
 router.get('/packaging-materials/:packagingConfigId', processController.getPackagingMaterials);
-router.post('/packaging-materials', checkRole('admin', 'producer', 'purchaser'), processController.createPackagingMaterial);
-router.put('/packaging-materials/:id', checkRole('admin', 'producer', 'purchaser'), processController.updatePackagingMaterial);
-router.delete('/packaging-materials/:id', checkRole('admin', 'producer', 'purchaser'), processController.deletePackagingMaterial);
+router.post('/packaging-materials', checkRole('admin', 'purchaser'), processController.createPackagingMaterial);
+router.put('/packaging-materials/:id', checkRole('admin', 'purchaser'), processController.updatePackagingMaterial);
+router.delete('/packaging-materials/:id', checkRole('admin', 'purchaser'), processController.deletePackagingMaterial);
 
 // 工序 Excel 导入导出
 router.post('/process-configs/import', upload.single('file'), checkRole('admin', 'producer'), processController.importProcesses);
@@ -62,8 +63,9 @@ router.post('/process-configs/export/excel', checkRole('admin', 'producer'), pro
 router.get('/process-configs/template/download', checkRole('admin', 'producer'), processController.downloadProcessTemplate);
 
 // 包材 Excel 导入导出
-router.post('/packaging-materials/import', upload.single('file'), checkRole('admin', 'producer', 'purchaser'), processController.importPackagingMaterials);
-router.post('/packaging-materials/export/excel', checkRole('admin', 'producer', 'purchaser'), processController.exportPackagingMaterials);
-router.get('/packaging-materials/template/download', checkRole('admin', 'producer', 'purchaser'), processController.downloadPackagingMaterialTemplate);
+// 采购人员可以导入导出包材，生产人员只能查看
+router.post('/packaging-materials/import', upload.single('file'), checkRole('admin', 'purchaser'), processController.importPackagingMaterials);
+router.post('/packaging-materials/export/excel', checkRole('admin', 'purchaser'), processController.exportPackagingMaterials);
+router.get('/packaging-materials/template/download', checkRole('admin', 'purchaser'), processController.downloadPackagingMaterialTemplate);
 
 module.exports = router;

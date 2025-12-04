@@ -308,8 +308,8 @@ const goBack = () => {
   router.push('/dashboard');
 };
 
-// 权限检查
-const canEdit = computed(() => authStore.isAdmin || authStore.isProducer || authStore.isPurchaser);
+// 权限检查 - 只有管理员和采购人员可以编辑包材
+const canEdit = computed(() => authStore.isAdmin || authStore.isPurchaser);
 
 // 数据
 const models = ref([]);

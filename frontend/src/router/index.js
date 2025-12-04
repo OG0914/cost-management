@@ -64,31 +64,31 @@ const routes = [
     path: '/cost/add',
     name: 'CostAdd',
     component: () => import('../views/cost/CostAdd.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, forbidPurchaserProducer: true }
   },
   {
     path: '/cost/edit/:id',
     name: 'CostEdit',
     component: () => import('../views/cost/CostAdd.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, forbidPurchaserProducer: true }
   },
   {
     path: '/cost/detail/:id',
     name: 'CostDetail',
     component: () => import('../views/cost/CostDetail.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, forbidPurchaserProducer: true }
   },
   {
     path: '/cost/records',
     name: 'CostRecords',
     component: () => import('../views/cost/CostRecords.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, forbidPurchaserProducer: true }
   },
   {
     path: '/cost/compare',
     name: 'CostCompare',
     component: () => import('../views/cost/CostCompare.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, forbidPurchaserProducer: true }
   },
   {
     path: '/home',
@@ -128,6 +128,16 @@ router.beforeEach(async (to, from, next) => {
         const { useAuthStore } = await import('../store/auth')
         const authStore = useAuthStore()
         await authStore.fetchUserInfo()
+        
+        // 检查采购人员和生产人员的访问限制
+        if (to.meta.forbidPurchaserProducer) {
+          const role = authStore.user?.role
+          if (role === 'purchaser' || role === 'producer') {
+            next('/dashboard')
+            return
+          }
+        }
+        
         next()
       } catch (error) {
         // Token无效，清除并跳转登录
@@ -135,6 +145,17 @@ router.beforeEach(async (to, from, next) => {
         next('/login')
       }
     } else {
+      // 检查采购人员和生产人员的访问限制
+      if (to.meta.forbidPurchaserProducer) {
+        const { useAuthStore } = await import('../store/auth')
+        const authStore = useAuthStore()
+        const role = authStore.user?.role
+        if (role === 'purchaser' || role === 'producer') {
+          next('/dashboard')
+          return
+        }
+      }
+      
       next()
     }
   } else {

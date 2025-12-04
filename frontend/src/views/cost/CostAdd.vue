@@ -692,7 +692,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, Plus } from '@element-plus/icons-vue'
@@ -1017,14 +1017,16 @@ const onShippingMethodChange = () => {
   form.port_type = 'fob_shenzhen'
   form.port = ''
   freightCalculation.value = null
-  calculateFOBFreight()
+  // 先计算箱数和CBM，再计算运费
+  calculateShippingInfo()
 }
 
 // 港口类型变化
 const onPortTypeChange = () => {
   if (form.port_type === 'fob_shenzhen') {
     form.port = 'FOB深圳'
-    calculateFOBFreight()
+    // 先计算箱数和CBM，再计算运费
+    calculateShippingInfo()
   } else {
     form.port = ''
     form.freight_total = null
@@ -1663,6 +1665,135 @@ const loadQuotationData = async (id, isCopy = false) => {
   }
 }
 
+// 加载标准成本数据（用于复制）
+const loadStandardCostData = async (id) => {
+  try {
+    const res = await request.get(`/standard-costs/${id}`)
+    
+    if (res.success) {
+      const { standardCost, items } = res.data
+      
+      console.log('标准成本数据:', standardCost)
+      
+      // 设置产品类别（用于过滤包装配置）
+      if (standardCost.model_category) {
+        currentModelCategory.value = standardCost.model_category
+        // 设置对应的原料系数
+        if (materialCoefficientsCache.value[standardCost.model_category]) {
+          materialCoefficient.value = materialCoefficientsCache.value[standardCost.model_category]
+        }
+      }
+      
+      // 填充基本信息 - 先设置 regulation_id，这样 filteredPackagingConfigs 才能正确过滤
+      form.regulation_id = standardCost.regulation_id || null
+      
+      // 使用 nextTick 确保 filteredPackagingConfigs 已更新后再设置 packaging_config_id
+      await nextTick()
+      
+      form.packaging_config_id = standardCost.packaging_config_id || null
+      form.model_id = standardCost.model_id || null
+      form.customer_name = ''  // 标准成本复制时客户名称为空
+      form.customer_region = ''
+      form.sales_type = standardCost.sales_type
+      form.shipping_method = ''  // 默认不设置货运方式，让用户选择
+      form.port_type = 'fob_shenzhen'  // 默认FOB深圳
+      form.port = ''
+      form.quantity = standardCost.quantity
+      form.freight_total = 0
+      form.include_freight_in_base = true
+      
+      // 设置货运信息（用于计算箱数、CBM和运费）
+      if (standardCost.pc_per_bag && standardCost.bags_per_box && standardCost.boxes_per_carton) {
+        // 计算每箱只数
+        const pcsPerCarton = standardCost.pc_per_bag * standardCost.bags_per_box * standardCost.boxes_per_carton
+        shippingInfo.pcsPerCarton = pcsPerCarton
+        console.log('每箱只数:', pcsPerCarton)
+      }
+      
+      // 填充明细数据
+      if (items && items.material) {
+        form.materials = items.material.items.map(item => ({
+          category: 'material',
+          material_id: item.material_id || null,
+          item_name: item.item_name,
+          usage_amount: item.usage_amount,
+          unit_price: item.unit_price,
+          subtotal: item.subtotal,
+          is_changed: 0,
+          from_standard: true,
+          after_overhead: item.after_overhead || false
+        }))
+      }
+      
+      if (items && items.process) {
+        form.processes = items.process.items.map(item => ({
+          category: 'process',
+          item_name: item.item_name,
+          usage_amount: item.usage_amount,
+          unit_price: item.unit_price,
+          subtotal: item.subtotal,
+          is_changed: 0,
+          from_standard: true
+        }))
+      }
+      
+      if (items && items.packaging) {
+        form.packaging = items.packaging.items.map(item => ({
+          category: 'packaging',
+          material_id: item.material_id || null,
+          item_name: item.item_name,
+          usage_amount: item.usage_amount,
+          unit_price: item.unit_price,
+          carton_volume: item.carton_volume || null,
+          subtotal: item.subtotal,
+          is_changed: 0,
+          from_standard: true
+        }))
+      }
+      
+      // 尝试从原料库匹配原料ID
+      form.materials.forEach(material => {
+        if (!material.material_id) {
+          const found = allMaterials.value.find(m => m.name === material.item_name)
+          if (found) {
+            material.material_id = found.id
+          }
+        }
+      })
+      
+      // 尝试从原料库匹配包材ID
+      form.packaging.forEach(pkg => {
+        if (!pkg.material_id) {
+          const found = allMaterials.value.find(m => m.name === pkg.item_name)
+          if (found) {
+            pkg.material_id = found.id
+          }
+        }
+      })
+      
+      // 查找外箱材积（从包材中查找）
+      if (items && items.packaging) {
+        const cartonMaterial = items.packaging.items.find(item => item.carton_volume && item.carton_volume > 0)
+        shippingInfo.cartonVolume = cartonMaterial ? cartonMaterial.carton_volume : null
+        console.log('外箱材积:', shippingInfo.cartonVolume)
+      }
+      
+      // 计算箱数和CBM（如果有数量和每箱只数）
+      if (form.quantity && shippingInfo.pcsPerCarton) {
+        calculateShippingInfo()
+      }
+      
+      // 计算成本
+      calculateCost()
+      
+      ElMessage.success('标准成本数据已复制，请填写客户信息后保存')
+    }
+  } catch (error) {
+    console.error('加载标准成本数据失败:', error)
+    ElMessage.error('加载标准成本数据失败')
+  }
+}
+
 // 加载系统配置
 const loadSystemConfig = async () => {
   try {
@@ -1809,6 +1940,11 @@ onMounted(async () => {
   if (route.params.id) {
     const id = route.params.id
     await loadQuotationData(id, false)
+  }
+  // 检查是否是从标准成本复制
+  else if (route.query.copyFromStandardCost) {
+    const id = route.query.copyFromStandardCost
+    await loadStandardCostData(id)
   }
   // 检查是否是复制模式
   else if (route.query.copyFrom) {
