@@ -48,8 +48,21 @@ class DatabaseManager {
     }
   }
 
-  // 执行数据库迁移
+  // 执行数据库迁移（保留机制以备将来使用）
   runMigrations() {
+    const migrationsDir = path.join(__dirname, 'migrations');
+    if (!fs.existsSync(migrationsDir)) {
+      return;
+    }
+
+    const migrationFiles = fs.readdirSync(migrationsDir)
+      .filter(f => f.endsWith('.sql'))
+      .sort();
+
+    if (migrationFiles.length === 0) {
+      return;
+    }
+
     // 创建迁移记录表
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS migrations (
@@ -58,17 +71,6 @@ class DatabaseManager {
         executed_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
-
-    const migrationsDir = path.join(__dirname, 'migrations');
-    if (!fs.existsSync(migrationsDir)) {
-      console.log('迁移目录不存在，跳过迁移');
-      return;
-    }
-
-    // 获取所有迁移文件并排序
-    const migrationFiles = fs.readdirSync(migrationsDir)
-      .filter(f => f.endsWith('.sql'))
-      .sort();
 
     // 获取已执行的迁移
     const executedMigrations = this.db.prepare('SELECT name FROM migrations').all().map(r => r.name);
@@ -88,7 +90,6 @@ class DatabaseManager {
         console.log(`迁移执行成功: ${file}`);
       } catch (error) {
         console.error(`迁移执行失败: ${file}`, error.message);
-        // 继续执行其他迁移，不中断
       }
     }
   }

@@ -126,7 +126,7 @@ CREATE TABLE IF NOT EXISTS quotations (
   freight_total REAL NOT NULL,
   freight_per_unit REAL NOT NULL,
   sales_type TEXT NOT NULL CHECK(sales_type IN ('domestic', 'export')),
-  shipping_method TEXT,
+  shipping_method TEXT CHECK(shipping_method IN ('fcl', 'fcl_20', 'fcl_40', 'lcl') OR shipping_method IS NULL),
   port TEXT,
   base_cost REAL NOT NULL,
   overhead_price REAL NOT NULL,
@@ -137,6 +137,8 @@ CREATE TABLE IF NOT EXISTS quotations (
   reviewed_by INTEGER,
   packaging_config_id INTEGER,
   include_freight_in_base BOOLEAN DEFAULT 1,
+  custom_profit_tiers TEXT,
+  vat_rate REAL DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   submitted_at DATETIME,
@@ -198,13 +200,57 @@ CREATE TABLE IF NOT EXISTS price_history (
   FOREIGN KEY (changed_by) REFERENCES users(id)
 );
 
+-- 标准成本表
+CREATE TABLE IF NOT EXISTS standard_costs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  packaging_config_id INTEGER NOT NULL,
+  quotation_id INTEGER NOT NULL,
+  version INTEGER NOT NULL DEFAULT 1,
+  is_current INTEGER DEFAULT 1,
+  base_cost REAL NOT NULL,
+  overhead_price REAL NOT NULL,
+  domestic_price REAL,
+  export_price REAL,
+  quantity INTEGER NOT NULL,
+  currency TEXT DEFAULT 'CNY',
+  sales_type TEXT NOT NULL,
+  set_by INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (packaging_config_id) REFERENCES packaging_configs(id),
+  FOREIGN KEY (quotation_id) REFERENCES quotations(id),
+  FOREIGN KEY (set_by) REFERENCES users(id),
+  UNIQUE(packaging_config_id, sales_type, version)
+);
+
+-- 报价单自定义费用表
+CREATE TABLE IF NOT EXISTS quotation_custom_fees (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  quotation_id INTEGER NOT NULL,
+  fee_name TEXT NOT NULL,
+  fee_rate REAL NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (quotation_id) REFERENCES quotations(id) ON DELETE CASCADE
+);
+
 -- 插入默认系统配置
 INSERT OR IGNORE INTO system_config (config_key, config_value, description) VALUES
 ('overhead_rate', '0.2', '管销率'),
 ('vat_rate', '0.13', '增值税率'),
 ('insurance_rate', '0.003', '保险率'),
 ('exchange_rate', '7.2', '汇率（CNY/USD）'),
-('profit_tiers', '[0.05, 0.10, 0.25, 0.50]', '利润区间');
+('profit_tiers', '[0.05, 0.10, 0.25, 0.50]', '利润区间'),
+('fob_shenzhen_exchange_rate', '7.1', 'FOB深圳运费汇率（USD/CNY）'),
+('fcl_20_freight_usd', '840', '20尺整柜FOB深圳运费（美金）'),
+('fcl_40_freight_usd', '940', '40尺整柜FOB深圳运费（美金）'),
+('lcl_base_freight_1_3', '800', '散货基础运费：1-3 CBM（人民币）'),
+('lcl_base_freight_4_10', '1000', '散货基础运费：4-10 CBM（人民币）'),
+('lcl_base_freight_11_15', '1500', '散货基础运费：11-15 CBM（人民币）'),
+('lcl_handling_charge', '500', '散货操作费（Handling charge）（人民币）'),
+('lcl_cfs_per_cbm', '170', '散货拼箱费（CFS）每CBM单价（人民币）'),
+('lcl_document_fee', '500', '散货文件费（人民币）'),
+('material_coefficients', '{"口罩": 0.97, "半面罩": 0.99}', '原料系数配置，按型号分类映射');
 
 -- 插入默认管理员账号（密码: admin123，需要在实际使用时通过 bcrypt 加密）
 -- 注意：这里的密码是明文，实际部署时需要通过后端 API 创建加密后的管理员账号
@@ -225,3 +271,7 @@ CREATE INDEX IF NOT EXISTS idx_quotations_status ON quotations(status);
 CREATE INDEX IF NOT EXISTS idx_quotations_created_by ON quotations(created_by);
 CREATE INDEX IF NOT EXISTS idx_quotation_items_quotation_id ON quotation_items(quotation_id);
 CREATE INDEX IF NOT EXISTS idx_comments_quotation_id ON comments(quotation_id);
+CREATE INDEX IF NOT EXISTS idx_standard_costs_packaging_config ON standard_costs(packaging_config_id);
+CREATE INDEX IF NOT EXISTS idx_standard_costs_is_current ON standard_costs(is_current);
+CREATE INDEX IF NOT EXISTS idx_standard_costs_sales_type ON standard_costs(sales_type);
+CREATE INDEX IF NOT EXISTS idx_custom_fees_quotation ON quotation_custom_fees(quotation_id);
