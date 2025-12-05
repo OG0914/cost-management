@@ -239,10 +239,10 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, ArrowLeft, Download, Delete, Upload } from '@element-plus/icons-vue';
-import request from '../utils/request';
-import { useAuthStore } from '../store/auth';
-import { useConfigStore } from '../store/config';
-import { formatNumber } from '../utils/format';
+import request from '../../utils/request';
+import { useAuthStore } from '../../store/auth';
+import { useConfigStore } from '../../store/config';
+import { formatNumber } from '../../utils/format';
 
 const router = useRouter();
 const authStore = useAuthStore();

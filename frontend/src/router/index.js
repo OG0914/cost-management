@@ -38,8 +38,8 @@ const routes = [
   },
   {
     path: '/processes',
-    name: 'ProcessManagement',
-    component: () => import('../views/ProcessManagement.vue'),
+    name: 'ProcessManage',
+    component: () => import('../views/process/ProcessManage.vue'),
     meta: { requiresAuth: true }
   },
   {
@@ -57,7 +57,7 @@ const routes = [
   {
     path: '/config',
     name: 'SystemConfig',
-    component: () => import('../views/SystemConfig.vue'),
+    component: () => import('../views/config/SystemConfig.vue'),
     meta: { requiresAuth: true }
   },
   {
