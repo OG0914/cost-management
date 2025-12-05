@@ -160,6 +160,7 @@ class Quotation {
         q.*, 
         r.name as regulation_name,
         m.model_name,
+        m.model_category,
         pc.config_name as packaging_config_name,
         pc.pc_per_bag,
         pc.bags_per_box,

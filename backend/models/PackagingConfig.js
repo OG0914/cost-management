@@ -10,7 +10,7 @@ class PackagingConfig {
   static findAll() {
     const db = dbManager.getDatabase();
     const stmt = db.prepare(`
-      SELECT pc.*, m.model_name
+      SELECT pc.*, m.model_name, m.model_category
       FROM packaging_configs pc
       LEFT JOIN models m ON pc.model_id = m.id
       WHERE pc.is_active = 1
@@ -23,7 +23,7 @@ class PackagingConfig {
   static findByModelId(modelId) {
     const db = dbManager.getDatabase();
     const stmt = db.prepare(`
-      SELECT pc.*, m.model_name
+      SELECT pc.*, m.model_name, m.model_category
       FROM packaging_configs pc
       LEFT JOIN models m ON pc.model_id = m.id
       WHERE pc.model_id = ? AND pc.is_active = 1
@@ -36,7 +36,7 @@ class PackagingConfig {
   static findById(id) {
     const db = dbManager.getDatabase();
     const stmt = db.prepare(`
-      SELECT pc.*, m.model_name
+      SELECT pc.*, m.model_name, m.model_category
       FROM packaging_configs pc
       LEFT JOIN models m ON pc.model_id = m.id
       WHERE pc.id = ?

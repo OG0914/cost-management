@@ -4,30 +4,18 @@
       <div class="header-content">
         <div class="header-left">
           <el-button icon="ArrowLeft" @click="goBack">返回</el-button>
-          <h2>{{ activeTab === 'standard' ? '标准成本' : '报价单记录' }}</h2>
+          <h2>报价单记录</h2>
         </div>
         <div class="header-right">
-          <template v-if="activeTab === 'standard'">
-            <el-button 
-              type="success" 
-              icon="DataAnalysis" 
-              @click="goToStandardCostCompare"
-              :disabled="selectedStandardCosts.length < 2"
-            >
-              对比模式 ({{ selectedStandardCosts.length }})
-            </el-button>
-          </template>
-          <template v-if="activeTab === 'quotations'">
-            <el-button 
-              type="success" 
-              icon="DataAnalysis" 
-              @click="goToCompare"
-              :disabled="selectedQuotations.length < 2"
-            >
-              对比模式 ({{ selectedQuotations.length }})
-            </el-button>
-            <el-button type="primary" icon="Plus" @click="showCategoryModal">新增报价单</el-button>
-          </template>
+          <el-button 
+            type="success" 
+            icon="DataAnalysis" 
+            @click="goToCompare"
+            :disabled="selectedQuotations.length < 2"
+          >
+            对比模式 ({{ selectedQuotations.length }})
+          </el-button>
+          <el-button type="primary" icon="Plus" @click="showCategoryModal">新增报价单</el-button>
         </div>
       </div>
     </el-card>
@@ -35,254 +23,125 @@
     <!-- 产品类别选择弹窗 -->
     <ProductCategoryModal
       v-model="categoryModalVisible"
-      :default-category="copyStandardCostCategory"
       @confirm="onCategoryConfirm"
     />
 
-    <!-- 标准成本历史弹窗 -->
-    <el-dialog
-      v-model="historyDialogVisible"
-      title="标准成本历史版本"
-      width="800px"
-      destroy-on-close
-    >
-      <el-table :data="historyList" border v-loading="historyLoading">
-        <el-table-column prop="version" label="版本" width="80" />
+    <el-card>
+      <!-- 搜索筛选 -->
+      <el-form :inline="true" :model="searchForm" class="search-form">
+        <el-form-item label="客户名称">
+          <el-input v-model="searchForm.customer_name" placeholder="请输入客户名称" clearable style="width: 180px" />
+        </el-form-item>
+        <el-form-item label="型号">
+          <el-input v-model="searchForm.model_name" placeholder="请输入型号" clearable style="width: 150px" />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 120px">
+            <el-option label="草稿" value="draft" />
+            <el-option label="已提交" value="submitted" />
+            <el-option label="已审核" value="approved" />
+            <el-option label="已退回" value="rejected" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="创建日期">
+          <el-date-picker
+            v-model="searchForm.date_range"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            clearable
+            style="width: 260px"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="loadQuotations">查询</el-button>
+          <el-button @click="resetSearch">重置</el-button>
+        </el-form-item>
+      </el-form>
+
+
+      <!-- 数据表格 -->
+      <el-table :data="quotations" border v-loading="loading" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" :selectable="checkSelectable" />
+        <el-table-column prop="quotation_no" label="报价单编号" width="180" />
+        <el-table-column prop="status" label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="getStatusType(row.status)">
+              {{ getStatusText(row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="sales_type" label="类型" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.sales_type === 'domestic' ? 'success' : 'warning'" size="small">
+              {{ row.sales_type === 'domestic' ? '内销' : '外销' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="customer_name" label="客户名称" width="150" />
+        <el-table-column prop="customer_region" label="客户地区" width="100" />
+        <el-table-column prop="model_category" label="产品类别" width="100" />
+        <el-table-column prop="model_name" label="型号" width="120" />
+        <el-table-column prop="packaging_config_name" label="包装方式" width="220">
+          <template #default="{ row }">
+            <div v-if="row.packaging_config_name">
+              <div>{{ row.packaging_config_name }}</div>
+              <div style="color: #909399; font-size: 12px;">
+                {{ row.pc_per_bag }}pc/bag, {{ row.bags_per_box }}bags/box, {{ row.boxes_per_carton }}boxes/carton
+              </div>
+            </div>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="quantity" label="数量" width="100">
           <template #default="{ row }">
             {{ formatNumber(row.quantity, 0) }}
           </template>
         </el-table-column>
-        <el-table-column label="最终价格" width="150">
+        <el-table-column prop="final_price" label="最终价格" width="120">
           <template #default="{ row }">
-            {{ formatNumber(row.sales_type === 'domestic' ? row.domestic_price : row.export_price) }} {{ row.currency }}
+            {{ formatNumber(row.final_price) }} {{ row.currency }}
           </template>
         </el-table-column>
-        <el-table-column prop="setter_name" label="设置人" width="100" />
-        <el-table-column prop="created_at" label="设置时间" width="180" />
-        <el-table-column label="状态" width="100">
+        <el-table-column prop="creator_name" label="创建人" width="100" />
+        <el-table-column prop="created_at" label="创建时间" width="180" />
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
-            <el-tag :type="row.is_current ? 'success' : 'info'" size="small">
-              {{ row.is_current ? '当前版本' : '历史版本' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="100">
-          <template #default="{ row }">
-            <el-button 
-              v-if="!row.is_current" 
-              size="small" 
-              type="primary"
-              @click="restoreVersion(row)"
-            >
-              恢复
+            <el-button size="small" @click="viewDetail(row.id)">查看</el-button>
+            <el-button size="small" type="primary" @click="editQuotation(row.id)" v-if="canEdit(row)">
+              编辑
+            </el-button>
+            <el-button size="small" type="warning" @click="copyQuotation(row.id)">
+              复制
+            </el-button>
+            <el-button size="small" type="danger" @click="deleteQuotation(row.id)" v-if="canDelete(row)">
+              删除
             </el-button>
           </template>
         </el-table-column>
       </el-table>
-    </el-dialog>
 
-    <el-card>
-      <!-- Tab切换 -->
-      <el-tabs v-model="activeTab" @tab-change="handleTabChange">
-        <el-tab-pane label="标准成本" name="standard">
-          <!-- 标准成本筛选 -->
-          <el-form :inline="true" :model="standardSearchForm" class="search-form">
-            <el-form-item label="产品类别">
-              <el-select v-model="standardSearchForm.model_category" placeholder="请选择产品类别" clearable style="width: 150px">
-                <el-option v-for="cat in modelCategories" :key="cat" :label="cat" :value="cat" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="型号">
-              <el-input v-model="standardSearchForm.model_name" placeholder="请输入型号" clearable style="width: 150px" />
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="loadStandardCosts">查询</el-button>
-              <el-button @click="resetStandardSearch">重置</el-button>
-            </el-form-item>
-          </el-form>
-
-          <!-- 标准成本表格 -->
-          <el-table :data="standardCosts" border v-loading="standardLoading" @selection-change="handleStandardCostSelectionChange">
-            <el-table-column type="selection" width="55" />
-            <el-table-column prop="model_category" label="产品类别" width="100" />
-            <el-table-column prop="model_name" label="型号" width="120" />
-            <el-table-column prop="packaging_config_name" label="包装方式" width="220">
-              <template #default="{ row }">
-                <div v-if="row.packaging_config_name">
-                  <div>{{ row.packaging_config_name }}</div>
-                  <div style="color: #909399; font-size: 12px;">
-                    {{ row.pc_per_bag }}pc/bag, {{ row.bags_per_box }}bags/box, {{ row.boxes_per_carton }}boxes/carton
-                  </div>
-                </div>
-                <span v-else>-</span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="quantity" label="数量" width="100">
-              <template #default="{ row }">
-                {{ formatNumber(row.quantity, 0) }}
-              </template>
-            </el-table-column>
-            <el-table-column prop="sales_type" label="销售类型" width="90">
-              <template #default="{ row }">
-                <el-tag :type="row.sales_type === 'domestic' ? 'success' : 'primary'" size="small">
-                  {{ row.sales_type === 'domestic' ? '内销' : '外销' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="最终价格" width="120">
-              <template #default="{ row }">
-                {{ formatNumber(row.sales_type === 'domestic' ? row.domestic_price : row.export_price) }} {{ row.currency }}
-              </template>
-            </el-table-column>
-            <el-table-column prop="version" label="版本" width="80">
-              <template #default="{ row }">
-                V{{ row.version }}
-              </template>
-            </el-table-column>
-            <el-table-column prop="setter_name" label="设置人" width="100" />
-            <el-table-column prop="created_at" label="设置时间" width="180" />
-            <el-table-column label="操作" width="200" fixed="right">
-              <template #default="{ row }">
-                <el-button size="small" type="primary" @click="copyStandardCost(row)">
-                  复制
-                </el-button>
-                <el-button 
-                  v-if="isAdminOrReviewer" 
-                  size="small" 
-                  type="warning"
-                  @click="showHistory(row)"
-                >
-                  历史
-                </el-button>
-                <el-button 
-                  v-if="isAdminOrReviewer" 
-                  size="small" 
-                  type="danger"
-                  @click="deleteStandardCost(row)"
-                >
-                  删除
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-tab-pane>
-
-        <el-tab-pane label="报价单记录" name="quotations">
-          <!-- 搜索筛选 -->
-          <el-form :inline="true" :model="searchForm" class="search-form">
-            <el-form-item label="客户名称">
-              <el-input v-model="searchForm.customer_name" placeholder="请输入客户名称" clearable style="width: 180px" />
-            </el-form-item>
-            <el-form-item label="型号">
-              <el-input v-model="searchForm.model_name" placeholder="请输入型号" clearable style="width: 150px" />
-            </el-form-item>
-            <el-form-item label="状态">
-              <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 120px">
-                <el-option label="草稿" value="draft" />
-                <el-option label="已提交" value="submitted" />
-                <el-option label="已审核" value="approved" />
-                <el-option label="已退回" value="rejected" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="创建日期">
-              <el-date-picker
-                v-model="searchForm.date_range"
-                type="daterange"
-                range-separator="至"
-                start-placeholder="开始日期"
-                end-placeholder="结束日期"
-                format="YYYY-MM-DD"
-                value-format="YYYY-MM-DD"
-                clearable
-                style="width: 260px"
-              />
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="loadQuotations">查询</el-button>
-              <el-button @click="resetSearch">重置</el-button>
-            </el-form-item>
-          </el-form>
-
-          <!-- 数据表格 -->
-          <el-table :data="quotations" border v-loading="loading" @selection-change="handleSelectionChange">
-            <el-table-column type="selection" width="55" :selectable="checkSelectable" />
-            <el-table-column prop="quotation_no" label="报价单编号" width="180" />
-            <el-table-column prop="sales_type" label="类型" width="80">
-              <template #default="{ row }">
-                <el-tag :type="row.sales_type === 'domestic' ? 'success' : 'warning'" size="small">
-                  {{ row.sales_type === 'domestic' ? '内销' : '外销' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="customer_name" label="客户名称" width="150" />
-            <el-table-column prop="customer_region" label="客户地区" width="100" />
-            <el-table-column prop="model_name" label="型号" width="120" />
-            <el-table-column prop="packaging_config_name" label="包装方式" width="220">
-              <template #default="{ row }">
-                <div v-if="row.packaging_config_name">
-                  <div>{{ row.packaging_config_name }}</div>
-                  <div style="color: #909399; font-size: 12px;">
-                    {{ row.pc_per_bag }}pc/bag, {{ row.bags_per_box }}bags/box, {{ row.boxes_per_carton }}boxes/carton
-                  </div>
-                </div>
-                <span v-else>-</span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="quantity" label="数量" width="100">
-              <template #default="{ row }">
-                {{ formatNumber(row.quantity, 0) }}
-              </template>
-            </el-table-column>
-            <el-table-column prop="final_price" label="最终价格" width="120">
-              <template #default="{ row }">
-                {{ formatNumber(row.final_price) }} {{ row.currency }}
-              </template>
-            </el-table-column>
-            <el-table-column prop="status" label="状态" width="100">
-              <template #default="{ row }">
-                <el-tag :type="getStatusType(row.status)">
-                  {{ getStatusText(row.status) }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="creator_name" label="创建人" width="100" />
-            <el-table-column prop="created_at" label="创建时间" width="180" />
-            <el-table-column label="操作" width="280" fixed="right">
-              <template #default="{ row }">
-                <el-button size="small" @click="viewDetail(row.id)">查看</el-button>
-                <el-button size="small" type="primary" @click="editQuotation(row.id)" v-if="canEdit(row)">
-                  编辑
-                </el-button>
-                <el-button size="small" type="warning" @click="copyQuotation(row.id)">
-                  复制
-                </el-button>
-                <el-button size="small" type="danger" @click="deleteQuotation(row.id)" v-if="canDelete(row)">
-                  删除
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-
-          <!-- 分页 -->
-          <el-pagination
-            v-model:current-page="pagination.page"
-            v-model:page-size="pagination.pageSize"
-            :total="pagination.total"
-            :page-sizes="[10, 20, 50, 100]"
-            layout="total, sizes, prev, pager, next, jumper"
-            @size-change="loadQuotations"
-            @current-change="loadQuotations"
-            class="pagination"
-          />
-        </el-tab-pane>
-      </el-tabs>
+      <!-- 分页 -->
+      <el-pagination
+        v-model:current-page="pagination.page"
+        v-model:page-size="pagination.pageSize"
+        :total="pagination.total"
+        :page-sizes="[10, 20, 50, 100]"
+        layout="total, sizes, prev, pager, next, jumper"
+        @size-change="loadQuotations"
+        @current-change="loadQuotations"
+        class="pagination"
+      />
     </el-card>
   </div>
 </template>
 
+
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, Plus, DataAnalysis } from '@element-plus/icons-vue'
@@ -293,172 +152,13 @@ import ProductCategoryModal from '@/components/ProductCategoryModal.vue'
 
 const router = useRouter()
 
-// Tab状态
-const activeTab = ref('standard')
-
 // 产品类别选择弹窗
 const categoryModalVisible = ref(false)
-const copyStandardCostCategory = ref('')
-const copyStandardCostData = ref(null)
 
 // 用户权限
 const user = getUser()
-const isAdminOrReviewer = computed(() => {
-  return user && (user.role === 'admin' || user.role === 'reviewer')
-})
 
-// 型号分类列表
-const modelCategories = ref([])
-
-// ========== 标准成本相关 ==========
-const standardCosts = ref([])
-const standardLoading = ref(false)
-const standardSearchForm = reactive({
-  model_category: '',
-  model_name: ''
-})
-
-// 历史弹窗
-const historyDialogVisible = ref(false)
-const historyList = ref([])
-const historyLoading = ref(false)
-const currentStandardCost = ref(null)
-
-// 标准成本选择（用于对比）
-const selectedStandardCosts = ref([])
-
-// 加载型号分类
-const loadModelCategories = async () => {
-  try {
-    const res = await request.get('/models/categories')
-    if (res.success) {
-      modelCategories.value = res.data
-    }
-  } catch (error) {
-    console.error('加载型号分类失败:', error)
-  }
-}
-
-// 加载标准成本列表
-const loadStandardCosts = async () => {
-  standardLoading.value = true
-  try {
-    const params = {}
-    if (standardSearchForm.model_category) {
-      params.model_category = standardSearchForm.model_category
-    }
-    if (standardSearchForm.model_name) {
-      params.model_name = standardSearchForm.model_name
-    }
-    
-    const res = await request.get('/standard-costs', { params })
-    if (res.success) {
-      standardCosts.value = res.data
-    }
-  } catch (error) {
-    console.error('加载标准成本列表失败:', error)
-    ElMessage.error('加载标准成本列表失败')
-  } finally {
-    standardLoading.value = false
-  }
-}
-
-// 重置标准成本搜索
-const resetStandardSearch = () => {
-  standardSearchForm.model_category = ''
-  standardSearchForm.model_name = ''
-  loadStandardCosts()
-}
-
-// 复制标准成本（直接跳转，不弹窗选择产品类别）
-const copyStandardCost = (row) => {
-  router.push({
-    path: '/cost/add',
-    query: { 
-      model_category: row.model_category,
-      copyFromStandardCost: row.id 
-    }
-  })
-  ElMessage.success('正在复制标准成本...')
-}
-
-// 显示历史版本
-const showHistory = async (row) => {
-  currentStandardCost.value = row
-  historyDialogVisible.value = true
-  historyLoading.value = true
-  
-  try {
-    const res = await request.get(`/standard-costs/${row.id}/history`)
-    if (res.success) {
-      historyList.value = res.data
-    }
-  } catch (error) {
-    console.error('加载历史版本失败:', error)
-    ElMessage.error('加载历史版本失败')
-  } finally {
-    historyLoading.value = false
-  }
-}
-
-// 恢复历史版本
-const restoreVersion = async (row) => {
-  // 获取当前最大版本号
-  const maxVersion = Math.max(...historyList.value.map(h => h.version))
-  const newVersion = maxVersion + 1
-  
-  try {
-    await ElMessageBox.confirm(
-      `确定要基于 V${row.version} 的内容创建新版本吗？将生成 V${newVersion} 作为当前版本。`,
-      '恢复历史版本',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'info'
-      }
-    )
-    
-    const res = await request.post(`/standard-costs/${currentStandardCost.value.id}/restore/${row.version}`)
-    if (res.success) {
-      ElMessage.success(`已基于 V${row.version} 创建新版本 V${newVersion}`)
-      historyDialogVisible.value = false
-      loadStandardCosts()
-    }
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('恢复版本失败:', error)
-      ElMessage.error('恢复版本失败')
-    }
-  }
-}
-
-// 删除标准成本
-const deleteStandardCost = async (row) => {
-  try {
-    await ElMessageBox.confirm(
-      '确定要删除这个标准成本吗？这将删除所有历史版本，此操作不可恢复。',
-      '警告',
-      {
-        confirmButtonText: '确定删除',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-    
-    const res = await request.delete(`/standard-costs/${row.packaging_config_id}`)
-    if (res.success) {
-      ElMessage.success('删除成功')
-      loadStandardCosts()
-    }
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('删除失败:', error)
-      ElMessage.error('删除失败')
-    }
-  }
-}
-
-// ========== 报价单相关 ==========
+// 搜索表单
 const searchForm = reactive({
   customer_name: '',
   model_name: '',
@@ -488,7 +188,6 @@ const loadQuotations = async () => {
       status: searchForm.status
     }
 
-    // 添加日期范围参数
     if (searchForm.date_range && searchForm.date_range.length === 2) {
       params.start_date = searchForm.date_range[0]
       params.end_date = searchForm.date_range[1]
@@ -540,14 +239,6 @@ const getStatusText = (status) => {
   return textMap[status] || status
 }
 
-// Tab切换处理
-const handleTabChange = (tab) => {
-  if (tab === 'standard') {
-    loadStandardCosts()
-  } else {
-    loadQuotations()
-  }
-}
 
 // 返回
 const goBack = () => {
@@ -556,39 +247,27 @@ const goBack = () => {
 
 // 显示产品类别选择弹窗
 const showCategoryModal = () => {
-  copyStandardCostCategory.value = ''
-  copyStandardCostData.value = null
   categoryModalVisible.value = true
 }
 
 // 产品类别选择确认
 const onCategoryConfirm = (category) => {
-  const query = { model_category: category }
-  
-  // 如果是从标准成本复制，传递标准成本ID
-  if (copyStandardCostData.value) {
-    query.copyFromStandardCost = copyStandardCostData.value.id
-  }
-  
   router.push({
     path: '/cost/add',
-    query
+    query: { model_category: category }
   })
 }
 
 // 判断是否可以编辑
 const canEdit = (row) => {
-  // 只有草稿和已退回状态可以编辑
   return row.status === 'draft' || row.status === 'rejected'
 }
 
 // 判断是否可以删除
 const canDelete = (row) => {
-  // 管理员可以删除任何状态的报价单
   if (user && user.role === 'admin') {
     return true
   }
-  // 普通用户只能删除草稿状态的报价单
   return row.status === 'draft'
 }
 
@@ -611,11 +290,9 @@ const copyQuotation = async (id) => {
       type: 'info'
     })
 
-    // 获取原报价单详情
     const res = await request.get(`/cost/quotations/${id}`)
     
     if (res.success) {
-      // 跳转到新增页面，并传递复制的数据
       router.push({
         path: '/cost/add',
         query: { copyFrom: id }
@@ -658,12 +335,12 @@ const handleSelectionChange = (selection) => {
   selectedQuotations.value = selection
 }
 
-// 检查是否可选择（只允许选择已审核或已提交的报价单）
+// 检查是否可选择
 const checkSelectable = (row) => {
   return row.status === 'approved' || row.status === 'submitted'
 }
 
-// 进入对比模式（报价单）
+// 进入对比模式
 const goToCompare = () => {
   if (selectedQuotations.value.length < 2) {
     ElMessage.warning('请至少选择2个报价单进行对比')
@@ -675,47 +352,15 @@ const goToCompare = () => {
     return
   }
   
-  // 提取选中的报价单ID
   const ids = selectedQuotations.value.map(q => q.id).join(',')
-  
-  // 跳转到对比页面
   router.push({
     path: '/cost/compare',
     query: { ids }
   })
 }
 
-// 处理标准成本选择变化
-const handleStandardCostSelectionChange = (selection) => {
-  selectedStandardCosts.value = selection
-}
-
-// 进入对比模式（标准成本）
-const goToStandardCostCompare = () => {
-  if (selectedStandardCosts.value.length < 2) {
-    ElMessage.warning('请至少选择2个标准成本进行对比')
-    return
-  }
-  
-  if (selectedStandardCosts.value.length > 4) {
-    ElMessage.warning('最多只能同时对比4个标准成本')
-    return
-  }
-  
-  // 提取选中的标准成本关联的报价单ID
-  const ids = selectedStandardCosts.value.map(sc => sc.quotation_id).join(',')
-  
-  // 跳转到对比页面（复用报价单对比页面）
-  router.push({
-    path: '/cost/compare',
-    query: { ids, type: 'standard' }
-  })
-}
-
 onMounted(() => {
-  loadModelCategories()
-  // 默认加载标准成本Tab
-  loadStandardCosts()
+  loadQuotations()
 })
 </script>
 

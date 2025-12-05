@@ -79,6 +79,12 @@ const routes = [
     meta: { requiresAuth: true, forbidPurchaserProducer: true }
   },
   {
+    path: '/cost/standard',
+    name: 'StandardCost',
+    component: () => import('../views/cost/StandardCost.vue'),
+    meta: { requiresAuth: true, forbidPurchaserProducer: true }
+  },
+  {
     path: '/cost/records',
     name: 'CostRecords',
     component: () => import('../views/cost/CostRecords.vue'),

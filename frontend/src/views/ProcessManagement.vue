@@ -73,28 +73,29 @@
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="model_name" label="型号" width="150" />
-        <el-table-column prop="config_name" label="配置名称" width="160" />
-        <el-table-column label="包装方式" min-width="300">
+        <el-table-column prop="model_category" label="产品类别" width="110" sortable />
+        <el-table-column prop="model_name" label="型号" width="150" sortable />
+        <el-table-column prop="config_name" label="配置名称" width="160" sortable />
+        <el-table-column label="包装方式" min-width="300" sortable>
           <template #default="{ row }">
             <span class="packaging-info">
               {{ row.pc_per_bag }}pc/bag, {{ row.bags_per_box }}bags/box, {{ row.boxes_per_carton }}boxes/carton
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="工序总价" width="130" align="right">
+        <el-table-column label="工序总价" width="130" align="right" sortable sort-by="process_total_price">
           <template #default="{ row }">
             <span class="price-info">¥{{ formatNumber(row.process_total_price || 0) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="100" align="center">
+        <el-table-column label="状态" width="100" align="center" sortable sort-by="is_active">
           <template #default="{ row }">
             <el-tag :type="row.is_active ? 'success' : 'danger'" class="status-tag">
               {{ row.is_active ? '启用' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="160" />
+        <el-table-column prop="created_at" label="创建时间" width="160" sortable />
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <el-button size="small" type="success" @click="viewProcesses(row)">查看</el-button>

@@ -46,16 +46,10 @@
           <div class="nav-section" v-if="canAccessCost">
             <h4>报价单管理</h4>
             <el-space wrap>
-              <el-button type="primary" icon="Plus" @click="showCategoryModal">新增报价单</el-button>
+              <el-button type="primary" icon="DataLine" @click="$router.push('/cost/standard')">标准成本</el-button>
               <el-button type="success" icon="Document" @click="$router.push('/cost/records')">报价单记录</el-button>
             </el-space>
           </div>
-
-    <!-- 产品类别选择弹窗 -->
-    <ProductCategoryModal
-      v-model="categoryModalVisible"
-      @confirm="onCategoryConfirm"
-    />
 
           <el-divider />
 
@@ -73,34 +67,17 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Document } from '@element-plus/icons-vue'
+import { DataLine, Document } from '@element-plus/icons-vue'
 import { useAuthStore } from '../store/auth'
-import ProductCategoryModal from '../components/ProductCategoryModal.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
 // 权限检查 - 采购人员和生产人员不能访问报价单管理
 const canAccessCost = computed(() => !authStore.isPurchaser && !authStore.isProducer)
-
-// 产品类别选择弹窗
-const categoryModalVisible = ref(false)
-
-// 显示产品类别选择弹窗
-const showCategoryModal = () => {
-  categoryModalVisible.value = true
-}
-
-// 产品类别选择确认
-const onCategoryConfirm = (category) => {
-  router.push({
-    path: '/cost/add',
-    query: { model_category: category }
-  })
-}
 
 // 获取角色中文名称
 const getRoleName = (role) => {
