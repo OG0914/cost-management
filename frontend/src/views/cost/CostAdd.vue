@@ -620,7 +620,26 @@
             {{ formatNumber(calculation.baseCost) || '' }}
           </el-descriptions-item>
           <el-descriptions-item label="管销价">
-            {{ formatNumber(calculation.overheadPrice) || '' }}
+            <div class="overhead-price-row">
+              <span>{{ formatNumber(calculation.overheadPrice) || '' }}</span>
+              <el-button size="small" type="primary" @click="showAddFeeDialog">
+                <el-icon><Plus /></el-icon>
+                添加管销后费用项
+              </el-button>
+            </div>
+          </el-descriptions-item>
+          <!-- 自定义费用项 - 每个费用独立一行 -->
+          <el-descriptions-item 
+            v-for="(fee, index) in customFeesWithValues" 
+            :key="'fee-' + index"
+            :label="fee.name + ' ' + (fee.rate * 100).toFixed(0) + '%'"
+          >
+            <div class="fee-value-row">
+              <span>{{ formatNumber(fee.calculatedValue) }}</span>
+              <el-button size="small" type="danger" link @click="removeCustomFee(index)">
+                <el-icon><Delete /></el-icon>
+              </el-button>
+            </div>
           </el-descriptions-item>
           <el-descriptions-item label="管销后算原料" v-if="calculation.afterOverheadMaterialTotal > 0">
             <span style="color: #E6A23C; font-weight: bold;">
@@ -706,6 +725,30 @@
         </div>
       </el-card>
     </el-form>
+
+    <!-- 添加自定义费用对话框 -->
+    <el-dialog v-model="addFeeDialogVisible" title="添加自定义费用" width="400px" :close-on-click-modal="false">
+      <el-form :model="newFee" :rules="feeRules" ref="feeFormRef" label-width="80px">
+        <el-form-item label="费用项" prop="name">
+          <el-input v-model="newFee.name" placeholder="" />
+        </el-form-item>
+        <el-form-item label="费率" prop="rate">
+          <el-input 
+            v-model="newFee.rate" 
+            placeholder="如 0.04 表示 4%"
+            style="width: 180px;"
+            @blur="newFee.rate = newFee.rate ? parseFloat(newFee.rate) : null"
+          />
+          <span v-if="newFee.rate && !isNaN(newFee.rate)" style="margin-left: 10px; color: #409eff;">
+            {{ (parseFloat(newFee.rate) * 100).toFixed(0) }}%
+          </span>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="addFeeDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmAddFee">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -713,7 +756,7 @@
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, Plus } from '@element-plus/icons-vue'
+import { ArrowLeft, Plus, Delete } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { formatNumber } from '@/utils/format'
 import { useConfigStore } from '@/store/config'
@@ -764,7 +807,8 @@ const form = reactive({
   vat_rate: null, // 增值税率，null表示使用全局配置
   materials: [],
   processes: [],
-  packaging: []
+  packaging: [],
+  customFees: [] // 自定义费用列表
 })
 
 // 编辑状态控制
@@ -797,6 +841,21 @@ const submitting = ref(false)
 
 // 自定义利润档位
 const customProfitTiers = ref([])
+
+// 自定义费用相关
+const addFeeDialogVisible = ref(false)
+const feeFormRef = ref(null)
+const newFee = reactive({
+  name: '',
+  rate: null
+})
+const feeRules = {
+  name: [{ required: true, message: '请输入费用项', trigger: 'blur' }],
+  rate: [
+    { required: true, message: '请输入费率', trigger: 'blur' },
+    { type: 'number', min: 0.0001, max: 1, message: '费率必须在0.0001到1之间', trigger: 'blur' }
+  ]
+}
 
 // 货运信息（箱数和CBM）
 const shippingInfo = reactive({
@@ -889,6 +948,36 @@ const allProfitTiers = computed(() => {
   const allTiers = [...systemTiers, ...customTiers]
   
   return allTiers
+})
+
+// 自定义费用总结金额
+const customFeeSummary = computed(() => {
+  if (!calculation.value || !calculation.value.overheadPrice) {
+    return 0
+  }
+  if (form.customFees.length === 0) {
+    return calculation.value.overheadPrice
+  }
+  let result = calculation.value.overheadPrice
+  for (const fee of form.customFees) {
+    result = result * (1 + fee.rate)
+  }
+  return Math.round(result * 10000) / 10000
+})
+
+// 带计算值的自定义费用列表（每项显示累乘后的值）
+const customFeesWithValues = computed(() => {
+  if (!calculation.value || !calculation.value.overheadPrice) {
+    return []
+  }
+  let currentValue = calculation.value.overheadPrice
+  return form.customFees.map((fee) => {
+    currentValue = currentValue * (1 + fee.rate)
+    return {
+      ...fee,
+      calculatedValue: Math.round(currentValue * 10000) / 10000
+    }
+  })
 })
 
 // 加载法规列表
@@ -1359,6 +1448,7 @@ const calculateCost = async () => {
       include_freight_in_base: form.include_freight_in_base,
       model_id: form.model_id, // 传递model_id用于获取原料系数
       vat_rate: form.vat_rate, // 传递自定义增值税率
+      custom_fees: form.customFees, // 传递自定义费用
       items
     })
 
@@ -1412,6 +1502,7 @@ const saveDraft = async () => {
         include_freight_in_base: form.include_freight_in_base,
         vat_rate: form.vat_rate,
         custom_profit_tiers: customProfitTiersData,
+        custom_fees: form.customFees,
         items
       })
 
@@ -1435,6 +1526,7 @@ const saveDraft = async () => {
         include_freight_in_base: form.include_freight_in_base,
         vat_rate: form.vat_rate,
         custom_profit_tiers: customProfitTiersData,
+        custom_fees: form.customFees,
         items
       })
 
@@ -1488,6 +1580,7 @@ const submitQuotation = async () => {
         include_freight_in_base: form.include_freight_in_base,
         vat_rate: form.vat_rate,
         custom_profit_tiers: customProfitTiersData,
+        custom_fees: form.customFees,
         items
       })
 
@@ -1516,6 +1609,7 @@ const submitQuotation = async () => {
         include_freight_in_base: form.include_freight_in_base,
         vat_rate: form.vat_rate,
         custom_profit_tiers: customProfitTiersData,
+        custom_fees: form.customFees,
         items
       })
 
@@ -1677,6 +1771,17 @@ const loadQuotationData = async (id, isCopy = false) => {
           console.error('解析自定义利润档位失败:', e)
           customProfitTiers.value = []
         }
+      }
+      
+      // 加载自定义费用
+      if (res.data.customFees && res.data.customFees.length > 0) {
+        form.customFees = res.data.customFees.map((fee, index) => ({
+          name: fee.name,
+          rate: fee.rate,
+          sortOrder: fee.sortOrder !== undefined ? fee.sortOrder : index
+        }))
+      } else {
+        form.customFees = []
       }
       
       // 计算成本
@@ -1919,6 +2024,43 @@ const removeCustomProfitTier = (customIndex) => {
   }
 }
 
+// 显示添加费用对话框
+const showAddFeeDialog = () => {
+  newFee.name = ''
+  newFee.rate = null
+  addFeeDialogVisible.value = true
+}
+
+// 确认添加费用
+const confirmAddFee = async () => {
+  if (!feeFormRef.value) return
+  
+  try {
+    await feeFormRef.value.validate()
+    
+    form.customFees.push({
+      name: newFee.name,
+      rate: newFee.rate,
+      sortOrder: form.customFees.length
+    })
+    
+    addFeeDialogVisible.value = false
+    calculateCost()
+  } catch (error) {
+    // 验证失败
+  }
+}
+
+// 删除自定义费用
+const removeCustomFee = (index) => {
+  form.customFees.splice(index, 1)
+  // 更新排序
+  form.customFees.forEach((fee, i) => {
+    fee.sortOrder = i
+  })
+  calculateCost()
+}
+
 // 原料系数配置缓存
 const materialCoefficientsCache = ref({})
 
@@ -2110,5 +2252,21 @@ onMounted(async () => {
 .freight-detail-card :deep(.el-card__header) {
   background-color: #ecf5ff;
   border-bottom: 1px solid #d9ecff;
+}
+
+/* 管销价行样式 */
+.overhead-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+/* 费用值行样式 */
+.fee-value-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
 }
 </style>

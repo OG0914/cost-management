@@ -96,6 +96,26 @@ class CostCalculator {
   }
 
   /**
+   * 计算自定义费用累乘结果
+   * 公式：result = basePrice × (1 + rate1) × (1 + rate2) × ...
+   * 
+   * @param {number} basePrice - 基础价格（管销价）
+   * @param {Array<{name: string, rate: number}>} customFees - 自定义费用列表
+   * @returns {number} 累乘计算后的总结金额
+   */
+  calculateCustomFeesSummary(basePrice, customFees = []) {
+    if (!customFees || customFees.length === 0) {
+      return basePrice;
+    }
+    
+    let result = basePrice;
+    for (const fee of customFees) {
+      result = result * (1 + fee.rate);
+    }
+    return this._round(result, 4);
+  }
+
+  /**
    * 生成利润区间报价
    * 公式：利润报价 = 基础价 / (1 - 利润率)
    * 
@@ -122,6 +142,7 @@ class CostCalculator {
    * @param {string} params.salesType - 销售类型（'domestic' 或 'export'）
    * @param {boolean} params.includeFreightInBase - 是否将运费计入基础成本价（默认true）
    * @param {number} params.afterOverheadMaterialTotal - 管销后算的原料总价（默认0）
+   * @param {Array<{name: string, rate: number}>} params.customFees - 自定义费用列表（默认[]）
    * @returns {Object} 完整的报价计算结果
    */
   calculateQuotation(params) {
@@ -133,7 +154,8 @@ class CostCalculator {
       quantity,
       salesType,
       includeFreightInBase = true,
-      afterOverheadMaterialTotal = 0
+      afterOverheadMaterialTotal = 0,
+      customFees = []
     } = params;
 
     // 计算运费成本（每片）
@@ -152,9 +174,13 @@ class CostCalculator {
     // 计算管销价
     const overheadPrice = this.calculateOverheadPrice(baseCost);
 
+    // 计算自定义费用总结金额（基于管销价累乘）
+    const customFeeSummary = this.calculateCustomFeesSummary(overheadPrice, customFees);
+
     let result = {
       baseCost,
       overheadPrice,
+      customFeeSummary: customFees.length > 0 ? customFeeSummary : null,
       freightCost,
       salesType,
       includeFreightInBase,
@@ -162,18 +188,21 @@ class CostCalculator {
     };
 
     // 根据销售类型计算最终价格
+    // 如果有自定义费用，使用总结金额替代管销价进行后续计算
+    const priceBase = customFees.length > 0 ? customFeeSummary : overheadPrice;
+
     if (salesType === 'domestic') {
       // 内销
       let domesticPrice;
       if (includeFreightInBase) {
         // 运费已计入基础成本价
-        // 公式：管销价 × (1 + 增值税率) + 管销后算的原料
-        domesticPrice = this.calculateDomesticPrice(overheadPrice) + afterOverheadMaterialTotal;
+        // 公式：(管销价或总结金额) × (1 + 增值税率) + 管销后算的原料
+        domesticPrice = priceBase * (1 + this.vatRate) + afterOverheadMaterialTotal;
         domesticPrice = this._round(domesticPrice, 4);
       } else {
-        // 运费未计入基础成本价，需要在管销价基础上加运费再计算含税价
-        // 公式：(管销价 + 运费) × (1 + 增值税率) + 管销后算的原料
-        domesticPrice = (overheadPrice + freightCost) * (1 + this.vatRate) + afterOverheadMaterialTotal;
+        // 运费未计入基础成本价，需要在价格基础上加运费再计算含税价
+        // 公式：(管销价或总结金额 + 运费) × (1 + 增值税率) + 管销后算的原料
+        domesticPrice = (priceBase + freightCost) * (1 + this.vatRate) + afterOverheadMaterialTotal;
         domesticPrice = this._round(domesticPrice, 4);
       }
       const profitTiers = this.generateProfitTiers(domesticPrice);
@@ -189,18 +218,18 @@ class CostCalculator {
       let exportPrice, insurancePrice;
       if (includeFreightInBase) {
         // 运费已计入基础成本价
-        // 公式：管销价 ÷ 汇率 + 管销后算的原料
-        exportPrice = this.calculateExportPrice(overheadPrice) + afterOverheadMaterialTotal;
+        // 公式：(管销价或总结金额) ÷ 汇率 + 管销后算的原料
+        exportPrice = priceBase / this.exchangeRate + afterOverheadMaterialTotal;
         exportPrice = this._round(exportPrice, 4);
         insurancePrice = this.calculateInsurancePrice(exportPrice);
       } else {
-        // 运费未计入基础成本价，需要在管销价基础上加运费再计算
-        // 公式：(管销价 + 运费) ÷ 汇率 + 管销后算的原料
-        exportPrice = (overheadPrice + freightCost) / this.exchangeRate + afterOverheadMaterialTotal;
+        // 运费未计入基础成本价，需要在价格基础上加运费再计算
+        // 公式：(管销价或总结金额 + 运费) ÷ 汇率 + 管销后算的原料
+        exportPrice = (priceBase + freightCost) / this.exchangeRate + afterOverheadMaterialTotal;
         exportPrice = this._round(exportPrice, 4);
         insurancePrice = this.calculateInsurancePrice(exportPrice);
       }
-      // 外销的最终成本价是保险价（管销价/汇率×1.003）
+      // 外销的最终成本价是保险价
       // 利润区间基于保险价计算
       const profitTiers = this.generateProfitTiers(insurancePrice);
 

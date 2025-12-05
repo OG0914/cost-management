@@ -5,6 +5,7 @@
 
 const Quotation = require('../models/Quotation');
 const QuotationItem = require('../models/QuotationItem');
+const QuotationCustomFee = require('../models/QuotationCustomFee');
 const SystemConfig = require('../models/SystemConfig');
 const Model = require('../models/Model');
 const CostCalculator = require('../utils/costCalculator');
@@ -111,6 +112,9 @@ const createQuotation = async (req, res) => {
         
         const calculator = new CostCalculator(calculatorConfig);
 
+        // 处理自定义费用
+        const customFees = req.body.custom_fees || [];
+
         const calculation = calculator.calculateQuotation({
             materialTotal,
             processTotal,
@@ -119,7 +123,8 @@ const createQuotation = async (req, res) => {
             quantity,
             salesType: sales_type,
             includeFreightInBase: req.body.include_freight_in_base !== false,
-            afterOverheadMaterialTotal
+            afterOverheadMaterialTotal,
+            customFees
         });
         
         // 在计算结果中包含实际使用的增值税率
@@ -173,6 +178,11 @@ const createQuotation = async (req, res) => {
                 quotation_id: quotationId
             }));
             QuotationItem.batchCreate(itemsWithQuotationId);
+        }
+
+        // 保存自定义费用
+        if (customFees && customFees.length > 0) {
+            QuotationCustomFee.replaceByQuotationId(quotationId, customFees);
         }
 
         // 查询完整的报价单信息
@@ -316,6 +326,9 @@ const calculateQuotation = async (req, res) => {
         
         const calculator = new CostCalculator(calculatorConfig);
 
+        // 处理自定义费用
+        const customFees = req.body.custom_fees || [];
+
         const calculation = calculator.calculateQuotation({
             materialTotal,
             processTotal,
@@ -324,7 +337,8 @@ const calculateQuotation = async (req, res) => {
             quantity,
             salesType: sales_type,
             includeFreightInBase: req.body.include_freight_in_base !== false,
-            afterOverheadMaterialTotal
+            afterOverheadMaterialTotal,
+            customFees
         });
 
         // 返回结果中包含原料系数信息和实际使用的增值税率
@@ -439,6 +453,9 @@ const updateQuotation = async (req, res) => {
         
         const calculator = new CostCalculator(calculatorConfig);
 
+        // 处理自定义费用
+        const customFees = req.body.custom_fees || [];
+
         const calculation = calculator.calculateQuotation({
             materialTotal,
             processTotal,
@@ -447,7 +464,8 @@ const updateQuotation = async (req, res) => {
             quantity,
             salesType: sales_type,
             includeFreightInBase: req.body.include_freight_in_base !== false,
-            afterOverheadMaterialTotal
+            afterOverheadMaterialTotal,
+            customFees
         });
         
         // 在计算结果中包含实际使用的增值税率
@@ -508,6 +526,9 @@ const updateQuotation = async (req, res) => {
             }));
             QuotationItem.batchCreate(itemsWithQuotationId);
         }
+
+        // 更新自定义费用
+        QuotationCustomFee.replaceByQuotationId(id, customFees);
 
         // 查询更新后的报价单
         const updatedQuotation = Quotation.findById(id);
@@ -663,6 +684,14 @@ const getQuotationDetail = async (req, res) => {
             .filter(item => item.after_overhead)
             .reduce((sum, item) => sum + item.subtotal, 0);
 
+        // 加载自定义费用
+        const customFeesFromDb = QuotationCustomFee.findByQuotationId(id);
+        const customFees = customFeesFromDb.map(fee => ({
+            name: fee.fee_name,
+            rate: fee.fee_rate,
+            sortOrder: fee.sort_order
+        }));
+
         const calculation = calculator.calculateQuotation({
             materialTotal,
             processTotal: items.process.total, // 原始工序总计，不需要手动乘以工价系数
@@ -671,7 +700,8 @@ const getQuotationDetail = async (req, res) => {
             quantity: quotation.quantity,
             salesType: quotation.sales_type,
             includeFreightInBase: quotation.include_freight_in_base !== false,
-            afterOverheadMaterialTotal
+            afterOverheadMaterialTotal,
+            customFees
         });
 
         // 返回原料系数信息和实际使用的增值税率
@@ -684,7 +714,8 @@ const getQuotationDetail = async (req, res) => {
         res.json(success({
             quotation,
             items,
-            calculation
+            calculation,
+            customFees
         }, '获取报价单详情成功'));
 
     } catch (err) {
