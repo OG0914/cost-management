@@ -32,7 +32,7 @@
                 {{ quotation.packaging_config_name || '标准配置' }}
               </div>
               <div class="config-spec">
-                包装：{{ quotation.pc_per_bag || 0 }}pc/bag, {{ quotation.bags_per_box || 0 }}bags/box, {{ quotation.boxes_per_carton || 0 }}boxes/carton
+                包装：{{ quotation.pc_per_bag || 0 }}片/袋, {{ quotation.bags_per_box || 0 }}袋/盒, {{ quotation.boxes_per_carton || 0 }}盒/箱
               </div>
               <div class="config-quantity">
                 数量：{{ formatNumber(quotation.quantity, 0) }}pcs
@@ -88,7 +88,7 @@
               <div class="config-info">
                 <div class="info-row">
                   <span class="info-label">包装规格：</span>
-                  <span class="info-value">{{ quotation.pc_per_bag || 0 }}pc/bag, {{ quotation.bags_per_box || 0 }}bags/box, {{ quotation.boxes_per_carton || 0 }}boxes/carton</span>
+                  <span class="info-value">{{ quotation.pc_per_bag || 0 }}片/袋, {{ quotation.bags_per_box || 0 }}袋/盒, {{ quotation.boxes_per_carton || 0 }}盒/箱</span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">数量：</span>

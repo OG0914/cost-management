@@ -49,13 +49,13 @@
                 <el-option
                   v-for="config in filteredPackagingConfigs"
                   :key="config.id"
-                  :label="`${config.model_name} - ${config.config_name} (${config.pc_per_bag}pc/${config.bags_per_box}bags/${config.boxes_per_carton}boxes)`"
+                  :label="`${config.model_name} - ${config.config_name} (${config.pc_per_bag}片/袋, ${config.bags_per_box}袋/盒, ${config.boxes_per_carton}盒/箱)`"
                   :value="config.id"
                 >
                   <div style="display: flex; justify-content: space-between;">
                     <span><strong>{{ config.model_name }}</strong> - {{ config.config_name }}</span>
                     <span style="color: #8492a6; font-size: 12px;">
-                      {{ config.pc_per_bag }}pc/{{ config.bags_per_box }}bags/{{ config.boxes_per_carton }}boxes
+                      {{ config.pc_per_bag }}片/袋, {{ config.bags_per_box }}袋/盒, {{ config.boxes_per_carton }}盒/箱
                     </span>
                   </div>
                 </el-option>
@@ -496,8 +496,12 @@
         </el-table>
 
         <div class="total-row">
-          <span>工序总计：</span>
+          <span>工序小计：</span>
           <span class="total-value">{{ formatNumber(processSubtotal) }}</span>
+        </div>
+        <div class="total-row" style="margin-top: 5px;">
+          <span>工序总计（×{{ configStore.config.process_coefficient || 1.56 }}）：</span>
+          <span class="total-value" style="color: #67c23a; font-weight: bold;">{{ formatNumber(processSubtotal * (configStore.config.process_coefficient || 1.56)) }}</span>
         </div>
       </el-card>
 
@@ -1177,7 +1181,7 @@ const calculateShippingInfo = () => {
     const selectedConfig = packagingConfigs.value.find(c => c.id === form.packaging_config_id)
     let packagingInfo = ''
     if (selectedConfig) {
-      packagingInfo = `${selectedConfig.pc_per_bag}pc/bag, ${selectedConfig.bags_per_box}bags/box, ${selectedConfig.boxes_per_carton}boxes/carton`
+      packagingInfo = `${selectedConfig.pc_per_bag}片/袋, ${selectedConfig.bags_per_box}袋/盒, ${selectedConfig.boxes_per_carton}盒/箱`
     }
     
     ElMessage.warning({

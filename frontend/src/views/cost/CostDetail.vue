@@ -43,7 +43,7 @@
           <el-descriptions-item label="包装方式">
             <span v-if="quotation.packaging_config_name">
               {{ quotation.packaging_config_name }} 
-              ({{ quotation.pc_per_bag }}pc/bag, {{ quotation.bags_per_box }}bags/box, {{ quotation.boxes_per_carton }}boxes/carton)
+              ({{ quotation.pc_per_bag }}片/袋, {{ quotation.bags_per_box }}袋/盒, {{ quotation.boxes_per_carton }}盒/箱)
             </span>
             <span v-else>-</span>
           </el-descriptions-item>
@@ -123,8 +123,12 @@
         </el-table>
         
         <div class="total-row">
-          <span>工序总计：</span>
+          <span>工序小计：</span>
           <span class="total-value">{{ formatNumber(items.process.total) }}</span>
+        </div>
+        <div class="total-row" style="margin-top: 5px;">
+          <span>工序总计（×{{ configStore.config.process_coefficient || 1.56 }}）：</span>
+          <span class="total-value" style="color: #67c23a; font-weight: bold;">{{ formatNumber(items.process.total * (configStore.config.process_coefficient || 1.56)) }}</span>
         </div>
       </el-card>
 

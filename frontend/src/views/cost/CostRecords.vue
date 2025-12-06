@@ -90,7 +90,7 @@
             <div v-if="row.packaging_config_name">
               <div>{{ row.packaging_config_name }}</div>
               <div style="color: #909399; font-size: 12px;">
-                {{ row.pc_per_bag }}pc/bag, {{ row.bags_per_box }}bags/box, {{ row.boxes_per_carton }}boxes/carton
+                {{ row.pc_per_bag }}片/袋, {{ row.bags_per_box }}袋/盒, {{ row.boxes_per_carton }}盒/箱
               </div>
             </div>
             <span v-else>-</span>
