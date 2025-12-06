@@ -67,7 +67,7 @@ class SystemConfig {
   }
 
   /**
-   * 批量更新配置
+   * 批量更新配置（存在则更新，不存在则插入）
    * @param {Object} configs - 配置对象 { key: value }
    * @returns {number} 更新的配置数量
    */
@@ -75,18 +75,30 @@ class SystemConfig {
     const db = dbManager.getDatabase();
     let updatedCount = 0;
 
+    const selectStmt = db.prepare('SELECT id FROM system_config WHERE config_key = ?');
     const updateStmt = db.prepare(`
       UPDATE system_config 
       SET config_value = ?, updated_at = CURRENT_TIMESTAMP 
       WHERE config_key = ?
     `);
+    const insertStmt = db.prepare(`
+      INSERT INTO system_config (config_key, config_value) 
+      VALUES (?, ?)
+    `);
 
     const transaction = db.transaction((configsObj) => {
       for (const [key, value] of Object.entries(configsObj)) {
         const configValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
-        const result = updateStmt.run(configValue, key);
-        if (result.changes > 0) {
-          updatedCount++;
+        const existing = selectStmt.get(key);
+        
+        if (existing) {
+          // 存在则更新
+          const result = updateStmt.run(configValue, key);
+          if (result.changes > 0) updatedCount++;
+        } else {
+          // 不存在则插入
+          const result = insertStmt.run(key, configValue);
+          if (result.changes > 0) updatedCount++;
         }
       }
     });

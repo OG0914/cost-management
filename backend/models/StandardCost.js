@@ -26,12 +26,14 @@ class StandardCost {
         m.model_name,
         m.model_category,
         r.name as regulation_name,
-        u.real_name as setter_name
+        u.real_name as setter_name,
+        q.quotation_no
       FROM standard_costs sc
       JOIN packaging_configs pc ON sc.packaging_config_id = pc.id
       JOIN models m ON pc.model_id = m.id
       JOIN regulations r ON m.regulation_id = r.id
       JOIN users u ON sc.set_by = u.id
+      LEFT JOIN quotations q ON sc.quotation_id = q.id
       WHERE sc.is_current = 1
     `;
     

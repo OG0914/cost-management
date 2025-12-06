@@ -238,6 +238,7 @@ CREATE TABLE IF NOT EXISTS quotation_custom_fees (
 INSERT OR IGNORE INTO system_config (config_key, config_value, description) VALUES
 ('overhead_rate', '0.2', '管销率'),
 ('vat_rate', '0.13', '增值税率'),
+('vat_rate_options', '[0.13, 0.10]', '增值税率选项列表'),
 ('insurance_rate', '0.003', '保险率'),
 ('exchange_rate', '7.2', '汇率（CNY/USD）'),
 ('profit_tiers', '[0.05, 0.10, 0.25, 0.50]', '利润区间'),

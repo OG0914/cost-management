@@ -9,6 +9,7 @@ export const useConfigStore = defineStore('config', {
     config: {
       overhead_rate: 0.2,
       vat_rate: 0.13,
+      vat_rate_options: [0.13, 0.10], // 增值税率选项列表
       insurance_rate: 0.003,
       exchange_rate: 7.2,
       process_coefficient: 1.56, // 工价系数
@@ -21,9 +22,9 @@ export const useConfigStore = defineStore('config', {
   }),
 
   actions: {
-    async loadConfig() {
-      if (this.loaded) return
-      
+    async loadConfig(forceReload = false) {
+      if (this.loaded && !forceReload) return
+
       try {
         const response = await request.get('/config')
         if (response.success && response.data) {
@@ -36,6 +37,12 @@ export const useConfigStore = defineStore('config', {
       } catch (error) {
         console.error('加载系统配置失败:', error)
       }
+    },
+
+    // 强制重新加载配置
+    async reloadConfig() {
+      this.loaded = false
+      await this.loadConfig(true)
     },
 
     getProcessCoefficient() {

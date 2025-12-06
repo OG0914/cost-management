@@ -82,8 +82,14 @@
       <!-- 标准成本表格 -->
       <el-table :data="standardCosts" border v-loading="loading" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" />
+        <el-table-column prop="quotation_no" label="报价单编号" width="150">
+          <template #default="{ row }">
+            <span v-if="row.quotation_no">{{ row.quotation_no }}</span>
+            <span v-else style="color: #909399;">-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="model_category" label="产品类别" width="100" />
-        <el-table-column prop="model_name" label="型号" width="120" />
+        <el-table-column prop="model_name" label="型号" width="150" />
         <el-table-column prop="packaging_config_name" label="包装方式" width="220">
           <template #default="{ row }">
             <div v-if="row.packaging_config_name">
@@ -119,8 +125,16 @@
         </el-table-column>
         <el-table-column prop="setter_name" label="设置人" width="100" />
         <el-table-column prop="created_at" label="设置时间" width="180" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="350" fixed="right">
           <template #default="{ row }">
+            <el-button 
+              size="small" 
+              type="info"
+              @click="viewQuotation(row)"
+              :disabled="!row.quotation_id"
+            >
+              查看
+            </el-button>
             <el-button size="small" type="primary" @click="copyStandardCost(row)">
               复制
             </el-button>
@@ -225,6 +239,13 @@ const resetSearch = () => {
   searchForm.model_category = ''
   searchForm.model_name = ''
   loadStandardCosts()
+}
+
+// 查看关联的报价单
+const viewQuotation = (row) => {
+  if (row.quotation_id) {
+    router.push(`/cost/detail/${row.quotation_id}`)
+  }
 }
 
 // 复制标准成本

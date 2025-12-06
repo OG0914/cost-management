@@ -90,19 +90,19 @@
 
           <el-col :span="8" v-if="form.sales_type === 'domestic'">
             <el-form-item label="增值税率" prop="vat_rate">
-              <el-input-number
+              <el-select
                 v-model="form.vat_rate"
-                :min="0"
-                :max="1"
-                :precision="2"
-                :step="0.01"
-                :controls="false"
+                placeholder="请选择增值税率"
                 @change="calculateCost"
                 style="width: 100%"
-              />
-              <div style="color: #909399; font-size: 12px; margin-top: 5px;">
-                当前: {{ ((form.vat_rate || 0) * 100).toFixed(0) }}%，系统默认: {{ ((configStore.config.vat_rate || 0.13) * 100).toFixed(0) }}%
-              </div>
+              >
+                <el-option
+                  v-for="rate in vatRateOptions"
+                  :key="rate"
+                  :label="`${(rate * 100).toFixed(0)}%`"
+                  :value="rate"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
 
@@ -769,6 +769,11 @@ const router = useRouter()
 const route = useRoute()
 const formRef = ref(null)
 const configStore = useConfigStore()
+
+// 增值税率选项列表
+const vatRateOptions = computed(() => {
+  return configStore.config.vat_rate_options || [0.13, 0.10]
+})
 
 // 是否编辑模式
 const isEditMode = computed(() => {
