@@ -29,7 +29,11 @@
           </template>
         </el-table-column>
         <el-table-column prop="email" label="邮箱" min-width="180" />
-        <el-table-column prop="created_at" label="创建时间" width="170" />
+        <el-table-column label="创建时间" width="170">
+          <template #default="{ row }">
+            {{ formatDateTime(row.created_at) }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <el-button size="small" type="primary" @click="editUser(row)">编辑</el-button>
@@ -89,6 +93,7 @@ import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, ArrowLeft } from '@element-plus/icons-vue';
 import request from '../../utils/request';
+import { formatDateTime } from '@/utils/format';
 
 const router = useRouter();
 

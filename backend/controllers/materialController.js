@@ -10,9 +10,9 @@ const path = require('path');
 const fs = require('fs');
 
 // 获取所有原料
-const getAllMaterials = (req, res, next) => {
+const getAllMaterials = async (req, res, next) => {
   try {
-    const materials = Material.findAll();
+    const materials = await Material.findAll();
     res.json(success(materials));
   } catch (err) {
     next(err);
@@ -20,10 +20,10 @@ const getAllMaterials = (req, res, next) => {
 };
 
 // 根据厂商获取原料
-const getMaterialsByManufacturer = (req, res, next) => {
+const getMaterialsByManufacturer = async (req, res, next) => {
   try {
     const { manufacturer } = req.params;
-    const materials = Material.findByManufacturer(manufacturer);
+    const materials = await Material.findByManufacturer(manufacturer);
     res.json(success(materials));
   } catch (err) {
     next(err);
@@ -31,10 +31,10 @@ const getMaterialsByManufacturer = (req, res, next) => {
 };
 
 // 根据 ID 获取原料
-const getMaterialById = (req, res, next) => {
+const getMaterialById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const material = Material.findById(id);
+    const material = await Material.findById(id);
     
     if (!material) {
       return res.status(404).json(error('原料不存在', 404));
@@ -47,7 +47,7 @@ const getMaterialById = (req, res, next) => {
 };
 
 // 创建原料
-const createMaterial = (req, res, next) => {
+const createMaterial = async (req, res, next) => {
   try {
     const { item_no, name, unit, price, currency, manufacturer, usage_amount } = req.body;
     
@@ -55,7 +55,7 @@ const createMaterial = (req, res, next) => {
       return res.status(400).json(error('品号、原料名称、单位和单价不能为空', 400));
     }
     
-    const id = Material.create({ item_no, name, unit, price, currency, manufacturer, usage_amount });
+    const id = await Material.create({ item_no, name, unit, price, currency, manufacturer, usage_amount });
     res.status(201).json(success({ id }, '创建成功'));
   } catch (err) {
     next(err);
@@ -63,12 +63,12 @@ const createMaterial = (req, res, next) => {
 };
 
 // 更新原料
-const updateMaterial = (req, res, next) => {
+const updateMaterial = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { item_no, name, unit, price, currency, manufacturer, usage_amount } = req.body;
     
-    const material = Material.findById(id);
+    const material = await Material.findById(id);
     if (!material) {
       return res.status(404).json(error('原料不存在', 404));
     }
@@ -77,7 +77,7 @@ const updateMaterial = (req, res, next) => {
       return res.status(400).json(error('品号、原料名称、单位和单价不能为空', 400));
     }
     
-    Material.update(id, { item_no, name, unit, price, currency, manufacturer, usage_amount }, req.user?.id);
+    await Material.update(id, { item_no, name, unit, price, currency, manufacturer, usage_amount }, req.user?.id);
     res.json(success(null, '更新成功'));
   } catch (err) {
     next(err);
@@ -85,16 +85,16 @@ const updateMaterial = (req, res, next) => {
 };
 
 // 删除原料
-const deleteMaterial = (req, res, next) => {
+const deleteMaterial = async (req, res, next) => {
   try {
     const { id } = req.params;
     
-    const material = Material.findById(id);
+    const material = await Material.findById(id);
     if (!material) {
       return res.status(404).json(error('原料不存在', 404));
     }
     
-    Material.delete(id);
+    await Material.delete(id);
     res.json(success(null, '删除成功'));
   } catch (err) {
     next(err);
@@ -122,17 +122,18 @@ const importMaterials = async (req, res, next) => {
     let created = 0;
     let updated = 0;
     
-    result.data.forEach((material, index) => {
+    for (let index = 0; index < result.data.length; index++) {
+      const material = result.data[index];
       console.log(`处理第 ${index + 1} 条数据:`, JSON.stringify(material));
-      const existing = Material.findByItemNo(material.item_no);
+      const existing = await Material.findByItemNo(material.item_no);
       if (existing) {
-        Material.update(existing.id, material);
+        await Material.update(existing.id, material);
         updated++;
       } else {
-        Material.create(material);
+        await Material.create(material);
         created++;
       }
-    });
+    }
     
     res.json(success({
       total: result.total,
@@ -157,10 +158,11 @@ const exportMaterials = async (req, res, next) => {
     let materials;
     if (ids && ids.length > 0) {
       // 导出选中的数据
-      materials = ids.map(id => Material.findById(id)).filter(m => m !== null);
+      const materialPromises = ids.map(id => Material.findById(id));
+      materials = (await Promise.all(materialPromises)).filter(m => m !== null);
     } else {
       // 如果没有指定ID，导出所有数据
-      materials = Material.findAll();
+      materials = await Material.findAll();
     }
     
     if (materials.length === 0) {

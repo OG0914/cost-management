@@ -1,183 +1,236 @@
 /**
  * 型号数据模型
+ * PostgreSQL 异步版本
  */
 
 const dbManager = require('../db/database');
 
 class Model {
-  // 获取所有型号
-  static findAll() {
-    const db = dbManager.getDatabase();
-    const stmt = db.prepare(`
+  /**
+   * 获取所有型号
+   * @returns {Promise<Array>} 型号列表
+   */
+  static async findAll() {
+    const result = await dbManager.query(`
       SELECT m.*, r.name as regulation_name
       FROM models m
       LEFT JOIN regulations r ON m.regulation_id = r.id
       ORDER BY m.created_at DESC
     `);
-    return stmt.all();
+    return result.rows;
   }
 
-  // 获取所有激活的型号
-  static findActive() {
-    const db = dbManager.getDatabase();
-    const stmt = db.prepare(`
+  /**
+   * 获取所有激活的型号
+   * @returns {Promise<Array>} 激活的型号列表
+   */
+  static async findActive() {
+    const result = await dbManager.query(`
       SELECT m.*, r.name as regulation_name
       FROM models m
       LEFT JOIN regulations r ON m.regulation_id = r.id
-      WHERE m.is_active = 1
+      WHERE m.is_active = true
       ORDER BY m.created_at DESC
     `);
-    return stmt.all();
+    return result.rows;
   }
 
-  // 根据法规 ID 获取型号
-  static findByRegulationId(regulationId) {
-    const db = dbManager.getDatabase();
-    const stmt = db.prepare(`
-      SELECT * FROM models
-      WHERE regulation_id = ? AND is_active = 1
-      ORDER BY created_at DESC
-    `);
-    return stmt.all(regulationId);
+  /**
+   * 根据法规 ID 获取型号
+   * @param {number} regulationId - 法规 ID
+   * @returns {Promise<Array>} 型号列表
+   */
+  static async findByRegulationId(regulationId) {
+    const result = await dbManager.query(
+      `SELECT * FROM models
+       WHERE regulation_id = $1 AND is_active = true
+       ORDER BY created_at DESC`,
+      [regulationId]
+    );
+    return result.rows;
   }
 
-  // 根据 ID 查找型号
-  static findById(id) {
-    const db = dbManager.getDatabase();
-    const stmt = db.prepare(`
-      SELECT m.*, r.name as regulation_name
-      FROM models m
-      LEFT JOIN regulations r ON m.regulation_id = r.id
-      WHERE m.id = ?
-    `);
-    return stmt.get(id);
+  /**
+   * 根据 ID 查找型号
+   * @param {number} id - 型号 ID
+   * @returns {Promise<Object|null>} 型号对象或 null
+   */
+  static async findById(id) {
+    const result = await dbManager.query(
+      `SELECT m.*, r.name as regulation_name
+       FROM models m
+       LEFT JOIN regulations r ON m.regulation_id = r.id
+       WHERE m.id = $1`,
+      [id]
+    );
+    return result.rows[0] || null;
   }
 
-  // 根据型号名称查找
-  static findByName(modelName) {
-    const db = dbManager.getDatabase();
-    const stmt = db.prepare(`
-      SELECT m.*, r.name as regulation_name
-      FROM models m
-      LEFT JOIN regulations r ON m.regulation_id = r.id
-      WHERE m.model_name = ?
-    `);
-    return stmt.get(modelName);
+  /**
+   * 根据型号名称查找
+   * @param {string} modelName - 型号名称
+   * @returns {Promise<Object|null>} 型号对象或 null
+   */
+  static async findByName(modelName) {
+    const result = await dbManager.query(
+      `SELECT m.*, r.name as regulation_name
+       FROM models m
+       LEFT JOIN regulations r ON m.regulation_id = r.id
+       WHERE m.model_name = $1`,
+      [modelName]
+    );
+    return result.rows[0] || null;
   }
 
-  // 根据法规ID和型号名称查找
-  static findByRegulationAndName(regulationId, modelName) {
-    const db = dbManager.getDatabase();
-    const stmt = db.prepare(`
-      SELECT m.*, r.name as regulation_name
-      FROM models m
-      LEFT JOIN regulations r ON m.regulation_id = r.id
-      WHERE m.regulation_id = ? AND m.model_name = ?
-    `);
-    return stmt.get(regulationId, modelName);
+  /**
+   * 根据法规ID和型号名称查找
+   * @param {number} regulationId - 法规 ID
+   * @param {string} modelName - 型号名称
+   * @returns {Promise<Object|null>} 型号对象或 null
+   */
+  static async findByRegulationAndName(regulationId, modelName) {
+    const result = await dbManager.query(
+      `SELECT m.*, r.name as regulation_name
+       FROM models m
+       LEFT JOIN regulations r ON m.regulation_id = r.id
+       WHERE m.regulation_id = $1 AND m.model_name = $2`,
+      [regulationId, modelName]
+    );
+    return result.rows[0] || null;
   }
 
-  // 创建型号
-  static create(data) {
-    const db = dbManager.getDatabase();
+  /**
+   * 创建型号
+   * @param {Object} data - 型号数据
+   * @returns {Promise<number>} 新型号的 ID
+   */
+  static async create(data) {
     const { regulation_id, model_name, model_category } = data;
     
-    const stmt = db.prepare(`
-      INSERT INTO models (regulation_id, model_name, model_category)
-      VALUES (?, ?, ?)
-    `);
+    const result = await dbManager.query(
+      `INSERT INTO models (regulation_id, model_name, model_category)
+       VALUES ($1, $2, $3)
+       RETURNING id`,
+      [regulation_id, model_name, model_category || null]
+    );
     
-    const result = stmt.run(regulation_id, model_name, model_category || null);
-    return result.lastInsertRowid;
+    return result.rows[0].id;
   }
 
-  // 更新型号
-  static update(id, data) {
-    const db = dbManager.getDatabase();
+
+  /**
+   * 更新型号
+   * @param {number} id - 型号 ID
+   * @param {Object} data - 更新的数据
+   * @returns {Promise<Object>} 更新结果
+   */
+  static async update(id, data) {
     const { regulation_id, model_name, model_category, is_active } = data;
     
-    const stmt = db.prepare(`
-      UPDATE models
-      SET regulation_id = ?, model_name = ?, model_category = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
+    const result = await dbManager.query(
+      `UPDATE models
+       SET regulation_id = $1, model_name = $2, model_category = $3, is_active = $4, updated_at = NOW()
+       WHERE id = $5`,
+      [regulation_id, model_name, model_category, is_active, id]
+    );
     
-    return stmt.run(regulation_id, model_name, model_category, is_active, id);
+    return { rowCount: result.rowCount };
   }
 
-  // 删除型号（硬删除，级联删除相关数据）
-  static delete(id) {
-    const db = dbManager.getDatabase();
-    
-    // 使用事务确保数据一致性
-    const deleteTransaction = db.transaction(() => {
-      // 删除相关的原料数据
-      db.prepare('DELETE FROM materials WHERE model_id = ?').run(id);
-      
+  /**
+   * 删除型号（硬删除，级联删除相关数据）
+   * @param {number} id - 型号 ID
+   * @returns {Promise<void>}
+   */
+  static async delete(id) {
+    await dbManager.transaction(async (client) => {
+      // 删除相关的原料数据（注意：materials 表没有 model_id 字段，跳过）
       // 删除相关的工序数据
-      db.prepare('DELETE FROM processes WHERE model_id = ?').run(id);
+      await client.query('DELETE FROM processes WHERE model_id = $1', [id]);
       
       // 删除相关的包材数据
-      db.prepare('DELETE FROM packaging WHERE model_id = ?').run(id);
+      await client.query('DELETE FROM packaging WHERE model_id = $1', [id]);
       
-      // 删除相关的包装配置及其工序配置
-      const packagingConfigs = db.prepare('SELECT id FROM packaging_configs WHERE model_id = ?').all(id);
-      for (const config of packagingConfigs) {
-        db.prepare('DELETE FROM process_configs WHERE packaging_config_id = ?').run(config.id);
+      // 获取相关的包装配置
+      const configsResult = await client.query(
+        'SELECT id FROM packaging_configs WHERE model_id = $1',
+        [id]
+      );
+      
+      // 删除相关的工序配置和包材配置
+      for (const config of configsResult.rows) {
+        await client.query('DELETE FROM process_configs WHERE packaging_config_id = $1', [config.id]);
+        await client.query('DELETE FROM packaging_materials WHERE packaging_config_id = $1', [config.id]);
       }
-      db.prepare('DELETE FROM packaging_configs WHERE model_id = ?').run(id);
+      
+      // 删除包装配置
+      await client.query('DELETE FROM packaging_configs WHERE model_id = $1', [id]);
       
       // 最后删除型号本身
-      db.prepare('DELETE FROM models WHERE id = ?').run(id);
+      await client.query('DELETE FROM models WHERE id = $1', [id]);
     });
-    
-    return deleteTransaction();
   }
 
-  // 检查型号是否被报价单使用
-  static isUsedInQuotations(id) {
-    const db = dbManager.getDatabase();
-    const stmt = db.prepare('SELECT COUNT(*) as count FROM quotations WHERE model_id = ?');
-    const result = stmt.get(id);
-    return result.count > 0;
+  /**
+   * 检查型号是否被报价单使用
+   * @param {number} id - 型号 ID
+   * @returns {Promise<boolean>} 是否被使用
+   */
+  static async isUsedInQuotations(id) {
+    const result = await dbManager.query(
+      'SELECT COUNT(*) as count FROM quotations WHERE model_id = $1',
+      [id]
+    );
+    return parseInt(result.rows[0].count) > 0;
   }
 
-  // 根据型号分类和法规ID获取型号
-  static findByModelCategoryAndRegulation(modelCategory, regulationId) {
-    const db = dbManager.getDatabase();
-    const stmt = db.prepare(`
-      SELECT m.*, r.name as regulation_name
-      FROM models m
-      LEFT JOIN regulations r ON m.regulation_id = r.id
-      WHERE m.model_category = ? AND m.regulation_id = ? AND m.is_active = 1
-      ORDER BY m.created_at DESC
-    `);
-    return stmt.all(modelCategory, regulationId);
+  /**
+   * 根据型号分类和法规ID获取型号
+   * @param {string} modelCategory - 型号分类
+   * @param {number} regulationId - 法规 ID
+   * @returns {Promise<Array>} 型号列表
+   */
+  static async findByModelCategoryAndRegulation(modelCategory, regulationId) {
+    const result = await dbManager.query(
+      `SELECT m.*, r.name as regulation_name
+       FROM models m
+       LEFT JOIN regulations r ON m.regulation_id = r.id
+       WHERE m.model_category = $1 AND m.regulation_id = $2 AND m.is_active = true
+       ORDER BY m.created_at DESC`,
+      [modelCategory, regulationId]
+    );
+    return result.rows;
   }
 
-  // 根据型号分类获取型号
-  static findByModelCategory(modelCategory) {
-    const db = dbManager.getDatabase();
-    const stmt = db.prepare(`
-      SELECT m.*, r.name as regulation_name
-      FROM models m
-      LEFT JOIN regulations r ON m.regulation_id = r.id
-      WHERE m.model_category = ? AND m.is_active = 1
-      ORDER BY m.created_at DESC
-    `);
-    return stmt.all(modelCategory);
+  /**
+   * 根据型号分类获取型号
+   * @param {string} modelCategory - 型号分类
+   * @returns {Promise<Array>} 型号列表
+   */
+  static async findByModelCategory(modelCategory) {
+    const result = await dbManager.query(
+      `SELECT m.*, r.name as regulation_name
+       FROM models m
+       LEFT JOIN regulations r ON m.regulation_id = r.id
+       WHERE m.model_category = $1 AND m.is_active = true
+       ORDER BY m.created_at DESC`,
+      [modelCategory]
+    );
+    return result.rows;
   }
 
-  // 获取所有型号分类（去重）
-  static getAllCategories() {
-    const db = dbManager.getDatabase();
-    const stmt = db.prepare(`
+  /**
+   * 获取所有型号分类（去重）
+   * @returns {Promise<Array<string>>} 型号分类列表
+   */
+  static async getAllCategories() {
+    const result = await dbManager.query(`
       SELECT DISTINCT model_category 
       FROM models 
-      WHERE model_category IS NOT NULL AND model_category != '' AND is_active = 1
+      WHERE model_category IS NOT NULL AND model_category != '' AND is_active = true
       ORDER BY model_category
     `);
-    return stmt.all().map(row => row.model_category);
+    return result.rows.map(row => row.model_category);
   }
 }
 

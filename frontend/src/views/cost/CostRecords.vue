@@ -107,7 +107,11 @@
           </template>
         </el-table-column>
         <el-table-column prop="creator_name" label="创建人" width="100" />
-        <el-table-column prop="created_at" label="创建时间" width="180" />
+        <el-table-column label="创建时间" width="180">
+          <template #default="{ row }">
+            {{ formatDateTime(row.created_at) }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click="viewDetail(row.id)">查看</el-button>
@@ -146,7 +150,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, Plus, DataAnalysis } from '@element-plus/icons-vue'
 import request from '@/utils/request'
-import { formatNumber } from '@/utils/format'
+import { formatNumber, formatDateTime } from '@/utils/format'
 import { getUser } from '@/utils/auth'
 import ProductCategoryModal from '@/components/ProductCategoryModal.vue'
 

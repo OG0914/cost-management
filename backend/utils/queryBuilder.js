@@ -1,6 +1,7 @@
 /**
  * SQL 查询构建器
  * 用于安全地构建动态 SQL 查询，避免手动拼接字符串
+ * 支持 PostgreSQL 的 $n 占位符格式
  */
 
 class QueryBuilder {
@@ -16,6 +17,16 @@ class QueryBuilder {
     this.orderBy = '';
     this.limitValue = null;
     this.offsetValue = null;
+    this.paramIndex = 0; // PostgreSQL 参数索引计数器
+  }
+
+  /**
+   * 获取下一个参数占位符
+   * @returns {string} PostgreSQL 格式的占位符 ($1, $2, ...)
+   */
+  _nextPlaceholder() {
+    this.paramIndex++;
+    return `$${this.paramIndex}`;
   }
 
   /**
@@ -26,7 +37,7 @@ class QueryBuilder {
    * @returns {QueryBuilder} 返回自身以支持链式调用
    */
   where(field, operator, value) {
-    this.conditions.push(`${field} ${operator} ?`);
+    this.conditions.push(`${field} ${operator} ${this._nextPlaceholder()}`);
     this.params.push(value);
     return this;
   }
@@ -41,11 +52,12 @@ class QueryBuilder {
     if (!values || values.length === 0) {
       return this;
     }
-    const placeholders = values.map(() => '?').join(', ');
+    const placeholders = values.map(() => this._nextPlaceholder()).join(', ');
     this.conditions.push(`${field} IN (${placeholders})`);
     this.params.push(...values);
     return this;
   }
+
 
   /**
    * 添加 LIKE 条件
@@ -54,20 +66,22 @@ class QueryBuilder {
    * @returns {QueryBuilder}
    */
   whereLike(field, value) {
-    this.conditions.push(`${field} LIKE ?`);
+    this.conditions.push(`${field} LIKE ${this._nextPlaceholder()}`);
     this.params.push(`%${value}%`);
     return this;
   }
 
   /**
    * 添加日期条件
+   * PostgreSQL 使用 DATE() 函数或 ::date 类型转换
    * @param {string} field - 字段名
    * @param {string} operator - 操作符（=, >, <, >=, <=）
    * @param {string} date - 日期值
    * @returns {QueryBuilder}
    */
   whereDate(field, operator, date) {
-    this.conditions.push(`DATE(${field}) ${operator} ?`);
+    // PostgreSQL 兼容：使用 ::date 类型转换
+    this.conditions.push(`${field}::date ${operator} ${this._nextPlaceholder()}`);
     this.params.push(date);
     return this;
   }
@@ -123,12 +137,27 @@ class QueryBuilder {
     return this;
   }
 
+
   /**
    * 构建 SELECT 查询
    * @param {string} fields - 查询字段（默认 *）
    * @returns {Object} { sql: string, params: Array }
    */
   buildSelect(fields = '*') {
+    // 重置参数索引，重新构建占位符
+    this.paramIndex = 0;
+    const rebuiltConditions = [];
+    
+    // 重新构建条件中的占位符
+    for (const condition of this.conditions) {
+      // 替换条件中的占位符为新的索引
+      const rebuiltCondition = condition.replace(/\$\d+/g, () => {
+        this.paramIndex++;
+        return `$${this.paramIndex}`;
+      });
+      rebuiltConditions.push(rebuiltCondition);
+    }
+    
     let sql = `SELECT ${fields} FROM ${this.table}`;
     
     // 添加 JOIN
@@ -137,8 +166,8 @@ class QueryBuilder {
     }
     
     // 添加 WHERE
-    if (this.conditions.length > 0) {
-      sql += ' WHERE ' + this.conditions.join(' AND ');
+    if (rebuiltConditions.length > 0) {
+      sql += ' WHERE ' + rebuiltConditions.join(' AND ');
     }
     
     // 添加 ORDER BY
@@ -151,13 +180,15 @@ class QueryBuilder {
     
     // 添加 LIMIT
     if (this.limitValue !== null) {
-      sql += ' LIMIT ?';
+      this.paramIndex++;
+      sql += ` LIMIT $${this.paramIndex}`;
       queryParams.push(this.limitValue);
     }
     
     // 添加 OFFSET
     if (this.offsetValue !== null) {
-      sql += ' OFFSET ?';
+      this.paramIndex++;
+      sql += ` OFFSET $${this.paramIndex}`;
       queryParams.push(this.offsetValue);
     }
     
@@ -169,6 +200,19 @@ class QueryBuilder {
    * @returns {Object} { sql: string, params: Array }
    */
   buildCount() {
+    // 重置参数索引，重新构建占位符
+    this.paramIndex = 0;
+    const rebuiltConditions = [];
+    
+    // 重新构建条件中的占位符
+    for (const condition of this.conditions) {
+      const rebuiltCondition = condition.replace(/\$\d+/g, () => {
+        this.paramIndex++;
+        return `$${this.paramIndex}`;
+      });
+      rebuiltConditions.push(rebuiltCondition);
+    }
+    
     let sql = `SELECT COUNT(*) as total FROM ${this.table}`;
     
     // 添加 JOIN
@@ -177,8 +221,8 @@ class QueryBuilder {
     }
     
     // 添加 WHERE
-    if (this.conditions.length > 0) {
-      sql += ' WHERE ' + this.conditions.join(' AND ');
+    if (rebuiltConditions.length > 0) {
+      sql += ' WHERE ' + rebuiltConditions.join(' AND ');
     }
     
     return { sql, params: [...this.params] };
@@ -196,6 +240,7 @@ class QueryBuilder {
     cloned.orderBy = this.orderBy;
     cloned.limitValue = this.limitValue;
     cloned.offsetValue = this.offsetValue;
+    cloned.paramIndex = this.paramIndex;
     return cloned;
   }
 }

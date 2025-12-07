@@ -11,20 +11,20 @@ const path = require('path');
 const fs = require('fs');
 
 // 获取所有型号（支持 model_category 和 regulation_id 过滤）
-const getAllModels = (req, res, next) => {
+const getAllModels = async (req, res, next) => {
   try {
     const { model_category, regulation_id } = req.query;
     
     let models;
     if (model_category && regulation_id) {
       // 同时按型号分类和法规过滤
-      models = Model.findByModelCategoryAndRegulation(model_category, regulation_id);
+      models = await Model.findByModelCategoryAndRegulation(model_category, regulation_id);
     } else if (model_category) {
       // 只按型号分类过滤
-      models = Model.findByModelCategory(model_category);
+      models = await Model.findByModelCategory(model_category);
     } else {
       // 获取所有型号
-      models = Model.findAll();
+      models = await Model.findAll();
     }
     
     res.json(success(models));
@@ -34,9 +34,9 @@ const getAllModels = (req, res, next) => {
 };
 
 // 获取激活的型号
-const getActiveModels = (req, res, next) => {
+const getActiveModels = async (req, res, next) => {
   try {
-    const models = Model.findActive();
+    const models = await Model.findActive();
     res.json(success(models));
   } catch (err) {
     next(err);
@@ -44,10 +44,10 @@ const getActiveModels = (req, res, next) => {
 };
 
 // 根据法规 ID 获取型号
-const getModelsByRegulation = (req, res, next) => {
+const getModelsByRegulation = async (req, res, next) => {
   try {
     const { regulationId } = req.params;
-    const models = Model.findByRegulationId(regulationId);
+    const models = await Model.findByRegulationId(regulationId);
     res.json(success(models));
   } catch (err) {
     next(err);
@@ -55,10 +55,10 @@ const getModelsByRegulation = (req, res, next) => {
 };
 
 // 根据 ID 获取型号
-const getModelById = (req, res, next) => {
+const getModelById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const model = Model.findById(id);
+    const model = await Model.findById(id);
     
     if (!model) {
       return res.status(404).json(error('型号不存在', 404));
@@ -71,7 +71,7 @@ const getModelById = (req, res, next) => {
 };
 
 // 创建型号
-const createModel = (req, res, next) => {
+const createModel = async (req, res, next) => {
   try {
     const { regulation_id, model_name, model_category } = req.body;
     
@@ -79,7 +79,7 @@ const createModel = (req, res, next) => {
       return res.status(400).json(error('法规类别和型号名称不能为空', 400));
     }
     
-    const id = Model.create({ regulation_id, model_name, model_category });
+    const id = await Model.create({ regulation_id, model_name, model_category });
     res.status(201).json(success({ id }, '创建成功'));
   } catch (err) {
     next(err);
@@ -87,12 +87,12 @@ const createModel = (req, res, next) => {
 };
 
 // 更新型号
-const updateModel = (req, res, next) => {
+const updateModel = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { regulation_id, model_name, model_category, is_active } = req.body;
     
-    const model = Model.findById(id);
+    const model = await Model.findById(id);
     if (!model) {
       return res.status(404).json(error('型号不存在', 404));
     }
@@ -101,7 +101,7 @@ const updateModel = (req, res, next) => {
       return res.status(400).json(error('法规类别和型号名称不能为空', 400));
     }
     
-    Model.update(id, { regulation_id, model_name, model_category, is_active: is_active !== undefined ? is_active : 1 });
+    await Model.update(id, { regulation_id, model_name, model_category, is_active: is_active !== undefined ? is_active : 1 });
     res.json(success(null, '更新成功'));
   } catch (err) {
     next(err);
@@ -109,21 +109,21 @@ const updateModel = (req, res, next) => {
 };
 
 // 删除型号
-const deleteModel = (req, res, next) => {
+const deleteModel = async (req, res, next) => {
   try {
     const { id } = req.params;
     
-    const model = Model.findById(id);
+    const model = await Model.findById(id);
     if (!model) {
       return res.status(404).json(error('型号不存在', 404));
     }
     
     // 检查是否被报价单使用
-    if (Model.isUsedInQuotations(id)) {
+    if (await Model.isUsedInQuotations(id)) {
       return res.status(400).json(error('该型号已被报价单使用，无法删除', 400));
     }
     
-    Model.delete(id);
+    await Model.delete(id);
     res.json(success(null, '删除成功'));
   } catch (err) {
     next(err);
@@ -152,21 +152,22 @@ const importModels = async (req, res, next) => {
     let updated = 0;
     const errors = [];
     
-    result.data.forEach((modelData, index) => {
+    for (let index = 0; index < result.data.length; index++) {
+      const modelData = result.data[index];
       try {
         // 查找法规ID
-        const regulation = Regulation.findByName(modelData.regulation_name);
+        const regulation = await Regulation.findByName(modelData.regulation_name);
         if (!regulation) {
           errors.push(`第 ${index + 2} 行：法规类别"${modelData.regulation_name}"不存在`);
-          return;
+          continue;
         }
         
         // 检查型号是否已存在（根据法规ID和型号名称）
-        const existing = Model.findByRegulationAndName(regulation.id, modelData.model_name);
+        const existing = await Model.findByRegulationAndName(regulation.id, modelData.model_name);
         
         if (existing) {
           // 更新已存在的型号
-          Model.update(existing.id, {
+          await Model.update(existing.id, {
             regulation_id: regulation.id,
             model_name: modelData.model_name,
             model_category: modelData.model_category || existing.model_category,
@@ -175,7 +176,7 @@ const importModels = async (req, res, next) => {
           updated++;
         } else {
           // 创建新型号
-          Model.create({
+          await Model.create({
             regulation_id: regulation.id,
             model_name: modelData.model_name,
             model_category: modelData.model_category || ''
@@ -185,7 +186,7 @@ const importModels = async (req, res, next) => {
       } catch (err) {
         errors.push(`第 ${index + 2} 行：${err.message}`);
       }
-    });
+    }
     
     res.json(success({
       total: result.total,
@@ -211,10 +212,11 @@ const exportModels = async (req, res, next) => {
     let models;
     if (ids && ids.length > 0) {
       // 导出选中的数据
-      models = ids.map(id => Model.findById(id)).filter(m => m !== null);
+      const modelPromises = ids.map(id => Model.findById(id));
+      models = (await Promise.all(modelPromises)).filter(m => m !== null);
     } else {
       // 如果没有指定ID，导出所有数据
-      models = Model.findAll();
+      models = await Model.findAll();
     }
     
     if (models.length === 0) {
@@ -279,9 +281,9 @@ const downloadTemplate = async (req, res, next) => {
 };
 
 // 获取所有型号分类
-const getModelCategories = (req, res, next) => {
+const getModelCategories = async (req, res, next) => {
   try {
-    const categories = Model.getAllCategories();
+    const categories = await Model.getAllCategories();
     res.json(success(categories));
   } catch (err) {
     next(err);

@@ -39,7 +39,11 @@
           </template>
         </el-table-column>
         <el-table-column prop="setter_name" label="设置人" width="100" />
-        <el-table-column prop="created_at" label="设置时间" width="180" />
+        <el-table-column label="设置时间" width="180">
+          <template #default="{ row }">
+            {{ formatDateTime(row.created_at) }}
+          </template>
+        </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="row.is_current ? 'success' : 'info'" size="small">
@@ -124,7 +128,11 @@
           </template>
         </el-table-column>
         <el-table-column prop="setter_name" label="设置人" width="100" />
-        <el-table-column prop="created_at" label="设置时间" width="180" />
+        <el-table-column label="设置时间" width="180">
+          <template #default="{ row }">
+            {{ formatDateTime(row.created_at) }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="350" fixed="right">
           <template #default="{ row }">
             <el-button 
@@ -167,7 +175,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, DataAnalysis } from '@element-plus/icons-vue'
 import request from '@/utils/request'
-import { formatNumber } from '@/utils/format'
+import { formatNumber, formatDateTime } from '@/utils/format'
 import { getUser } from '@/utils/auth'
 
 const router = useRouter()

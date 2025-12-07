@@ -1,0 +1,1418 @@
+{
+  "exportedAt": "2025-12-07T11:48:40.955Z",
+  "tables": {
+    "users": {
+      "count": 1,
+      "data": [
+        {
+          "id": 3,
+          "username": "admin",
+          "password": "$2b$10$kZD3DaxQ2FvNp6DxPfleHuNUm86YAaLCbNlc8i0ATSBniW.vBY8A6",
+          "role": "admin",
+          "real_name": "系统管理员",
+          "email": "admin@example.com",
+          "is_active": 1,
+          "created_at": "2025-12-06 23:03:46",
+          "updated_at": "2025-12-06 23:03:46"
+        }
+      ]
+    },
+    "regulations": {
+      "count": 3,
+      "data": [
+        {
+          "id": 1,
+          "name": "CE",
+          "description": null,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:03:59",
+          "updated_at": "2025-12-06 23:03:59"
+        },
+        {
+          "id": 2,
+          "name": "GB",
+          "description": null,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:03",
+          "updated_at": "2025-12-06 23:04:03"
+        },
+        {
+          "id": 3,
+          "name": "NIOSH",
+          "description": null,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:08",
+          "updated_at": "2025-12-06 23:04:08"
+        }
+      ]
+    },
+    "models": {
+      "count": 16,
+      "data": [
+        {
+          "id": 1,
+          "regulation_id": 1,
+          "model_name": "MK8152",
+          "model_category": "半面罩",
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:16",
+          "updated_at": "2025-12-06 23:04:16"
+        },
+        {
+          "id": 2,
+          "regulation_id": 3,
+          "model_name": "9600V-N95",
+          "model_category": "口罩",
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:16",
+          "updated_at": "2025-12-06 23:04:16"
+        },
+        {
+          "id": 3,
+          "regulation_id": 3,
+          "model_name": "9600-N95",
+          "model_category": "口罩",
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:16",
+          "updated_at": "2025-12-06 23:04:16"
+        },
+        {
+          "id": 4,
+          "regulation_id": 1,
+          "model_name": "MK8151",
+          "model_category": "半面罩",
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:16",
+          "updated_at": "2025-12-06 23:04:16"
+        },
+        {
+          "id": 5,
+          "regulation_id": 2,
+          "model_name": "6001-KN95",
+          "model_category": "口罩",
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:16",
+          "updated_at": "2025-12-06 23:04:16"
+        },
+        {
+          "id": 6,
+          "regulation_id": 1,
+          "model_name": "MK8153",
+          "model_category": "半面罩",
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:16",
+          "updated_at": "2025-12-06 23:04:16"
+        },
+        {
+          "id": 7,
+          "regulation_id": 1,
+          "model_name": "MK8154",
+          "model_category": "半面罩",
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:16",
+          "updated_at": "2025-12-06 23:04:16"
+        },
+        {
+          "id": 8,
+          "regulation_id": 1,
+          "model_name": "MK8155",
+          "model_category": "半面罩",
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:16",
+          "updated_at": "2025-12-06 23:04:16"
+        },
+        {
+          "id": 9,
+          "regulation_id": 1,
+          "model_name": "MK8157",
+          "model_category": "半面罩",
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:16",
+          "updated_at": "2025-12-06 23:04:16"
+        },
+        {
+          "id": 10,
+          "regulation_id": 1,
+          "model_name": "MK8158",
+          "model_category": "半面罩",
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:16",
+          "updated_at": "2025-12-06 23:04:16"
+        },
+        {
+          "id": 11,
+          "regulation_id": 3,
+          "model_name": "MK9101",
+          "model_category": "半面罩",
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:16",
+          "updated_at": "2025-12-06 23:04:16"
+        },
+        {
+          "id": 12,
+          "regulation_id": 3,
+          "model_name": "MK9102",
+          "model_category": "半面罩",
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:16",
+          "updated_at": "2025-12-06 23:04:16"
+        },
+        {
+          "id": 13,
+          "regulation_id": 3,
+          "model_name": "MK9103",
+          "model_category": "半面罩",
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:16",
+          "updated_at": "2025-12-06 23:04:16"
+        },
+        {
+          "id": 14,
+          "regulation_id": 3,
+          "model_name": "MK9104",
+          "model_category": "半面罩",
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:16",
+          "updated_at": "2025-12-06 23:04:16"
+        },
+        {
+          "id": 15,
+          "regulation_id": 3,
+          "model_name": "9600-N95OV",
+          "model_category": "口罩",
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:16",
+          "updated_at": "2025-12-06 23:04:16"
+        },
+        {
+          "id": 16,
+          "regulation_id": 3,
+          "model_name": "9600-N95VOV",
+          "model_category": "口罩",
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:16",
+          "updated_at": "2025-12-06 23:04:16"
+        }
+      ]
+    },
+    "materials": {
+      "count": 21,
+      "data": [
+        {
+          "id": 1,
+          "item_no": "102000111189",
+          "name": "蓝色鬆緊帶 6.8mm",
+          "unit": "Kg",
+          "price": 10,
+          "currency": "CNY",
+          "manufacturer": "唯宾",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        },
+        {
+          "id": 2,
+          "item_no": "102000211460",
+          "name": "白棉 內層 6D",
+          "unit": "Kg",
+          "price": 12,
+          "currency": "CNY",
+          "manufacturer": "日月",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        },
+        {
+          "id": 3,
+          "item_no": "102000111280",
+          "name": "熱熔棉 内層 4D",
+          "unit": "Kg",
+          "price": 15,
+          "currency": "CNY",
+          "manufacturer": "日月",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        },
+        {
+          "id": 4,
+          "item_no": "102000111172",
+          "name": "白棉 外層 6D",
+          "unit": "Kg",
+          "price": 10,
+          "currency": "CNY",
+          "manufacturer": "日月",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        },
+        {
+          "id": 5,
+          "item_no": "102000111200",
+          "name": "熱熔棉 外層 4D ",
+          "unit": "Kg",
+          "price": 12,
+          "currency": "CNY",
+          "manufacturer": "日月",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        },
+        {
+          "id": 6,
+          "item_no": "102000111210",
+          "name": "稱道 38g",
+          "unit": "Kg",
+          "price": 15,
+          "currency": "CNY",
+          "manufacturer": "稱道",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        },
+        {
+          "id": 7,
+          "item_no": "102000111212",
+          "name": "油墨",
+          "unit": "CAN",
+          "price": 100,
+          "currency": "CNY",
+          "manufacturer": "安美",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        },
+        {
+          "id": 8,
+          "item_no": "102000111214",
+          "name": "手动方形气阀",
+          "unit": "套",
+          "price": 1,
+          "currency": "CNY",
+          "manufacturer": "阔润",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        },
+        {
+          "id": 9,
+          "item_no": "102000111216",
+          "name": "手动呼吸阀硅胶片",
+          "unit": "Pcs",
+          "price": 1,
+          "currency": "CNY",
+          "manufacturer": "阔润",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        },
+        {
+          "id": 10,
+          "item_no": "102000111218",
+          "name": "PE印刷平口袋 0.04mmx9.5\"x15\"",
+          "unit": "Pcs",
+          "price": 0.5,
+          "currency": "CNY",
+          "manufacturer": "博辉",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        },
+        {
+          "id": 11,
+          "item_no": "102000111220",
+          "name": "說明書 A4黑白雙面",
+          "unit": "Pcs",
+          "price": 0.1,
+          "currency": "CNY",
+          "manufacturer": "博辉",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        },
+        {
+          "id": 12,
+          "item_no": "102000111222",
+          "name": "彩盒 140 x 130 X 200mm",
+          "unit": "Pcs",
+          "price": 1,
+          "currency": "CNY",
+          "manufacturer": "利邦",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        },
+        {
+          "id": 13,
+          "item_no": "102000111224",
+          "name": "外箱  16.25“ X11.75\"X16.5\" ",
+          "unit": "Pcs",
+          "price": 5,
+          "currency": "CNY",
+          "manufacturer": "森宏",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        },
+        {
+          "id": 14,
+          "item_no": "102000111226",
+          "name": "封箱膠帶",
+          "unit": "Pcs",
+          "price": 3,
+          "currency": "CNY",
+          "manufacturer": "美安",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        },
+        {
+          "id": 15,
+          "item_no": "HP110079",
+          "name": "方形滤盒MK81系列灰色PP上盖",
+          "unit": "Pcs",
+          "price": 0.6,
+          "currency": "CNY",
+          "manufacturer": "阔润",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        },
+        {
+          "id": 16,
+          "item_no": "HP110080",
+          "name": "方形滤盒MK81系列灰色PP下盖",
+          "unit": "Pcs",
+          "price": 0.6,
+          "currency": "CNY",
+          "manufacturer": "阔润",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        },
+        {
+          "id": 17,
+          "item_no": "406082010360",
+          "name": "A1有机气体 浦士达 PFH-PA-1220",
+          "unit": "Pcs",
+          "price": 35,
+          "currency": "CNY",
+          "manufacturer": "浦士达",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        },
+        {
+          "id": 18,
+          "item_no": "406082010361",
+          "name": "A1有机气体 浦士达 PFH-WA-1220",
+          "unit": "Pcs",
+          "price": 40,
+          "currency": "CNY",
+          "manufacturer": "浦士达",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        },
+        {
+          "id": 19,
+          "item_no": "406082010362",
+          "name": "标签：MK8101滤毒盒（GB）--褐色底白字 A1",
+          "unit": "Pcs",
+          "price": 0.5,
+          "currency": "CNY",
+          "manufacturer": "博辉",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        },
+        {
+          "id": 20,
+          "item_no": "402000012159",
+          "name": "胶袋：MK033 MK8101-GB滤毒盒A1中文版麦特瑞2PCS入复合铝箔印刷袋0.11x155mmx240mm",
+          "unit": "Pcs",
+          "price": 0.8,
+          "currency": "CNY",
+          "manufacturer": "博辉",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        },
+        {
+          "id": 21,
+          "item_no": "408082010361",
+          "name": "纸箱：500mm*470*300 mm K=K",
+          "unit": "Pcs",
+          "price": 6,
+          "currency": "CNY",
+          "manufacturer": "森宏",
+          "usage_amount": null,
+          "created_at": "2025-12-06 23:04:21",
+          "updated_at": "2025-12-06 23:04:21"
+        }
+      ]
+    },
+    "processes": {
+      "count": 0,
+      "data": []
+    },
+    "packaging": {
+      "count": 0,
+      "data": []
+    },
+    "packaging_configs": {
+      "count": 3,
+      "data": [
+        {
+          "id": 1,
+          "model_id": 6,
+          "config_name": "C5标准包装",
+          "pc_per_bag": 2,
+          "bags_per_box": 1,
+          "boxes_per_carton": 48,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:27",
+          "updated_at": "2025-12-06 23:04:27"
+        },
+        {
+          "id": 2,
+          "model_id": 7,
+          "config_name": "C5标准包装",
+          "pc_per_bag": 2,
+          "bags_per_box": 1,
+          "boxes_per_carton": 48,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:27",
+          "updated_at": "2025-12-06 23:04:27"
+        },
+        {
+          "id": 3,
+          "model_id": 3,
+          "config_name": "C5标准包装",
+          "pc_per_bag": 1,
+          "bags_per_box": 10,
+          "boxes_per_carton": 12,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:27",
+          "updated_at": "2025-12-06 23:08:41"
+        }
+      ]
+    },
+    "process_configs": {
+      "count": 11,
+      "data": [
+        {
+          "id": 1,
+          "packaging_config_id": 1,
+          "process_name": "超音波压盒",
+          "unit_price": 0.1,
+          "sort_order": 0,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:27",
+          "updated_at": "2025-12-06 23:04:27"
+        },
+        {
+          "id": 2,
+          "packaging_config_id": 1,
+          "process_name": "贴标",
+          "unit_price": 0.02,
+          "sort_order": 0,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:27",
+          "updated_at": "2025-12-06 23:04:27"
+        },
+        {
+          "id": 3,
+          "packaging_config_id": 1,
+          "process_name": "装袋",
+          "unit_price": 0.2,
+          "sort_order": 0,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:27",
+          "updated_at": "2025-12-06 23:04:27"
+        },
+        {
+          "id": 4,
+          "packaging_config_id": 1,
+          "process_name": "装箱",
+          "unit_price": 0.4,
+          "sort_order": 0,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:27",
+          "updated_at": "2025-12-06 23:04:27"
+        },
+        {
+          "id": 5,
+          "packaging_config_id": 2,
+          "process_name": "超音波压盒",
+          "unit_price": 0.1,
+          "sort_order": 0,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:27",
+          "updated_at": "2025-12-06 23:04:27"
+        },
+        {
+          "id": 6,
+          "packaging_config_id": 2,
+          "process_name": "贴标",
+          "unit_price": 0.02,
+          "sort_order": 0,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:27",
+          "updated_at": "2025-12-06 23:04:27"
+        },
+        {
+          "id": 7,
+          "packaging_config_id": 2,
+          "process_name": "装袋",
+          "unit_price": 0.2,
+          "sort_order": 0,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:27",
+          "updated_at": "2025-12-06 23:04:27"
+        },
+        {
+          "id": 8,
+          "packaging_config_id": 2,
+          "process_name": "装箱",
+          "unit_price": 0.4,
+          "sort_order": 0,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:04:27",
+          "updated_at": "2025-12-06 23:04:27"
+        },
+        {
+          "id": 12,
+          "packaging_config_id": 3,
+          "process_name": "超音波",
+          "unit_price": 0.04,
+          "sort_order": 0,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:06:44",
+          "updated_at": "2025-12-06 23:06:44"
+        },
+        {
+          "id": 13,
+          "packaging_config_id": 3,
+          "process_name": "装袋",
+          "unit_price": 0.05,
+          "sort_order": 0,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:06:44",
+          "updated_at": "2025-12-06 23:06:44"
+        },
+        {
+          "id": 14,
+          "packaging_config_id": 3,
+          "process_name": "装箱",
+          "unit_price": 0.1,
+          "sort_order": 0,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:06:44",
+          "updated_at": "2025-12-06 23:06:44"
+        }
+      ]
+    },
+    "packaging_materials": {
+      "count": 8,
+      "data": [
+        {
+          "id": 5,
+          "packaging_config_id": 1,
+          "material_name": "胶袋：MK033 MK8101-GB滤毒盒A1中文版麦特瑞2PCS入复合铝箔印刷袋0.11x155mmx240mm",
+          "basic_usage": 2,
+          "unit_price": 0.8,
+          "carton_volume": null,
+          "sort_order": 0,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:08:14",
+          "updated_at": "2025-12-06 23:08:14"
+        },
+        {
+          "id": 6,
+          "packaging_config_id": 1,
+          "material_name": "纸箱：500mm*470*300 mm K=K",
+          "basic_usage": 96,
+          "unit_price": 6,
+          "carton_volume": 1.2,
+          "sort_order": 0,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:08:14",
+          "updated_at": "2025-12-06 23:08:14"
+        },
+        {
+          "id": 7,
+          "packaging_config_id": 2,
+          "material_name": "胶袋：MK033 MK8101-GB滤毒盒A1中文版麦特瑞2PCS入复合铝箔印刷袋0.11x155mmx240mm",
+          "basic_usage": 2,
+          "unit_price": 0.8,
+          "carton_volume": null,
+          "sort_order": 0,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:08:14",
+          "updated_at": "2025-12-06 23:08:14"
+        },
+        {
+          "id": 8,
+          "packaging_config_id": 2,
+          "material_name": "纸箱：500mm*470*300 mm K=K",
+          "basic_usage": 96,
+          "unit_price": 6,
+          "carton_volume": 1.2,
+          "sort_order": 0,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:08:14",
+          "updated_at": "2025-12-06 23:08:14"
+        },
+        {
+          "id": 17,
+          "packaging_config_id": 3,
+          "material_name": "PE印刷平口袋 0.04mmx9.5\"x15\"",
+          "basic_usage": 10,
+          "unit_price": 0.5,
+          "carton_volume": null,
+          "sort_order": 0,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:08:41",
+          "updated_at": "2025-12-06 23:08:41"
+        },
+        {
+          "id": 18,
+          "packaging_config_id": 3,
+          "material_name": "彩盒 140 x 130 X 200mm",
+          "basic_usage": 10,
+          "unit_price": 2.1,
+          "carton_volume": null,
+          "sort_order": 0,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:08:41",
+          "updated_at": "2025-12-06 23:08:41"
+        },
+        {
+          "id": 19,
+          "packaging_config_id": 3,
+          "material_name": "外箱 16.25“ X11.75\"X16.5\"",
+          "basic_usage": 120,
+          "unit_price": 6,
+          "carton_volume": 1.68,
+          "sort_order": 0,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:08:41",
+          "updated_at": "2025-12-06 23:08:41"
+        },
+        {
+          "id": 20,
+          "packaging_config_id": 3,
+          "material_name": "說明書 A4黑白雙面",
+          "basic_usage": 10,
+          "unit_price": 0.55,
+          "carton_volume": null,
+          "sort_order": 0,
+          "is_active": 1,
+          "created_at": "2025-12-06 23:08:41",
+          "updated_at": "2025-12-06 23:08:41"
+        }
+      ]
+    },
+    "quotations": {
+      "count": 3,
+      "data": [
+        {
+          "id": 1,
+          "quotation_no": "MK20251207-001",
+          "customer_name": "KFC",
+          "customer_region": "美国",
+          "model_id": 3,
+          "regulation_id": 3,
+          "quantity": 20000,
+          "freight_total": 3360,
+          "freight_per_unit": 0.168,
+          "sales_type": "export",
+          "shipping_method": "lcl",
+          "port": null,
+          "base_cost": 1.4777,
+          "overhead_price": 1.8471,
+          "final_price": 0.2573,
+          "currency": "USD",
+          "status": "submitted",
+          "created_by": 3,
+          "reviewed_by": null,
+          "packaging_config_id": 3,
+          "include_freight_in_base": 1,
+          "custom_profit_tiers": "[{\"profitRate\":0.37,\"profitPercentage\":\"37%\",\"price\":0.4084126984126984}]",
+          "vat_rate": 0.13,
+          "created_at": "2025-12-06 23:10:49",
+          "updated_at": "2025-12-06 23:19:00",
+          "submitted_at": "2025-12-06 23:19:00",
+          "reviewed_at": null
+        },
+        {
+          "id": 2,
+          "quotation_no": "MK20251207-002",
+          "customer_name": "KFC",
+          "customer_region": "美国",
+          "model_id": 3,
+          "regulation_id": 3,
+          "quantity": 67920,
+          "freight_total": 5964,
+          "freight_per_unit": 0.08780918727915195,
+          "sales_type": "export",
+          "shipping_method": "fcl_20",
+          "port": null,
+          "base_cost": 1.3975,
+          "overhead_price": 1.7469,
+          "final_price": 0.2433,
+          "currency": "USD",
+          "status": "submitted",
+          "created_by": 3,
+          "reviewed_by": null,
+          "packaging_config_id": 3,
+          "include_freight_in_base": 1,
+          "custom_profit_tiers": "[{\"profitRate\":0.37,\"profitPercentage\":\"37%\",\"price\":0.3861904761904762}]",
+          "vat_rate": 0.13,
+          "created_at": "2025-12-06 23:18:29",
+          "updated_at": "2025-12-06 23:18:56",
+          "submitted_at": "2025-12-06 23:18:56",
+          "reviewed_at": null
+        },
+        {
+          "id": 4,
+          "quotation_no": "MK20251207-003",
+          "customer_name": "MDL",
+          "customer_region": "美国",
+          "model_id": 3,
+          "regulation_id": 3,
+          "quantity": 1200,
+          "freight_total": 1970,
+          "freight_per_unit": 1.6416666666666666,
+          "sales_type": "export",
+          "shipping_method": "lcl",
+          "port": "FOB深圳",
+          "base_cost": 3.0578,
+          "overhead_price": 3.8222,
+          "final_price": 0.5325,
+          "currency": "USD",
+          "status": "draft",
+          "created_by": 3,
+          "reviewed_by": null,
+          "packaging_config_id": 3,
+          "include_freight_in_base": 1,
+          "custom_profit_tiers": "[{\"profitRate\":0.37,\"profitPercentage\":\"37%\",\"price\":0.8452380952380952}]",
+          "vat_rate": 0.13,
+          "created_at": "2025-12-07 00:06:31",
+          "updated_at": "2025-12-07 00:06:54",
+          "submitted_at": null,
+          "reviewed_at": null
+        }
+      ]
+    },
+    "quotation_items": {
+      "count": 30,
+      "data": [
+        {
+          "id": 31,
+          "quotation_id": 2,
+          "category": "material",
+          "item_name": "白棉 內層 6D",
+          "usage_amount": 0.018,
+          "unit_price": 12,
+          "subtotal": 0.2227,
+          "is_changed": 1,
+          "original_value": null,
+          "material_id": 2,
+          "after_overhead": 0,
+          "created_at": "2025-12-06 23:18:56"
+        },
+        {
+          "id": 32,
+          "quotation_id": 2,
+          "category": "material",
+          "item_name": "稱道 38g",
+          "usage_amount": 0.02,
+          "unit_price": 15,
+          "subtotal": 0.3093,
+          "is_changed": 1,
+          "original_value": null,
+          "material_id": 6,
+          "after_overhead": 0,
+          "created_at": "2025-12-06 23:18:56"
+        },
+        {
+          "id": 33,
+          "quotation_id": 2,
+          "category": "material",
+          "item_name": "熱熔棉 外層 4D ",
+          "usage_amount": 0.018,
+          "unit_price": 12,
+          "subtotal": 0.2227,
+          "is_changed": 1,
+          "original_value": null,
+          "material_id": 5,
+          "after_overhead": 0,
+          "created_at": "2025-12-06 23:18:56"
+        },
+        {
+          "id": 34,
+          "quotation_id": 2,
+          "category": "process",
+          "item_name": "超音波",
+          "usage_amount": 1,
+          "unit_price": 0.04,
+          "subtotal": 0.04,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": null,
+          "after_overhead": 0,
+          "created_at": "2025-12-06 23:18:56"
+        },
+        {
+          "id": 35,
+          "quotation_id": 2,
+          "category": "process",
+          "item_name": "装袋",
+          "usage_amount": 1,
+          "unit_price": 0.05,
+          "subtotal": 0.05,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": null,
+          "after_overhead": 0,
+          "created_at": "2025-12-06 23:18:56"
+        },
+        {
+          "id": 36,
+          "quotation_id": 2,
+          "category": "process",
+          "item_name": "装箱",
+          "usage_amount": 1,
+          "unit_price": 0.1,
+          "subtotal": 0.1,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": null,
+          "after_overhead": 0,
+          "created_at": "2025-12-06 23:18:56"
+        },
+        {
+          "id": 37,
+          "quotation_id": 2,
+          "category": "packaging",
+          "item_name": "PE印刷平口袋 0.04mmx9.5\"x15\"",
+          "usage_amount": 10,
+          "unit_price": 0.5,
+          "subtotal": 0.05,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": 10,
+          "after_overhead": 0,
+          "created_at": "2025-12-06 23:18:56"
+        },
+        {
+          "id": 38,
+          "quotation_id": 2,
+          "category": "packaging",
+          "item_name": "彩盒 140 x 130 X 200mm",
+          "usage_amount": 10,
+          "unit_price": 2.1,
+          "subtotal": 0.21000000000000002,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": 12,
+          "after_overhead": 0,
+          "created_at": "2025-12-06 23:18:56"
+        },
+        {
+          "id": 39,
+          "quotation_id": 2,
+          "category": "packaging",
+          "item_name": "外箱 16.25“ X11.75\"X16.5\"",
+          "usage_amount": 120,
+          "unit_price": 6,
+          "subtotal": 0.05,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": null,
+          "after_overhead": 0,
+          "created_at": "2025-12-06 23:18:56"
+        },
+        {
+          "id": 40,
+          "quotation_id": 2,
+          "category": "packaging",
+          "item_name": "說明書 A4黑白雙面",
+          "usage_amount": 10,
+          "unit_price": 0.55,
+          "subtotal": 0.05500000000000001,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": 11,
+          "after_overhead": 0,
+          "created_at": "2025-12-06 23:18:56"
+        },
+        {
+          "id": 41,
+          "quotation_id": 1,
+          "category": "material",
+          "item_name": "白棉 內層 6D",
+          "usage_amount": 0.018,
+          "unit_price": 12,
+          "subtotal": 0.2227,
+          "is_changed": 1,
+          "original_value": null,
+          "material_id": 2,
+          "after_overhead": 0,
+          "created_at": "2025-12-06 23:19:00"
+        },
+        {
+          "id": 42,
+          "quotation_id": 1,
+          "category": "material",
+          "item_name": "稱道 38g",
+          "usage_amount": 0.02,
+          "unit_price": 15,
+          "subtotal": 0.3093,
+          "is_changed": 1,
+          "original_value": null,
+          "material_id": 6,
+          "after_overhead": 0,
+          "created_at": "2025-12-06 23:19:00"
+        },
+        {
+          "id": 43,
+          "quotation_id": 1,
+          "category": "material",
+          "item_name": "熱熔棉 外層 4D ",
+          "usage_amount": 0.018,
+          "unit_price": 12,
+          "subtotal": 0.2227,
+          "is_changed": 1,
+          "original_value": null,
+          "material_id": 5,
+          "after_overhead": 0,
+          "created_at": "2025-12-06 23:19:00"
+        },
+        {
+          "id": 44,
+          "quotation_id": 1,
+          "category": "process",
+          "item_name": "超音波",
+          "usage_amount": 1,
+          "unit_price": 0.04,
+          "subtotal": 0.04,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": null,
+          "after_overhead": 0,
+          "created_at": "2025-12-06 23:19:00"
+        },
+        {
+          "id": 45,
+          "quotation_id": 1,
+          "category": "process",
+          "item_name": "装袋",
+          "usage_amount": 1,
+          "unit_price": 0.05,
+          "subtotal": 0.05,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": null,
+          "after_overhead": 0,
+          "created_at": "2025-12-06 23:19:00"
+        },
+        {
+          "id": 46,
+          "quotation_id": 1,
+          "category": "process",
+          "item_name": "装箱",
+          "usage_amount": 1,
+          "unit_price": 0.1,
+          "subtotal": 0.1,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": null,
+          "after_overhead": 0,
+          "created_at": "2025-12-06 23:19:00"
+        },
+        {
+          "id": 47,
+          "quotation_id": 1,
+          "category": "packaging",
+          "item_name": "PE印刷平口袋 0.04mmx9.5\"x15\"",
+          "usage_amount": 10,
+          "unit_price": 0.5,
+          "subtotal": 0.05,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": 10,
+          "after_overhead": 0,
+          "created_at": "2025-12-06 23:19:00"
+        },
+        {
+          "id": 48,
+          "quotation_id": 1,
+          "category": "packaging",
+          "item_name": "彩盒 140 x 130 X 200mm",
+          "usage_amount": 10,
+          "unit_price": 2.1,
+          "subtotal": 0.21000000000000002,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": 12,
+          "after_overhead": 0,
+          "created_at": "2025-12-06 23:19:00"
+        },
+        {
+          "id": 49,
+          "quotation_id": 1,
+          "category": "packaging",
+          "item_name": "外箱 16.25“ X11.75\"X16.5\"",
+          "usage_amount": 120,
+          "unit_price": 6,
+          "subtotal": 0.05,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": null,
+          "after_overhead": 0,
+          "created_at": "2025-12-06 23:19:00"
+        },
+        {
+          "id": 50,
+          "quotation_id": 1,
+          "category": "packaging",
+          "item_name": "說明書 A4黑白雙面",
+          "usage_amount": 10,
+          "unit_price": 0.55,
+          "subtotal": 0.05500000000000001,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": 11,
+          "after_overhead": 0,
+          "created_at": "2025-12-06 23:19:00"
+        },
+        {
+          "id": 71,
+          "quotation_id": 4,
+          "category": "material",
+          "item_name": "白棉 內層 6D",
+          "usage_amount": 0.018,
+          "unit_price": 12,
+          "subtotal": 0.2227,
+          "is_changed": 1,
+          "original_value": null,
+          "material_id": 2,
+          "after_overhead": 0,
+          "created_at": "2025-12-07 00:06:54"
+        },
+        {
+          "id": 72,
+          "quotation_id": 4,
+          "category": "material",
+          "item_name": "稱道 38g",
+          "usage_amount": 0.02,
+          "unit_price": 15,
+          "subtotal": 0.3093,
+          "is_changed": 1,
+          "original_value": null,
+          "material_id": 6,
+          "after_overhead": 0,
+          "created_at": "2025-12-07 00:06:54"
+        },
+        {
+          "id": 73,
+          "quotation_id": 4,
+          "category": "material",
+          "item_name": "熱熔棉 外層 4D ",
+          "usage_amount": 0.018,
+          "unit_price": 12,
+          "subtotal": 0.2227,
+          "is_changed": 1,
+          "original_value": null,
+          "material_id": 5,
+          "after_overhead": 0,
+          "created_at": "2025-12-07 00:06:54"
+        },
+        {
+          "id": 74,
+          "quotation_id": 4,
+          "category": "process",
+          "item_name": "超音波",
+          "usage_amount": 1,
+          "unit_price": 0.04,
+          "subtotal": 0.04,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": null,
+          "after_overhead": 0,
+          "created_at": "2025-12-07 00:06:54"
+        },
+        {
+          "id": 75,
+          "quotation_id": 4,
+          "category": "process",
+          "item_name": "装袋",
+          "usage_amount": 1,
+          "unit_price": 0.05,
+          "subtotal": 0.05,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": null,
+          "after_overhead": 0,
+          "created_at": "2025-12-07 00:06:54"
+        },
+        {
+          "id": 76,
+          "quotation_id": 4,
+          "category": "process",
+          "item_name": "装箱",
+          "usage_amount": 1,
+          "unit_price": 0.1,
+          "subtotal": 0.1,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": null,
+          "after_overhead": 0,
+          "created_at": "2025-12-07 00:06:54"
+        },
+        {
+          "id": 77,
+          "quotation_id": 4,
+          "category": "packaging",
+          "item_name": "PE印刷平口袋 0.04mmx9.5\"x15\"",
+          "usage_amount": 10,
+          "unit_price": 0.5,
+          "subtotal": 0.05,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": 10,
+          "after_overhead": 0,
+          "created_at": "2025-12-07 00:06:54"
+        },
+        {
+          "id": 78,
+          "quotation_id": 4,
+          "category": "packaging",
+          "item_name": "彩盒 140 x 130 X 200mm",
+          "usage_amount": 10,
+          "unit_price": 2.1,
+          "subtotal": 0.21000000000000002,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": 12,
+          "after_overhead": 0,
+          "created_at": "2025-12-07 00:06:54"
+        },
+        {
+          "id": 79,
+          "quotation_id": 4,
+          "category": "packaging",
+          "item_name": "外箱 16.25“ X11.75\"X16.5\"",
+          "usage_amount": 120,
+          "unit_price": 6,
+          "subtotal": 0.05,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": null,
+          "after_overhead": 0,
+          "created_at": "2025-12-07 00:06:54"
+        },
+        {
+          "id": 80,
+          "quotation_id": 4,
+          "category": "packaging",
+          "item_name": "說明書 A4黑白雙面",
+          "usage_amount": 10,
+          "unit_price": 0.55,
+          "subtotal": 0.05500000000000001,
+          "is_changed": 0,
+          "original_value": null,
+          "material_id": 11,
+          "after_overhead": 0,
+          "created_at": "2025-12-07 00:06:54"
+        }
+      ]
+    },
+    "quotation_custom_fees": {
+      "count": 0,
+      "data": []
+    },
+    "comments": {
+      "count": 0,
+      "data": []
+    },
+    "system_config": {
+      "count": 17,
+      "data": [
+        {
+          "id": 1,
+          "config_key": "overhead_rate",
+          "config_value": "0.2",
+          "description": "管销率",
+          "updated_at": "2025-12-06 23:44:58"
+        },
+        {
+          "id": 2,
+          "config_key": "vat_rate",
+          "config_value": "0.13",
+          "description": "增值税率",
+          "updated_at": "2025-12-06 23:44:58"
+        },
+        {
+          "id": 3,
+          "config_key": "insurance_rate",
+          "config_value": "0.003",
+          "description": "保险率",
+          "updated_at": "2025-12-06 23:44:58"
+        },
+        {
+          "id": 4,
+          "config_key": "exchange_rate",
+          "config_value": "7.2",
+          "description": "汇率（CNY/USD）",
+          "updated_at": "2025-12-06 23:44:58"
+        },
+        {
+          "id": 5,
+          "config_key": "profit_tiers",
+          "config_value": "[0.05,0.1,0.25,0.5]",
+          "description": "利润区间",
+          "updated_at": "2025-12-06 23:44:58"
+        },
+        {
+          "id": 6,
+          "config_key": "fob_shenzhen_exchange_rate",
+          "config_value": "7.1",
+          "description": "FOB深圳运费汇率（USD/CNY）",
+          "updated_at": "2025-12-06 23:44:58"
+        },
+        {
+          "id": 7,
+          "config_key": "fcl_20_freight_usd",
+          "config_value": "840",
+          "description": "20尺整柜FOB深圳运费（美金）",
+          "updated_at": "2025-12-06 23:44:58"
+        },
+        {
+          "id": 8,
+          "config_key": "fcl_40_freight_usd",
+          "config_value": "940",
+          "description": "40尺整柜FOB深圳运费（美金）",
+          "updated_at": "2025-12-06 23:44:58"
+        },
+        {
+          "id": 9,
+          "config_key": "lcl_base_freight_1_3",
+          "config_value": "800",
+          "description": "散货基础运费：1-3 CBM（人民币）",
+          "updated_at": "2025-12-06 23:44:58"
+        },
+        {
+          "id": 10,
+          "config_key": "lcl_base_freight_4_10",
+          "config_value": "1000",
+          "description": "散货基础运费：4-10 CBM（人民币）",
+          "updated_at": "2025-12-06 23:44:58"
+        },
+        {
+          "id": 11,
+          "config_key": "lcl_base_freight_11_15",
+          "config_value": "1500",
+          "description": "散货基础运费：11-15 CBM（人民币）",
+          "updated_at": "2025-12-06 23:44:58"
+        },
+        {
+          "id": 12,
+          "config_key": "lcl_handling_charge",
+          "config_value": "500",
+          "description": "散货操作费（Handling charge）（人民币）",
+          "updated_at": "2025-12-06 23:44:58"
+        },
+        {
+          "id": 13,
+          "config_key": "lcl_cfs_per_cbm",
+          "config_value": "170",
+          "description": "散货拼箱费（CFS）每CBM单价（人民币）",
+          "updated_at": "2025-12-06 23:44:58"
+        },
+        {
+          "id": 14,
+          "config_key": "lcl_document_fee",
+          "config_value": "500",
+          "description": "散货文件费（人民币）",
+          "updated_at": "2025-12-06 23:44:58"
+        },
+        {
+          "id": 15,
+          "config_key": "material_coefficients",
+          "config_value": "{\"口罩\":0.97,\"半面罩\":0.99}",
+          "description": "原料系数配置，按型号分类映射",
+          "updated_at": "2025-12-06 23:44:58"
+        },
+        {
+          "id": 78,
+          "config_key": "vat_rate_options",
+          "config_value": "[0.13,0.09]",
+          "description": "增值税率选项列表",
+          "updated_at": "2025-12-06 23:44:58"
+        },
+        {
+          "id": 98,
+          "config_key": "process_coefficient",
+          "config_value": "1.56",
+          "description": null,
+          "updated_at": "2025-12-06 23:44:58"
+        }
+      ]
+    },
+    "price_history": {
+      "count": 0,
+      "data": []
+    },
+    "standard_costs": {
+      "count": 2,
+      "data": [
+        {
+          "id": 1,
+          "packaging_config_id": 3,
+          "quotation_id": 2,
+          "version": 1,
+          "is_current": 0,
+          "base_cost": 1.3975,
+          "overhead_price": 1.7469,
+          "domestic_price": null,
+          "export_price": 0.2433,
+          "quantity": 67920,
+          "currency": "USD",
+          "sales_type": "export",
+          "set_by": 3,
+          "created_at": "2025-12-06 23:27:45"
+        },
+        {
+          "id": 2,
+          "packaging_config_id": 3,
+          "quotation_id": 1,
+          "version": 2,
+          "is_current": 1,
+          "base_cost": 1.4777,
+          "overhead_price": 1.8471,
+          "domestic_price": null,
+          "export_price": 0.2573,
+          "quantity": 20000,
+          "currency": "USD",
+          "sales_type": "export",
+          "set_by": 3,
+          "created_at": "2025-12-06 23:27:50"
+        }
+      ]
+    },
+    "migrations": {
+      "count": 1,
+      "data": [
+        {
+          "id": 1,
+          "name": "001_add_vat_rate_options.sql",
+          "executed_at": "2025-12-06 23:43:30"
+        }
+      ]
+    }
+  }
+}

@@ -6,9 +6,9 @@ const Regulation = require('../models/Regulation');
 const { success, error } = require('../utils/response');
 
 // 获取所有法规类别
-const getAllRegulations = (req, res, next) => {
+const getAllRegulations = async (req, res, next) => {
   try {
-    const regulations = Regulation.findAll();
+    const regulations = await Regulation.findAll();
     res.json(success(regulations));
   } catch (err) {
     next(err);
@@ -16,9 +16,9 @@ const getAllRegulations = (req, res, next) => {
 };
 
 // 获取激活的法规类别
-const getActiveRegulations = (req, res, next) => {
+const getActiveRegulations = async (req, res, next) => {
   try {
-    const regulations = Regulation.findActive();
+    const regulations = await Regulation.findActive();
     res.json(success(regulations));
   } catch (err) {
     next(err);
@@ -26,10 +26,10 @@ const getActiveRegulations = (req, res, next) => {
 };
 
 // 根据 ID 获取法规
-const getRegulationById = (req, res, next) => {
+const getRegulationById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const regulation = Regulation.findById(id);
+    const regulation = await Regulation.findById(id);
     
     if (!regulation) {
       return res.status(404).json(error('法规类别不存在', 404));
@@ -42,7 +42,7 @@ const getRegulationById = (req, res, next) => {
 };
 
 // 创建法规类别
-const createRegulation = (req, res, next) => {
+const createRegulation = async (req, res, next) => {
   try {
     const { name, description } = req.body;
     
@@ -51,11 +51,11 @@ const createRegulation = (req, res, next) => {
     }
     
     // 检查名称是否已存在
-    if (Regulation.existsByName(name)) {
+    if (await Regulation.existsByName(name)) {
       return res.status(400).json(error('法规名称已存在', 400));
     }
     
-    const id = Regulation.create({ name, description });
+    const id = await Regulation.create({ name, description });
     res.status(201).json(success({ id }, '创建成功'));
   } catch (err) {
     next(err);
@@ -63,12 +63,12 @@ const createRegulation = (req, res, next) => {
 };
 
 // 更新法规类别
-const updateRegulation = (req, res, next) => {
+const updateRegulation = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { name, description, is_active } = req.body;
     
-    const regulation = Regulation.findById(id);
+    const regulation = await Regulation.findById(id);
     if (!regulation) {
       return res.status(404).json(error('法规类别不存在', 404));
     }
@@ -78,11 +78,11 @@ const updateRegulation = (req, res, next) => {
     }
     
     // 检查名称是否与其他法规重复
-    if (Regulation.existsByName(name, id)) {
+    if (await Regulation.existsByName(name, id)) {
       return res.status(400).json(error('法规名称已存在', 400));
     }
     
-    Regulation.update(id, { name, description, is_active: is_active !== undefined ? is_active : 1 });
+    await Regulation.update(id, { name, description, is_active: is_active !== undefined ? is_active : 1 });
     res.json(success(null, '更新成功'));
   } catch (err) {
     next(err);
@@ -90,16 +90,16 @@ const updateRegulation = (req, res, next) => {
 };
 
 // 删除法规类别
-const deleteRegulation = (req, res, next) => {
+const deleteRegulation = async (req, res, next) => {
   try {
     const { id } = req.params;
     
-    const regulation = Regulation.findById(id);
+    const regulation = await Regulation.findById(id);
     if (!regulation) {
       return res.status(404).json(error('法规类别不存在', 404));
     }
     
-    Regulation.delete(id);
+    await Regulation.delete(id);
     res.json(success(null, '删除成功'));
   } catch (err) {
     next(err);

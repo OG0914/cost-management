@@ -73,7 +73,11 @@
         </el-table-column>
         <el-table-column prop="currency" label="币别" width="100" />
         <el-table-column prop="manufacturer" label="厂商" width="150" />
-        <el-table-column prop="updated_at" label="更新时间" width="180" />
+        <el-table-column label="更新时间" width="180">
+          <template #default="{ row }">
+            {{ formatDateTime(row.updated_at) }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="200" v-if="canEdit">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
@@ -128,7 +132,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Upload, Download, ArrowLeft, Delete, Search } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
-import { formatNumber } from '../../utils/format'
+import { formatNumber, formatDateTime } from '../../utils/format'
 
 const router = useRouter()
 const authStore = useAuthStore()

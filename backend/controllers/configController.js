@@ -8,9 +8,9 @@ const { success, error } = require('../utils/response');
 /**
  * 获取所有配置
  */
-const getAllConfigs = (req, res, next) => {
+const getAllConfigs = async (req, res, next) => {
   try {
-    const configs = SystemConfig.getAllAsObject();
+    const configs = await SystemConfig.getAllAsObject();
     res.json(success(configs));
   } catch (err) {
     next(err);
@@ -20,10 +20,10 @@ const getAllConfigs = (req, res, next) => {
 /**
  * 获取单个配置
  */
-const getConfigByKey = (req, res, next) => {
+const getConfigByKey = async (req, res, next) => {
   try {
     const { key } = req.params;
-    const config = SystemConfig.findByKey(key);
+    const config = await SystemConfig.findByKey(key);
 
     if (!config) {
       return res.status(404).json(error('配置不存在', 404));
@@ -51,7 +51,7 @@ const getConfigByKey = (req, res, next) => {
 /**
  * 更新单个配置
  */
-const updateConfig = (req, res, next) => {
+const updateConfig = async (req, res, next) => {
   try {
     const { key } = req.params;
     const { value } = req.body;
@@ -61,7 +61,7 @@ const updateConfig = (req, res, next) => {
     }
 
     // 验证配置键是否存在
-    const existingConfig = SystemConfig.findByKey(key);
+    const existingConfig = await SystemConfig.findByKey(key);
     if (!existingConfig) {
       return res.status(404).json(error('配置不存在', 404));
     }
@@ -73,7 +73,7 @@ const updateConfig = (req, res, next) => {
     }
 
     // 更新配置
-    const updated = SystemConfig.update(key, value);
+    const updated = await SystemConfig.update(key, value);
 
     if (!updated) {
       return res.status(500).json(error('配置更新失败', 500));
@@ -88,7 +88,7 @@ const updateConfig = (req, res, next) => {
 /**
  * 批量更新配置
  */
-const batchUpdateConfigs = (req, res, next) => {
+const batchUpdateConfigs = async (req, res, next) => {
   try {
     const { configs } = req.body;
 
@@ -105,7 +105,7 @@ const batchUpdateConfigs = (req, res, next) => {
     }
 
     // 批量更新
-    const updatedCount = SystemConfig.batchUpdate(configs);
+    const updatedCount = await SystemConfig.batchUpdate(configs);
 
     res.json(success({ updatedCount }, `成功更新 ${updatedCount} 个配置`));
   } catch (err) {
@@ -116,7 +116,7 @@ const batchUpdateConfigs = (req, res, next) => {
 /**
  * 创建新配置
  */
-const createConfig = (req, res, next) => {
+const createConfig = async (req, res, next) => {
   try {
     const { key, value, description } = req.body;
 
@@ -125,13 +125,13 @@ const createConfig = (req, res, next) => {
     }
 
     // 检查配置键是否已存在
-    const existingConfig = SystemConfig.findByKey(key);
+    const existingConfig = await SystemConfig.findByKey(key);
     if (existingConfig) {
       return res.status(400).json(error('配置键已存在', 400));
     }
 
     // 创建配置
-    const configId = SystemConfig.create({ key, value, description });
+    const configId = await SystemConfig.create({ key, value, description });
 
     res.status(201).json(success({ id: configId }, '配置创建成功'));
   } catch (err) {
@@ -142,7 +142,7 @@ const createConfig = (req, res, next) => {
 /**
  * 删除配置
  */
-const deleteConfig = (req, res, next) => {
+const deleteConfig = async (req, res, next) => {
   try {
     const { key } = req.params;
 
@@ -152,7 +152,7 @@ const deleteConfig = (req, res, next) => {
       return res.status(400).json(error('不能删除核心配置项', 400));
     }
 
-    const deleted = SystemConfig.delete(key);
+    const deleted = await SystemConfig.delete(key);
 
     if (!deleted) {
       return res.status(404).json(error('配置不存在', 404));
@@ -167,9 +167,9 @@ const deleteConfig = (req, res, next) => {
 /**
  * 获取计算器配置
  */
-const getCalculatorConfig = (req, res, next) => {
+const getCalculatorConfig = async (req, res, next) => {
   try {
-    const config = SystemConfig.getCalculatorConfig();
+    const config = await SystemConfig.getCalculatorConfig();
     res.json(success(config));
   } catch (err) {
     next(err);

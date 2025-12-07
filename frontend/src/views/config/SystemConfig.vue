@@ -128,6 +128,7 @@ import { Check, Plus, Delete, ArrowLeft } from '@element-plus/icons-vue';
 import { useAuthStore } from '../../store/auth';
 import { useConfigStore } from '../../store/config';
 import request from '../../utils/request';
+import { formatDateTime } from '@/utils/format';
 
 const authStore = useAuthStore();
 const configStore = useConfigStore();
@@ -152,7 +153,7 @@ const loadConfig = async () => {
       Object.assign(configForm, response.data);
       const detailResponse = await request.get('/config/overhead_rate');
       if (detailResponse.success && detailResponse.data) {
-        lastUpdateTime.value = detailResponse.data.updated_at;
+        lastUpdateTime.value = formatDateTime(detailResponse.data.updated_at);
       }
     }
   } catch (error) {

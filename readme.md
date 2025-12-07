@@ -13,7 +13,7 @@
 | ------ | ------------------------------------------------------- |
 | 前端   | Vue3 + Element Plus + TailwindCSS + Axios + Pinia + Vue Router |
 | 后端   | Node.js + Express + bcrypt + jsonwebtoken + multer      |
-| 数据库 | better-sqlite3                                          |
+| 数据库 | PostgreSQL (pg 驱动 + 连接池)                           |
 | 文件导出 | ExcelJS                                               |
 
 ---
@@ -26,10 +26,9 @@ cost-analysis-system/
 ├── backend/                            # 后端服务
 │   ├── server.js                       # Express 主入口
 │   ├── db/                             # 数据库目录
-│   │   ├── database.js                 # better-sqlite3 初始化
-│   │   ├── seedData.sql                # 初始建表脚本
-│   │   ├── migrations/                 # 数据库迁移脚本
-│   │   └── cost_analysis.db            # SQLite 数据库文件
+│   │   ├── database.js                 # PostgreSQL 连接池管理
+│   │   ├── schema.sql                  # PostgreSQL 表结构定义
+│   │   └── migrations/                 # 数据库迁移脚本
 │   ├── routes/                         # 路由模块
 │   │   ├── authRoutes.js               # 登录与权限
 │   │   ├── costRoutes.js               # 成本分析与报价逻辑
@@ -189,6 +188,47 @@ cost-analysis-system/
 
 ## 六、项目启动
 
+### 1. 安装 PostgreSQL
+
+系统需要 PostgreSQL 数据库。请先安装并启动 PostgreSQL 服务：
+
+- **Windows**: 下载安装包 https://www.postgresql.org/download/windows/
+- **macOS**: `brew install postgresql`
+- **Linux**: `sudo apt install postgresql`
+
+### 2. 创建数据库
+
+```bash
+# 登录 PostgreSQL
+psql -U postgres
+
+# 创建数据库
+CREATE DATABASE cost_analysis;
+```
+
+### 3. 配置环境变量
+
+在 `backend/.env` 文件中配置数据库连接：
+
+```env
+# 数据库配置（二选一）
+# 方式1：连接字符串
+DATABASE_URL=postgresql://postgres:your_password@localhost:5432/cost_analysis
+
+# 方式2：独立配置
+PGHOST=localhost
+PGPORT=5432
+PGDATABASE=cost_analysis
+PGUSER=postgres
+PGPASSWORD=your_password
+
+# 连接池配置（可选）
+PG_POOL_MIN=2
+PG_POOL_MAX=20
+```
+
+### 4. 启动服务
+
 ```bash
 # 启动后端服务
 cd backend
@@ -213,7 +253,8 @@ npm run dev
 
 - 模块清晰、职责单一（每个文件仅处理一类逻辑）
 - 导入与导出流程标准化（支持Excel导入、导出）
-- 数据库轻量嵌入，无需额外服务依赖
+- 使用 PostgreSQL 数据库，支持生产环境并发访问
+- 异步数据库操作，使用连接池提高性能
 - 成本计算公式全在后端封装（防止前端公式被误删）
 - 页面布局以侧边导航为主，卡片式操作直观简洁
 

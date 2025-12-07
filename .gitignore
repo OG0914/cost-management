@@ -7,11 +7,12 @@ frontend/node_modules/
 .env.local
 .env.production
 
-# Database
+# Database (SQLite - deprecated, migrated to PostgreSQL)
 *.db
 *.db-journal
 *.db-shm
 *.db-wal
+backend/db/archive/
 
 # Build output
 frontend/dist/

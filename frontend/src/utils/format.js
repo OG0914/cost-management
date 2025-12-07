@@ -49,3 +49,34 @@ export function parseFormattedNumber(value) {
   
   return isNaN(num) ? null : num
 }
+
+/**
+ * 格式化日期时间
+ * 支持 ISO 格式 (2025-12-06T16:06:31.000Z) 和普通格式 (2025-12-06 16:06:31)
+ * @param {string|Date} value - 日期值
+ * @param {string} format - 格式类型: 'datetime' | 'date' | 'time'
+ * @returns {string} 格式化后的日期字符串
+ */
+export function formatDateTime(value, format = 'datetime') {
+  if (!value) return ''
+  
+  const date = new Date(value)
+  if (isNaN(date.getTime())) return ''
+  
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  
+  switch (format) {
+    case 'date':
+      return `${year}-${month}-${day}`
+    case 'time':
+      return `${hours}:${minutes}:${seconds}`
+    case 'datetime':
+    default:
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+  }
+}

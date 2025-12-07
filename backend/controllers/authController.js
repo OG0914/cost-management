@@ -18,7 +18,7 @@ const login = async (req, res, next) => {
     }
 
     // 查找用户
-    const user = User.findByUsername(username);
+    const user = await User.findByUsername(username);
     if (!user) {
       return res.status(401).json(error('用户名或密码错误', 401));
     }
@@ -79,7 +79,7 @@ const register = async (req, res, next) => {
     }
 
     // 检查用户名是否已存在
-    if (User.exists(username)) {
+    if (await User.exists(username)) {
       return res.status(400).json(error('用户名已存在', 400));
     }
 
@@ -87,7 +87,7 @@ const register = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // 创建用户
-    const userId = User.create({
+    const userId = await User.create({
       username,
       password: hashedPassword,
       role,
@@ -103,9 +103,9 @@ const register = async (req, res, next) => {
 };
 
 // 获取当前用户信息
-const getCurrentUser = (req, res, next) => {
+const getCurrentUser = async (req, res, next) => {
   try {
-    const user = User.findById(req.user.id);
+    const user = await User.findById(req.user.id);
     
     if (!user) {
       return res.status(404).json(error('用户不存在', 404));
@@ -135,7 +135,7 @@ const changePassword = async (req, res, next) => {
     }
 
     // 获取当前用户
-    const user = User.findById(req.user.id);
+    const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json(error('用户不存在', 404));
     }
@@ -150,7 +150,7 @@ const changePassword = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // 更新密码
-    User.updatePassword(req.user.id, hashedPassword);
+    await User.updatePassword(req.user.id, hashedPassword);
 
     res.json(success(null, '密码修改成功'));
 
@@ -160,9 +160,9 @@ const changePassword = async (req, res, next) => {
 };
 
 // 获取所有用户（管理员）
-const getAllUsers = (req, res, next) => {
+const getAllUsers = async (req, res, next) => {
   try {
-    const users = User.findAll();
+    const users = await User.findAll();
     
     // 不返回密码字段
     const usersWithoutPassword = users.map(user => {
@@ -183,7 +183,7 @@ const updateUser = async (req, res, next) => {
     const { real_name, email, role, is_active } = req.body;
 
     // 检查用户是否存在
-    const user = User.findById(id);
+    const user = await User.findById(id);
     if (!user) {
       return res.status(404).json(error('用户不存在', 404));
     }
@@ -199,7 +199,7 @@ const updateUser = async (req, res, next) => {
       return res.status(400).json(error('无效的角色类型', 400));
     }
 
-    User.update(id, { real_name, email, role, is_active });
+    await User.update(id, { real_name, email, role, is_active });
 
     res.json(success(null, '用户信息更新成功'));
   } catch (err) {
@@ -208,12 +208,12 @@ const updateUser = async (req, res, next) => {
 };
 
 // 删除用户（管理员）
-const deleteUser = (req, res, next) => {
+const deleteUser = async (req, res, next) => {
   try {
     const { id } = req.params;
 
     // 不能删除管理员账号
-    const user = User.findById(id);
+    const user = await User.findById(id);
     if (!user) {
       return res.status(404).json(error('用户不存在', 404));
     }
@@ -225,7 +225,7 @@ const deleteUser = (req, res, next) => {
     // 管理员删除用户时，自动处理关联的报价单
     // 1. 删除用户创建的所有报价单
     // 2. 将用户审核的报价单的 reviewed_by 设置为 NULL
-    const result = User.deleteWithRelations(id);
+    const result = await User.deleteWithRelations(id);
     
     if (!result.success) {
       return res.status(500).json(error('删除用户失败', 500));
@@ -255,7 +255,7 @@ const resetUserPassword = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // 更新密码
-    User.updatePassword(id, hashedPassword);
+    await User.updatePassword(id, hashedPassword);
 
     res.json(success(null, '密码重置成功'));
   } catch (err) {
@@ -264,13 +264,13 @@ const resetUserPassword = async (req, res, next) => {
 };
 
 // 禁用/启用用户（管理员）
-const toggleUserStatus = (req, res, next) => {
+const toggleUserStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { is_active } = req.body;
 
     // 检查用户是否存在
-    const user = User.findById(id);
+    const user = await User.findById(id);
     if (!user) {
       return res.status(404).json(error('用户不存在', 404));
     }
@@ -281,7 +281,7 @@ const toggleUserStatus = (req, res, next) => {
     }
 
     // 更新用户状态
-    User.update(id, { is_active });
+    await User.update(id, { is_active });
 
     const statusText = is_active ? '启用' : '禁用';
     res.json(success(null, `用户${statusText}成功`));

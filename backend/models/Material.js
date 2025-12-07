@@ -1,155 +1,202 @@
 /**
  * 原料数据模型
+ * PostgreSQL 异步版本
  */
 
 const dbManager = require('../db/database');
 
 class Material {
-  // 获取所有原料
-  static findAll() {
-    const db = dbManager.getDatabase();
-    const stmt = db.prepare(`
+  /**
+   * 获取所有原料
+   * @returns {Promise<Array>} 原料列表
+   */
+  static async findAll() {
+    const result = await dbManager.query(`
       SELECT * FROM materials
       ORDER BY created_at DESC
     `);
-    return stmt.all();
+    return result.rows;
   }
 
-  // 根据厂商获取原料
-  static findByManufacturer(manufacturer) {
-    const db = dbManager.getDatabase();
-    const stmt = db.prepare(`
-      SELECT * FROM materials
-      WHERE manufacturer = ?
-      ORDER BY created_at DESC
-    `);
-    return stmt.all(manufacturer);
+  /**
+   * 根据厂商获取原料
+   * @param {string} manufacturer - 厂商名称
+   * @returns {Promise<Array>} 原料列表
+   */
+  static async findByManufacturer(manufacturer) {
+    const result = await dbManager.query(
+      `SELECT * FROM materials
+       WHERE manufacturer = $1
+       ORDER BY created_at DESC`,
+      [manufacturer]
+    );
+    return result.rows;
   }
 
-  // 根据 ID 查找原料
-  static findById(id) {
-    const db = dbManager.getDatabase();
-    const stmt = db.prepare('SELECT * FROM materials WHERE id = ?');
-    return stmt.get(id);
+  /**
+   * 根据 ID 查找原料
+   * @param {number} id - 原料 ID
+   * @returns {Promise<Object|null>} 原料对象或 null
+   */
+  static async findById(id) {
+    const result = await dbManager.query(
+      'SELECT * FROM materials WHERE id = $1',
+      [id]
+    );
+    return result.rows[0] || null;
   }
 
-  // 创建原料
-  static create(data) {
-    const db = dbManager.getDatabase();
+  /**
+   * 创建原料
+   * @param {Object} data - 原料数据
+   * @returns {Promise<number>} 新原料的 ID
+   */
+  static async create(data) {
     const { item_no, name, unit, price, currency, manufacturer, usage_amount } = data;
     
-    console.log('Material.create 接收到的数据:', {
-      item_no,
-      name,
-      unit,
-      price,
-      currency,
-      manufacturer,
-      usage_amount
-    });
-    
-    const stmt = db.prepare(`
-      INSERT INTO materials (item_no, name, unit, price, currency, manufacturer, usage_amount)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-    
-    const result = stmt.run(
-      item_no,
-      name,
-      unit,
-      price,
-      currency || 'CNY',
-      manufacturer || null,
-      usage_amount || null
+    const result = await dbManager.query(
+      `INSERT INTO materials (item_no, name, unit, price, currency, manufacturer, usage_amount)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id`,
+      [
+        item_no,
+        name,
+        unit,
+        price,
+        currency || 'CNY',
+        manufacturer || null,
+        usage_amount || null
+      ]
     );
-    return result.lastInsertRowid;
+    
+    return result.rows[0].id;
   }
 
-  // 批量创建原料
-  static batchCreate(materials) {
-    const db = dbManager.getDatabase();
-    const stmt = db.prepare(`
-      INSERT INTO materials (item_no, name, unit, price, currency, manufacturer, usage_amount)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-    
-    const insertMany = db.transaction((items) => {
-      for (const item of items) {
-        stmt.run(
-          item.item_no,
-          item.name,
-          item.unit,
-          item.price,
-          item.currency || 'CNY',
-          item.manufacturer || null,
-          item.usage_amount || null
+  /**
+   * 批量创建原料
+   * @param {Array} materials - 原料数据数组
+   * @returns {Promise<number>} 插入的记录数
+   */
+  static async batchCreate(materials) {
+    return await dbManager.transaction(async (client) => {
+      let insertedCount = 0;
+      
+      for (const item of materials) {
+        await client.query(
+          `INSERT INTO materials (item_no, name, unit, price, currency, manufacturer, usage_amount)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            item.item_no,
+            item.name,
+            item.unit,
+            item.price,
+            item.currency || 'CNY',
+            item.manufacturer || null,
+            item.usage_amount || null
+          ]
         );
+        insertedCount++;
       }
+      
+      return insertedCount;
     });
-    
-    insertMany(materials);
   }
 
-  // 更新原料
-  static update(id, data, userId = null) {
-    const db = dbManager.getDatabase();
+  /**
+   * 更新原料
+   * @param {number} id - 原料 ID
+   * @param {Object} data - 更新的数据
+   * @param {number|null} userId - 操作用户 ID（用于记录价格历史）
+   * @returns {Promise<Object>} 更新结果 { rowCount }
+   */
+  static async update(id, data, userId = null) {
     const { item_no, name, unit, price, currency, manufacturer, usage_amount } = data;
     
     // 记录价格历史
-    const oldMaterial = this.findById(id);
+    const oldMaterial = await this.findById(id);
     if (oldMaterial && oldMaterial.price !== price && userId) {
-      this.recordPriceHistory(id, oldMaterial.price, price, userId);
+      await this.recordPriceHistory(id, oldMaterial.price, price, userId);
     }
     
-    const stmt = db.prepare(`
-      UPDATE materials
-      SET item_no = ?, name = ?, unit = ?, price = ?, currency = ?, manufacturer = ?, usage_amount = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
+    const result = await dbManager.query(
+      `UPDATE materials
+       SET item_no = $1, name = $2, unit = $3, price = $4, currency = $5, 
+           manufacturer = $6, usage_amount = $7, updated_at = NOW()
+       WHERE id = $8`,
+      [item_no, name, unit, price, currency, manufacturer, usage_amount, id]
+    );
     
-    return stmt.run(item_no, name, unit, price, currency, manufacturer, usage_amount, id);
+    return { rowCount: result.rowCount };
   }
 
-  // 删除原料
-  static delete(id) {
-    const db = dbManager.getDatabase();
-    const stmt = db.prepare('DELETE FROM materials WHERE id = ?');
-    return stmt.run(id);
+  /**
+   * 删除原料
+   * @param {number} id - 原料 ID
+   * @returns {Promise<Object>} 删除结果 { rowCount }
+   */
+  static async delete(id) {
+    const result = await dbManager.query(
+      'DELETE FROM materials WHERE id = $1',
+      [id]
+    );
+    return { rowCount: result.rowCount };
   }
 
-  // 根据品号查找原料（用于导入时更新）
-  static findByItemNo(itemNo) {
-    const db = dbManager.getDatabase();
-    const stmt = db.prepare('SELECT * FROM materials WHERE item_no = ?');
-    return stmt.get(itemNo);
+  /**
+   * 根据品号查找原料（用于导入时更新）
+   * @param {string} itemNo - 品号
+   * @returns {Promise<Object|null>} 原料对象或 null
+   */
+  static async findByItemNo(itemNo) {
+    const result = await dbManager.query(
+      'SELECT * FROM materials WHERE item_no = $1',
+      [itemNo]
+    );
+    return result.rows[0] || null;
   }
 
-  // 根据名称查找原料
-  static findByName(name) {
-    const db = dbManager.getDatabase();
-    const stmt = db.prepare('SELECT * FROM materials WHERE name = ?');
-    return stmt.get(name);
+  /**
+   * 根据名称查找原料
+   * @param {string} name - 原料名称
+   * @returns {Promise<Object|null>} 原料对象或 null
+   */
+  static async findByName(name) {
+    const result = await dbManager.query(
+      'SELECT * FROM materials WHERE name = $1',
+      [name]
+    );
+    return result.rows[0] || null;
   }
 
-  // 记录价格历史
-  static recordPriceHistory(materialId, oldPrice, newPrice, userId) {
-    const db = dbManager.getDatabase();
-    const stmt = db.prepare(`
-      INSERT INTO price_history (item_type, item_id, old_price, new_price, changed_by)
-      VALUES ('material', ?, ?, ?, ?)
-    `);
-    stmt.run(materialId, oldPrice, newPrice, userId);
+  /**
+   * 记录价格历史
+   * @param {number} materialId - 原料 ID
+   * @param {number} oldPrice - 旧价格
+   * @param {number} newPrice - 新价格
+   * @param {number} userId - 操作用户 ID
+   * @returns {Promise<void>}
+   */
+  static async recordPriceHistory(materialId, oldPrice, newPrice, userId) {
+    await dbManager.query(
+      `INSERT INTO price_history (item_type, item_id, old_price, new_price, changed_by)
+       VALUES ('material', $1, $2, $3, $4)`,
+      [materialId, oldPrice, newPrice, userId]
+    );
   }
 
-  // 获取价格历史
-  static getPriceHistory(materialId) {
-    const db = dbManager.getDatabase();
-    const stmt = db.prepare(`
-      SELECT * FROM price_history
-      WHERE item_type = 'material' AND item_id = ?
-      ORDER BY changed_at DESC
-    `);
-    return stmt.all(materialId);
+  /**
+   * 获取价格历史
+   * @param {number} materialId - 原料 ID
+   * @returns {Promise<Array>} 价格历史列表
+   */
+  static async getPriceHistory(materialId) {
+    const result = await dbManager.query(
+      `SELECT * FROM price_history
+       WHERE item_type = 'material' AND item_id = $1
+       ORDER BY changed_at DESC`,
+      [materialId]
+    );
+    return result.rows;
   }
 }
 

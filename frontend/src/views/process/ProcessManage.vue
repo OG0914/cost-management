@@ -95,7 +95,11 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="160" sortable />
+        <el-table-column label="创建时间" width="160" sortable>
+          <template #default="{ row }">
+            {{ formatDateTime(row.created_at) }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <el-button size="small" type="success" @click="viewProcesses(row)">查看</el-button>
@@ -242,7 +246,7 @@ import { Plus, ArrowLeft, Download, Delete, Upload } from '@element-plus/icons-v
 import request from '../../utils/request';
 import { useAuthStore } from '../../store/auth';
 import { useConfigStore } from '../../store/config';
-import { formatNumber } from '../../utils/format';
+import { formatNumber, formatDateTime } from '../../utils/format';
 
 const router = useRouter();
 const authStore = useAuthStore();

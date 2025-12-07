@@ -46,9 +46,9 @@ const createQuotation = async (req, res) => {
 
         // 获取原料系数
         let materialCoefficient = 1;
-        const model = Model.findById(model_id);
+        const model = await Model.findById(model_id);
         if (model && model.model_category) {
-            const coefficients = SystemConfig.getValue('material_coefficients') || {};
+            const coefficients = await SystemConfig.getValue('material_coefficients') || {};
             materialCoefficient = CostCalculator.getMaterialCoefficient(model.model_category, coefficients);
         }
 
@@ -62,12 +62,12 @@ const createQuotation = async (req, res) => {
             .reduce((sum, item) => {
                 // 如果前端已经传递了应用系数后的subtotal，直接使用
                 if (item.coefficient_applied) {
-                    return sum + item.subtotal;
+                    return sum + parseFloat(item.subtotal || 0);
                 }
                 // 使用原料系数重新计算小计
                 const subtotal = CostCalculator.calculateMaterialSubtotal(
-                    item.usage_amount || 0,
-                    item.unit_price || 0,
+                    parseFloat(item.usage_amount || 0),
+                    parseFloat(item.unit_price || 0),
                     materialCoefficient
                 );
                 return sum + subtotal;
@@ -78,11 +78,11 @@ const createQuotation = async (req, res) => {
             .filter(item => item.category === 'material' && item.after_overhead)
             .reduce((sum, item) => {
                 if (item.coefficient_applied) {
-                    return sum + item.subtotal;
+                    return sum + parseFloat(item.subtotal || 0);
                 }
                 const subtotal = CostCalculator.calculateMaterialSubtotal(
-                    item.usage_amount || 0,
-                    item.unit_price || 0,
+                    parseFloat(item.usage_amount || 0),
+                    parseFloat(item.unit_price || 0),
                     materialCoefficient
                 );
                 return sum + subtotal;
@@ -90,14 +90,14 @@ const createQuotation = async (req, res) => {
 
         const processTotal = items
             .filter(item => item.category === 'process')
-            .reduce((sum, item) => sum + item.subtotal, 0);
+            .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
 
         const packagingTotal = items
             .filter(item => item.category === 'packaging')
-            .reduce((sum, item) => sum + item.subtotal, 0);
+            .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
 
         // 获取系统配置并计算报价
-        const calculatorConfig = SystemConfig.getCalculatorConfig();
+        const calculatorConfig = await SystemConfig.getCalculatorConfig();
         
         // 如果请求中包含 vat_rate，验证并覆盖全局配置
         let vatRateToSave = null;
@@ -119,8 +119,8 @@ const createQuotation = async (req, res) => {
             materialTotal,
             processTotal,
             packagingTotal,
-            freightTotal: freight_total,
-            quantity,
+            freightTotal: parseFloat(freight_total || 0),
+            quantity: parseFloat(quantity || 1),
             salesType: sales_type,
             includeFreightInBase: req.body.include_freight_in_base !== false,
             afterOverheadMaterialTotal,
@@ -130,8 +130,8 @@ const createQuotation = async (req, res) => {
         // 在计算结果中包含实际使用的增值税率
         calculation.vatRate = calculatorConfig.vatRate;
 
-        // 生成报价单编号
-        const quotation_no = Quotation.generateQuotationNo();
+        // 生成报价单编号（createQuotation）
+        const quotation_no = await Quotation.generateQuotationNo();
 
         // 确定最终成本价（不含利润）
         // 内销：domesticPrice（含13%增值税）
@@ -147,7 +147,7 @@ const createQuotation = async (req, res) => {
         }
 
         // 创建报价单
-        const quotationId = Quotation.create({
+        const quotationId = await Quotation.create({
             quotation_no,
             customer_name,
             customer_region,
@@ -177,16 +177,16 @@ const createQuotation = async (req, res) => {
                 ...item,
                 quotation_id: quotationId
             }));
-            QuotationItem.batchCreate(itemsWithQuotationId);
+            await QuotationItem.batchCreate(itemsWithQuotationId);
         }
 
         // 保存自定义费用
         if (customFees && customFees.length > 0) {
-            QuotationCustomFee.replaceByQuotationId(quotationId, customFees);
+            await QuotationCustomFee.replaceByQuotationId(quotationId, customFees);
         }
 
         // 查询完整的报价单信息
-        const quotation = Quotation.findById(quotationId);
+        const quotation = await Quotation.findById(quotationId);
 
         res.status(201).json(success({
             quotation,
@@ -208,27 +208,27 @@ const getModelStandardData = async (req, res) => {
     try {
         const { modelId } = req.params;
         console.log('获取型号标准数据，modelId:', modelId);
-        
-        const db = dbManager.getDatabase();
 
         // 获取工序数据
-        const processesStmt = db.prepare(`
-      SELECT id, name, price
-      FROM processes
-      WHERE model_id = ?
-      ORDER BY id
-    `);
-        const processes = processesStmt.all(modelId);
+        const processesResult = await dbManager.query(
+            `SELECT id, name, price
+             FROM processes
+             WHERE model_id = $1
+             ORDER BY id`,
+            [modelId]
+        );
+        const processes = processesResult.rows;
         console.log(`找到 ${processes.length} 个工序`);
 
         // 获取包材数据
-        const packagingStmt = db.prepare(`
-      SELECT id, name, usage_amount, price, currency
-      FROM packaging
-      WHERE model_id = ?
-      ORDER BY id
-    `);
-        const packaging = packagingStmt.all(modelId);
+        const packagingResult = await dbManager.query(
+            `SELECT id, name, usage_amount, price, currency
+             FROM packaging
+             WHERE model_id = $1
+             ORDER BY id`,
+            [modelId]
+        );
+        const packaging = packagingResult.rows;
         console.log(`找到 ${packaging.length} 个包材`);
 
         res.json(success({
@@ -264,9 +264,9 @@ const calculateQuotation = async (req, res) => {
         // 获取原料系数
         let materialCoefficient = 1;
         if (model_id) {
-            const model = Model.findById(model_id);
+            const model = await Model.findById(model_id);
             if (model && model.model_category) {
-                const coefficients = SystemConfig.getValue('material_coefficients') || {};
+                const coefficients = await SystemConfig.getValue('material_coefficients') || {};
                 materialCoefficient = CostCalculator.getMaterialCoefficient(model.model_category, coefficients);
             }
         }
@@ -279,12 +279,12 @@ const calculateQuotation = async (req, res) => {
                 // 如果前端已经传递了应用系数后的subtotal，直接使用
                 // 否则重新计算（兼容旧版本）
                 if (item.coefficient_applied) {
-                    return sum + item.subtotal;
+                    return sum + parseFloat(item.subtotal || 0);
                 }
                 // 使用原料系数重新计算小计
                 const subtotal = CostCalculator.calculateMaterialSubtotal(
-                    item.usage_amount || 0,
-                    item.unit_price || 0,
+                    parseFloat(item.usage_amount || 0),
+                    parseFloat(item.unit_price || 0),
                     materialCoefficient
                 );
                 return sum + subtotal;
@@ -295,11 +295,11 @@ const calculateQuotation = async (req, res) => {
             .filter(item => item.category === 'material' && item.after_overhead)
             .reduce((sum, item) => {
                 if (item.coefficient_applied) {
-                    return sum + item.subtotal;
+                    return sum + parseFloat(item.subtotal || 0);
                 }
                 const subtotal = CostCalculator.calculateMaterialSubtotal(
-                    item.usage_amount || 0,
-                    item.unit_price || 0,
+                    parseFloat(item.usage_amount || 0),
+                    parseFloat(item.unit_price || 0),
                     materialCoefficient
                 );
                 return sum + subtotal;
@@ -307,14 +307,14 @@ const calculateQuotation = async (req, res) => {
 
         const processTotal = items
             .filter(item => item.category === 'process')
-            .reduce((sum, item) => sum + item.subtotal, 0);
+            .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
 
         const packagingTotal = items
             .filter(item => item.category === 'packaging')
-            .reduce((sum, item) => sum + item.subtotal, 0);
+            .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
 
         // 获取系统配置并计算报价
-        const calculatorConfig = SystemConfig.getCalculatorConfig();
+        const calculatorConfig = await SystemConfig.getCalculatorConfig();
         
         // 如果请求中包含 vat_rate，验证并覆盖全局配置
         if (req.body.vat_rate !== undefined && req.body.vat_rate !== null) {
@@ -333,8 +333,8 @@ const calculateQuotation = async (req, res) => {
             materialTotal,
             processTotal,
             packagingTotal,
-            freightTotal: freight_total || 0,
-            quantity,
+            freightTotal: parseFloat(freight_total || 0),
+            quantity: parseFloat(quantity || 1),
             salesType: sales_type,
             includeFreightInBase: req.body.include_freight_in_base !== false,
             afterOverheadMaterialTotal,
@@ -372,7 +372,7 @@ const updateQuotation = async (req, res) => {
         } = req.body;
 
         // 检查报价单是否存在
-        const quotation = Quotation.findById(id);
+        const quotation = await Quotation.findById(id);
         if (!quotation) {
             return res.status(404).json(error('报价单不存在', 404));
         }
@@ -389,9 +389,9 @@ const updateQuotation = async (req, res) => {
 
         // 获取原料系数（使用报价单关联的型号）
         let materialCoefficient = 1;
-        const model = Model.findById(quotation.model_id);
+        const model = await Model.findById(quotation.model_id);
         if (model && model.model_category) {
-            const coefficients = SystemConfig.getValue('material_coefficients') || {};
+            const coefficients = await SystemConfig.getValue('material_coefficients') || {};
             materialCoefficient = CostCalculator.getMaterialCoefficient(model.model_category, coefficients);
         }
 
@@ -404,11 +404,11 @@ const updateQuotation = async (req, res) => {
             .filter(item => item.category === 'material' && !item.after_overhead)
             .reduce((sum, item) => {
                 if (item.coefficient_applied) {
-                    return sum + item.subtotal;
+                    return sum + parseFloat(item.subtotal || 0);
                 }
                 const subtotal = CostCalculator.calculateMaterialSubtotal(
-                    item.usage_amount || 0,
-                    item.unit_price || 0,
+                    parseFloat(item.usage_amount || 0),
+                    parseFloat(item.unit_price || 0),
                     materialCoefficient
                 );
                 return sum + subtotal;
@@ -419,11 +419,11 @@ const updateQuotation = async (req, res) => {
             .filter(item => item.category === 'material' && item.after_overhead)
             .reduce((sum, item) => {
                 if (item.coefficient_applied) {
-                    return sum + item.subtotal;
+                    return sum + parseFloat(item.subtotal || 0);
                 }
                 const subtotal = CostCalculator.calculateMaterialSubtotal(
-                    item.usage_amount || 0,
-                    item.unit_price || 0,
+                    parseFloat(item.usage_amount || 0),
+                    parseFloat(item.unit_price || 0),
                     materialCoefficient
                 );
                 return sum + subtotal;
@@ -431,14 +431,14 @@ const updateQuotation = async (req, res) => {
 
         const processTotal = items
             .filter(item => item.category === 'process')
-            .reduce((sum, item) => sum + item.subtotal, 0);
+            .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
 
         const packagingTotal = items
             .filter(item => item.category === 'packaging')
-            .reduce((sum, item) => sum + item.subtotal, 0);
+            .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
 
         // 获取系统配置并计算报价
-        const calculatorConfig = SystemConfig.getCalculatorConfig();
+        const calculatorConfig = await SystemConfig.getCalculatorConfig();
         
         // 如果请求中包含 vat_rate，验证并覆盖全局配置
         let vatRateToSave = null;
@@ -460,8 +460,8 @@ const updateQuotation = async (req, res) => {
             materialTotal,
             processTotal,
             packagingTotal,
-            freightTotal: freight_total,
-            quantity,
+            freightTotal: parseFloat(freight_total || 0),
+            quantity: parseFloat(quantity || 1),
             salesType: sales_type,
             includeFreightInBase: req.body.include_freight_in_base !== false,
             afterOverheadMaterialTotal,
@@ -471,7 +471,7 @@ const updateQuotation = async (req, res) => {
         // 在计算结果中包含实际使用的增值税率
         calculation.vatRate = calculatorConfig.vatRate;
 
-        console.log('更新报价单 - 计算结果:', {
+        console.log('更新报价单 (updateQuotation) - 计算结果:', {
             salesType: sales_type,
             domesticPrice: calculation.domesticPrice,
             exportPrice: calculation.exportPrice,
@@ -498,7 +498,7 @@ const updateQuotation = async (req, res) => {
         }
 
         // 更新报价单
-        Quotation.update(id, {
+        await Quotation.update(id, {
             customer_name,
             customer_region,
             quantity,
@@ -518,20 +518,20 @@ const updateQuotation = async (req, res) => {
         });
 
         // 删除旧明细并创建新明细
-        QuotationItem.deleteByQuotationId(id);
+        await QuotationItem.deleteByQuotationId(id);
         if (items && items.length > 0) {
             const itemsWithQuotationId = items.map(item => ({
                 ...item,
                 quotation_id: id
             }));
-            QuotationItem.batchCreate(itemsWithQuotationId);
+            await QuotationItem.batchCreate(itemsWithQuotationId);
         }
 
         // 更新自定义费用
-        QuotationCustomFee.replaceByQuotationId(id, customFees);
+        await QuotationCustomFee.replaceByQuotationId(id, customFees);
 
         // 查询更新后的报价单
-        const updatedQuotation = Quotation.findById(id);
+        const updatedQuotation = await Quotation.findById(id);
 
         res.json(success({
             quotation: updatedQuotation,
@@ -553,7 +553,7 @@ const submitQuotation = async (req, res) => {
         const { id } = req.params;
 
         // 检查报价单是否存在
-        const quotation = Quotation.findById(id);
+        const quotation = await Quotation.findById(id);
         if (!quotation) {
             return res.status(404).json(error('报价单不存在', 404));
         }
@@ -569,10 +569,10 @@ const submitQuotation = async (req, res) => {
         }
 
         // 更新状态为已提交
-        Quotation.updateStatus(id, 'submitted');
+        await Quotation.updateStatus(id, 'submitted');
 
         // 查询更新后的报价单
-        const updatedQuotation = Quotation.findById(id);
+        const updatedQuotation = await Quotation.findById(id);
 
         res.json(success(updatedQuotation, '报价单提交成功'));
 
@@ -614,7 +614,7 @@ const getQuotationList = async (req, res) => {
             options.created_by = req.user.id;
         }
 
-        const result = Quotation.findAll(options);
+        const result = await Quotation.findAll(options);
 
         res.json(paginated(result.data, result.total, result.page, result.pageSize));
 
@@ -633,7 +633,7 @@ const getQuotationDetail = async (req, res) => {
         const { id } = req.params;
 
         // 查询报价单
-        const quotation = Quotation.findById(id);
+        const quotation = await Quotation.findById(id);
         if (!quotation) {
             return res.status(404).json(error('报价单不存在', 404));
         }
@@ -641,7 +641,7 @@ const getQuotationDetail = async (req, res) => {
         // 检查权限：创建者、管理员、审核人可以查看
         // 如果报价单已被设为标准成本，所有用户都可以查看（用于标准成本对比）
         const StandardCost = require('../models/StandardCost');
-        const isStandardCost = StandardCost.findByQuotationId(quotation.id);
+        const isStandardCost = await StandardCost.findByQuotationId(quotation.id);
         
         if (
             quotation.created_by !== req.user.id &&
@@ -652,19 +652,19 @@ const getQuotationDetail = async (req, res) => {
         }
 
         // 查询报价单明细
-        const items = QuotationItem.getGroupedByCategory(id);
+        const items = await QuotationItem.getGroupedByCategory(id);
 
         // 获取原料系数
         let materialCoefficient = 1;
-        const model = Model.findById(quotation.model_id);
+        const model = await Model.findById(quotation.model_id);
         if (model && model.model_category) {
-            const coefficients = SystemConfig.getValue('material_coefficients') || {};
+            const coefficients = await SystemConfig.getValue('material_coefficients') || {};
             materialCoefficient = CostCalculator.getMaterialCoefficient(model.model_category, coefficients);
         }
 
         // 重新计算以获取利润区间
         // 注意：工序总计传入原始值，计算器内部会自动乘以工价系数
-        const calculatorConfig = SystemConfig.getCalculatorConfig();
+        const calculatorConfig = await SystemConfig.getCalculatorConfig();
         
         // 如果报价单保存了自定义增值税率，使用该值
         if (quotation.vat_rate !== null && quotation.vat_rate !== undefined) {
@@ -675,17 +675,18 @@ const getQuotationDetail = async (req, res) => {
 
         // 计算原料总计（不含管销后算的原料）
         // 注意：数据库中存储的subtotal已经是应用系数后的值，直接使用
+        // PostgreSQL 返回 DECIMAL 为字符串，需要转换为数字
         const materialTotal = items.material.items
             .filter(item => !item.after_overhead)
-            .reduce((sum, item) => sum + item.subtotal, 0);
+            .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
 
         // 管销后算的原料总计
         const afterOverheadMaterialTotal = items.material.items
             .filter(item => item.after_overhead)
-            .reduce((sum, item) => sum + item.subtotal, 0);
+            .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
 
         // 加载自定义费用
-        const customFeesFromDb = QuotationCustomFee.findByQuotationId(id);
+        const customFeesFromDb = await QuotationCustomFee.findByQuotationId(id);
         const customFees = customFeesFromDb.map(fee => ({
             name: fee.fee_name,
             rate: fee.fee_rate,
@@ -694,10 +695,10 @@ const getQuotationDetail = async (req, res) => {
 
         const calculation = calculator.calculateQuotation({
             materialTotal,
-            processTotal: items.process.total, // 原始工序总计，不需要手动乘以工价系数
-            packagingTotal: items.packaging.total,
-            freightTotal: quotation.freight_total,
-            quantity: quotation.quantity,
+            processTotal: parseFloat(items.process.total || 0), // 原始工序总计，不需要手动乘以工价系数
+            packagingTotal: parseFloat(items.packaging.total || 0),
+            freightTotal: parseFloat(quotation.freight_total || 0),
+            quantity: parseFloat(quotation.quantity || 1),
             salesType: quotation.sales_type,
             includeFreightInBase: quotation.include_freight_in_base !== false,
             afterOverheadMaterialTotal,
@@ -733,14 +734,14 @@ const deleteQuotation = async (req, res) => {
         const { id } = req.params;
 
         // 检查报价单是否存在
-        const quotation = Quotation.findById(id);
+        const quotation = await Quotation.findById(id);
         if (!quotation) {
             return res.status(404).json(error('报价单不存在', 404));
         }
 
         // 管理员可以删除任何报价单，无论审批与否
         if (req.user.role === 'admin') {
-            const success_flag = Quotation.delete(id);
+            const success_flag = await Quotation.delete(id);
             if (success_flag) {
                 return res.json(success(null, '报价单删除成功'));
             } else {
@@ -759,7 +760,7 @@ const deleteQuotation = async (req, res) => {
         }
 
         // 删除报价单（会级联删除明细）
-        const success_flag = Quotation.delete(id);
+        const success_flag = await Quotation.delete(id);
 
         if (success_flag) {
             res.json(success(null, '报价单删除成功'));
@@ -779,9 +780,7 @@ const deleteQuotation = async (req, res) => {
  */
 const getPackagingConfigs = async (req, res) => {
     try {
-        const db = dbManager.getDatabase();
-
-        const stmt = db.prepare(`
+        const result = await dbManager.query(`
             SELECT 
                 pc.id,
                 pc.model_id,
@@ -797,11 +796,11 @@ const getPackagingConfigs = async (req, res) => {
             FROM packaging_configs pc
             JOIN models m ON pc.model_id = m.id
             JOIN regulations r ON m.regulation_id = r.id
-            WHERE pc.is_active = 1
+            WHERE pc.is_active = true
             ORDER BY m.model_name, pc.config_name
         `);
         
-        const configs = stmt.all();
+        const configs = result.rows;
         console.log(`找到 ${configs.length} 个包装配置`);
 
         res.json(success(configs, '获取包装配置列表成功'));
@@ -820,12 +819,10 @@ const getPackagingConfigDetails = async (req, res) => {
     try {
         const { configId } = req.params;
         console.log('获取包装配置详情，configId:', configId);
-        
-        const db = dbManager.getDatabase();
 
         // 获取配置基本信息
-        const configStmt = db.prepare(`
-            SELECT 
+        const configResult = await dbManager.query(
+            `SELECT 
                 pc.*,
                 m.model_name,
                 m.regulation_id,
@@ -833,31 +830,33 @@ const getPackagingConfigDetails = async (req, res) => {
             FROM packaging_configs pc
             JOIN models m ON pc.model_id = m.id
             JOIN regulations r ON m.regulation_id = r.id
-            WHERE pc.id = ?
-        `);
-        const config = configStmt.get(configId);
+            WHERE pc.id = $1`,
+            [configId]
+        );
+        const config = configResult.rows[0] || null;
 
         if (!config) {
             return res.status(404).json(error('包装配置不存在', 404));
         }
 
         // 获取工序配置
-        const processesStmt = db.prepare(`
-            SELECT 
+        const processesResult = await dbManager.query(
+            `SELECT 
                 id,
                 process_name,
                 unit_price,
                 sort_order
             FROM process_configs
-            WHERE packaging_config_id = ? AND is_active = 1
-            ORDER BY sort_order, id
-        `);
-        const processes = processesStmt.all(configId);
+            WHERE packaging_config_id = $1 AND is_active = true
+            ORDER BY sort_order, id`,
+            [configId]
+        );
+        const processes = processesResult.rows;
         console.log(`找到 ${processes.length} 个工序`);
 
         // 获取包材配置
-        const materialsStmt = db.prepare(`
-            SELECT 
+        const materialsResult = await dbManager.query(
+            `SELECT 
                 id,
                 material_name,
                 basic_usage,
@@ -865,10 +864,11 @@ const getPackagingConfigDetails = async (req, res) => {
                 carton_volume,
                 sort_order
             FROM packaging_materials
-            WHERE packaging_config_id = ? AND is_active = 1
-            ORDER BY sort_order, id
-        `);
-        const materials = materialsStmt.all(configId);
+            WHERE packaging_config_id = $1 AND is_active = true
+            ORDER BY sort_order, id`,
+            [configId]
+        );
+        const materials = materialsResult.rows;
         console.log(`找到 ${materials.length} 个包材`);
 
         res.json(success({
@@ -889,7 +889,7 @@ const getPackagingConfigDetails = async (req, res) => {
  */
 const getMaterialCoefficients = async (req, res) => {
     try {
-        const coefficients = SystemConfig.getValue('material_coefficients');
+        const coefficients = await SystemConfig.getValue('material_coefficients');
         res.json(success(coefficients || { '口罩': 0.97, '半面罩': 0.99 }));
     } catch (err) {
         console.error('获取原料系数配置失败:', err);

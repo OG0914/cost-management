@@ -1,5 +1,6 @@
 /**
  * 工序管理控制器
+ * PostgreSQL 异步版本
  */
 
 const PackagingConfig = require('../models/PackagingConfig');
@@ -8,23 +9,23 @@ const PackagingMaterial = require('../models/PackagingMaterial');
 const SystemConfig = require('../models/SystemConfig');
 
 // 获取所有包装配置
-exports.getAllPackagingConfigs = (req, res) => {
+exports.getAllPackagingConfigs = async (req, res) => {
   try {
-    const configs = PackagingConfig.findAll();
+    const configs = await PackagingConfig.findAll();
     
     // 获取工价系数
-    const processCoefficient = parseFloat(SystemConfig.getValue('process_coefficient')) || 1.56;
+    const processCoefficient = parseFloat(await SystemConfig.getValue('process_coefficient')) || 1.56;
     
     // 为每个配置计算工序总价和包材总价
-    const configsWithPrice = configs.map(config => {
-      const processes = ProcessConfig.findByPackagingConfigId(config.id);
-      const processSum = processes.reduce((sum, p) => sum + p.unit_price, 0);
+    const configsWithPrice = await Promise.all(configs.map(async config => {
+      const processes = await ProcessConfig.findByPackagingConfigId(config.id);
+      const processSum = processes.reduce((sum, p) => sum + parseFloat(p.unit_price), 0);
       const processTotalPrice = processSum * processCoefficient;
       
-      const materials = PackagingMaterial.findByPackagingConfigId(config.id);
+      const materials = await PackagingMaterial.findByPackagingConfigId(config.id);
       // 包材总价 = Σ(单价 ÷ 基本用量)
       const materialTotalPrice = materials.reduce((sum, m) => {
-        return sum + (m.basic_usage !== 0 ? m.unit_price / m.basic_usage : 0);
+        return sum + (m.basic_usage !== 0 ? parseFloat(m.unit_price) / parseFloat(m.basic_usage) : 0);
       }, 0);
       
       return {
@@ -32,7 +33,7 @@ exports.getAllPackagingConfigs = (req, res) => {
         process_total_price: processTotalPrice,
         material_total_price: materialTotalPrice
       };
-    });
+    }));
     
     res.json({
       success: true,
@@ -48,24 +49,24 @@ exports.getAllPackagingConfigs = (req, res) => {
 };
 
 // 根据型号获取包装配置
-exports.getPackagingConfigsByModel = (req, res) => {
+exports.getPackagingConfigsByModel = async (req, res) => {
   try {
     const { modelId } = req.params;
-    const configs = PackagingConfig.findByModelId(modelId);
-    
+    const configs = await PackagingConfig.findByModelId(modelId);
+
     // 获取工价系数
-    const processCoefficient = parseFloat(SystemConfig.getValue('process_coefficient')) || 1.56;
+    const processCoefficient = parseFloat(await SystemConfig.getValue('process_coefficient')) || 1.56;
     
     // 为每个配置计算工序总价和包材总价
-    const configsWithPrice = configs.map(config => {
-      const processes = ProcessConfig.findByPackagingConfigId(config.id);
-      const processSum = processes.reduce((sum, p) => sum + p.unit_price, 0);
+    const configsWithPrice = await Promise.all(configs.map(async config => {
+      const processes = await ProcessConfig.findByPackagingConfigId(config.id);
+      const processSum = processes.reduce((sum, p) => sum + parseFloat(p.unit_price), 0);
       const processTotalPrice = processSum * processCoefficient;
       
-      const materials = PackagingMaterial.findByPackagingConfigId(config.id);
+      const materials = await PackagingMaterial.findByPackagingConfigId(config.id);
       // 包材总价 = Σ(单价 ÷ 基本用量)
       const materialTotalPrice = materials.reduce((sum, m) => {
-        return sum + (m.basic_usage !== 0 ? m.unit_price / m.basic_usage : 0);
+        return sum + (m.basic_usage !== 0 ? parseFloat(m.unit_price) / parseFloat(m.basic_usage) : 0);
       }, 0);
       
       return {
@@ -73,7 +74,7 @@ exports.getPackagingConfigsByModel = (req, res) => {
         process_total_price: processTotalPrice,
         material_total_price: materialTotalPrice
       };
-    });
+    }));
     
     res.json({
       success: true,
@@ -89,10 +90,10 @@ exports.getPackagingConfigsByModel = (req, res) => {
 };
 
 // 获取包装配置详情（含工序列表）
-exports.getPackagingConfigDetail = (req, res) => {
+exports.getPackagingConfigDetail = async (req, res) => {
   try {
     const { id } = req.params;
-    const config = PackagingConfig.findWithProcesses(id);
+    const config = await PackagingConfig.findWithProcesses(id);
     
     if (!config) {
       return res.status(404).json({
@@ -115,10 +116,10 @@ exports.getPackagingConfigDetail = (req, res) => {
 };
 
 // 获取包装配置完整详情（含工序和包材列表）
-exports.getPackagingConfigFullDetail = (req, res) => {
+exports.getPackagingConfigFullDetail = async (req, res) => {
   try {
     const { id } = req.params;
-    const config = PackagingConfig.findWithDetails(id);
+    const config = await PackagingConfig.findWithDetails(id);
     
     if (!config) {
       return res.status(404).json({
@@ -141,7 +142,7 @@ exports.getPackagingConfigFullDetail = (req, res) => {
 };
 
 // 创建包装配置
-exports.createPackagingConfig = (req, res) => {
+exports.createPackagingConfig = async (req, res) => {
   try {
     const { model_id, config_name, pc_per_bag, bags_per_box, boxes_per_carton, processes, materials } = req.body;
 
@@ -154,7 +155,7 @@ exports.createPackagingConfig = (req, res) => {
     }
 
     // 检查配置名称是否已存在
-    if (PackagingConfig.existsByModelAndName(model_id, config_name)) {
+    if (await PackagingConfig.existsByModelAndName(model_id, config_name)) {
       return res.status(400).json({
         success: false,
         message: '该型号下已存在同名的配置，请修改配置名称'
@@ -162,7 +163,7 @@ exports.createPackagingConfig = (req, res) => {
     }
 
     // 创建包装配置
-    const configId = PackagingConfig.create({
+    const configId = await PackagingConfig.create({
       model_id,
       config_name,
       pc_per_bag,
@@ -172,12 +173,12 @@ exports.createPackagingConfig = (req, res) => {
 
     // 如果有工序列表，批量创建
     if (processes && processes.length > 0) {
-      ProcessConfig.createBatch(configId, processes);
+      await ProcessConfig.createBatch(configId, processes);
     }
 
     // 如果有包材列表，批量创建
     if (materials && materials.length > 0) {
-      PackagingMaterial.createBatch(configId, materials);
+      await PackagingMaterial.createBatch(configId, materials);
     }
 
     res.json({
@@ -188,9 +189,9 @@ exports.createPackagingConfig = (req, res) => {
   } catch (error) {
     console.error('创建包装配置失败:', error);
     
-    // 检查是否是唯一性约束错误
-    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE' || 
-        (error.message && error.message.includes('UNIQUE constraint failed'))) {
+    // 检查是否是唯一性约束错误（PostgreSQL）
+    if (error.code === '23505' || 
+        (error.message && error.message.includes('duplicate key'))) {
       return res.status(400).json({
         success: false,
         message: '该型号下已存在同名的配置，请修改配置名称'
@@ -205,33 +206,33 @@ exports.createPackagingConfig = (req, res) => {
 };
 
 // 更新包装配置
-exports.updatePackagingConfig = (req, res) => {
+exports.updatePackagingConfig = async (req, res) => {
   try {
     const { id } = req.params;
     const { config_name, pc_per_bag, bags_per_box, boxes_per_carton, is_active, processes, materials } = req.body;
 
     // 更新包装配置
-    PackagingConfig.update(id, {
+    await PackagingConfig.update(id, {
       config_name,
       pc_per_bag,
       bags_per_box,
       boxes_per_carton,
-      is_active: is_active !== undefined ? is_active : 1
+      is_active: is_active !== undefined ? is_active : true
     });
 
     // 如果提供了工序列表，先删除旧的，再创建新的
     if (processes) {
-      ProcessConfig.deleteByPackagingConfigId(id);
+      await ProcessConfig.deleteByPackagingConfigId(id);
       if (processes.length > 0) {
-        ProcessConfig.createBatch(id, processes);
+        await ProcessConfig.createBatch(id, processes);
       }
     }
 
     // 如果提供了包材列表，先删除旧的，再创建新的
     if (materials) {
-      PackagingMaterial.deleteByPackagingConfigId(id);
+      await PackagingMaterial.deleteByPackagingConfigId(id);
       if (materials.length > 0) {
-        PackagingMaterial.createBatch(id, materials);
+        await PackagingMaterial.createBatch(id, materials);
       }
     }
 
@@ -249,10 +250,10 @@ exports.updatePackagingConfig = (req, res) => {
 };
 
 // 删除包装配置
-exports.deletePackagingConfig = (req, res) => {
+exports.deletePackagingConfig = async (req, res) => {
   try {
     const { id } = req.params;
-    PackagingConfig.delete(id);
+    await PackagingConfig.delete(id);
 
     res.json({
       success: true,
@@ -268,10 +269,10 @@ exports.deletePackagingConfig = (req, res) => {
 };
 
 // 获取工序列表
-exports.getProcessConfigs = (req, res) => {
+exports.getProcessConfigs = async (req, res) => {
   try {
     const { packagingConfigId } = req.params;
-    const processes = ProcessConfig.findByPackagingConfigId(packagingConfigId);
+    const processes = await ProcessConfig.findByPackagingConfigId(packagingConfigId);
     
     res.json({
       success: true,
@@ -287,7 +288,7 @@ exports.getProcessConfigs = (req, res) => {
 };
 
 // 创建工序
-exports.createProcessConfig = (req, res) => {
+exports.createProcessConfig = async (req, res) => {
   try {
     const { packaging_config_id, process_name, unit_price, sort_order } = req.body;
 
@@ -298,7 +299,7 @@ exports.createProcessConfig = (req, res) => {
       });
     }
 
-    const id = ProcessConfig.create({
+    const id = await ProcessConfig.create({
       packaging_config_id,
       process_name,
       unit_price,
@@ -320,16 +321,16 @@ exports.createProcessConfig = (req, res) => {
 };
 
 // 更新工序
-exports.updateProcessConfig = (req, res) => {
+exports.updateProcessConfig = async (req, res) => {
   try {
     const { id } = req.params;
     const { process_name, unit_price, sort_order, is_active } = req.body;
 
-    ProcessConfig.update(id, {
+    await ProcessConfig.update(id, {
       process_name,
       unit_price,
       sort_order,
-      is_active: is_active !== undefined ? is_active : 1
+      is_active: is_active !== undefined ? is_active : true
     });
 
     res.json({
@@ -346,10 +347,10 @@ exports.updateProcessConfig = (req, res) => {
 };
 
 // 删除工序
-exports.deleteProcessConfig = (req, res) => {
+exports.deleteProcessConfig = async (req, res) => {
   try {
     const { id } = req.params;
-    ProcessConfig.delete(id);
+    await ProcessConfig.delete(id);
 
     res.json({
       success: true,
@@ -367,10 +368,10 @@ exports.deleteProcessConfig = (req, res) => {
 // ==================== 包材管理 ====================
 
 // 获取包材列表
-exports.getPackagingMaterials = (req, res) => {
+exports.getPackagingMaterials = async (req, res) => {
   try {
     const { packagingConfigId } = req.params;
-    const materials = PackagingMaterial.findByPackagingConfigId(packagingConfigId);
+    const materials = await PackagingMaterial.findByPackagingConfigId(packagingConfigId);
     
     res.json({
       success: true,
@@ -386,7 +387,7 @@ exports.getPackagingMaterials = (req, res) => {
 };
 
 // 创建包材
-exports.createPackagingMaterial = (req, res) => {
+exports.createPackagingMaterial = async (req, res) => {
   try {
     const { packaging_config_id, material_name, basic_usage, unit_price, carton_volume, sort_order } = req.body;
 
@@ -397,7 +398,7 @@ exports.createPackagingMaterial = (req, res) => {
       });
     }
 
-    const id = PackagingMaterial.create({
+    const id = await PackagingMaterial.create({
       packaging_config_id,
       material_name,
       basic_usage,
@@ -421,18 +422,18 @@ exports.createPackagingMaterial = (req, res) => {
 };
 
 // 更新包材
-exports.updatePackagingMaterial = (req, res) => {
+exports.updatePackagingMaterial = async (req, res) => {
   try {
     const { id } = req.params;
     const { material_name, basic_usage, unit_price, carton_volume, sort_order, is_active } = req.body;
 
-    PackagingMaterial.update(id, {
+    await PackagingMaterial.update(id, {
       material_name,
       basic_usage,
       unit_price,
       carton_volume,
       sort_order,
-      is_active: is_active !== undefined ? is_active : 1
+      is_active: is_active !== undefined ? is_active : true
     });
 
     res.json({
@@ -449,10 +450,10 @@ exports.updatePackagingMaterial = (req, res) => {
 };
 
 // 删除包材
-exports.deletePackagingMaterial = (req, res) => {
+exports.deletePackagingMaterial = async (req, res) => {
   try {
     const { id } = req.params;
-    PackagingMaterial.delete(id);
+    await PackagingMaterial.delete(id);
 
     res.json({
       success: true,
@@ -466,6 +467,7 @@ exports.deletePackagingMaterial = (req, res) => {
     });
   }
 };
+
 
 // ==================== Excel 导入导出 ====================
 
@@ -495,7 +497,6 @@ exports.importProcesses = async (req, res) => {
     console.log('解析结果:', result);
     
     if (!result.success) {
-      // 删除临时文件
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
@@ -508,7 +509,6 @@ exports.importProcesses = async (req, res) => {
     }
     
     if (result.valid === 0) {
-      // 删除临时文件
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
@@ -523,7 +523,6 @@ exports.importProcesses = async (req, res) => {
     const configMap = new Map();
     
     result.data.forEach(item => {
-      // 解析包装方式
       const packagingMatch = item.packaging_method.match(/(\d+)pc\/bag.*?(\d+)bags?\/box.*?(\d+)boxes?\/carton/i);
       if (!packagingMatch) {
         return;
@@ -557,14 +556,14 @@ exports.importProcesses = async (req, res) => {
     // 处理每个配置
     for (const [key, configData] of configMap) {
       // 查找型号
-      const model = Model.findByName(configData.model_name);
+      const model = await Model.findByName(configData.model_name);
       if (!model) {
         errors.push(`型号 "${configData.model_name}" 不存在，请先创建该型号`);
         continue;
       }
       
       // 查找或创建配置
-      const existingConfigs = PackagingConfig.findByModelId(model.id);
+      const existingConfigs = await PackagingConfig.findByModelId(model.id);
       let config = existingConfigs.find(c => 
         c.config_name === configData.config_name &&
         c.pc_per_bag === configData.pc_per_bag &&
@@ -574,19 +573,19 @@ exports.importProcesses = async (req, res) => {
       
       if (config) {
         // 更新：删除旧工序，添加新工序
-        ProcessConfig.deleteByPackagingConfigId(config.id);
-        ProcessConfig.createBatch(config.id, configData.processes);
+        await ProcessConfig.deleteByPackagingConfigId(config.id);
+        await ProcessConfig.createBatch(config.id, configData.processes);
         updated++;
       } else {
         // 创建新配置
-        const configId = PackagingConfig.create({
+        const configId = await PackagingConfig.create({
           model_id: model.id,
           config_name: configData.config_name,
           pc_per_bag: configData.pc_per_bag,
           bags_per_box: configData.bags_per_box,
           boxes_per_carton: configData.boxes_per_carton
         });
-        ProcessConfig.createBatch(configId, configData.processes);
+        await ProcessConfig.createBatch(configId, configData.processes);
         created++;
       }
     }
@@ -611,7 +610,6 @@ exports.importProcesses = async (req, res) => {
     });
   } catch (error) {
     console.error('导入工序失败:', error);
-    // 清理临时文件
     if (filePath && fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
@@ -631,11 +629,10 @@ exports.exportProcesses = async (req, res) => {
     
     let configs;
     if (ids && ids.length > 0) {
-      // 导出选中的配置
-      configs = ids.map(id => PackagingConfig.findById(id)).filter(c => c !== null);
+      const configPromises = ids.map(id => PackagingConfig.findById(id));
+      configs = (await Promise.all(configPromises)).filter(c => c !== null);
     } else {
-      // 如果没有指定ID，导出所有配置
-      configs = PackagingConfig.findAll();
+      configs = await PackagingConfig.findAll();
     }
     
     if (configs.length === 0) {
@@ -647,8 +644,8 @@ exports.exportProcesses = async (req, res) => {
     
     const processes = [];
     
-    configs.forEach(config => {
-      const configProcesses = ProcessConfig.findByPackagingConfigId(config.id);
+    for (const config of configs) {
+      const configProcesses = await ProcessConfig.findByPackagingConfigId(config.id);
       const packagingMethod = `${config.pc_per_bag}pc/bag, ${config.bags_per_box}bags/box, ${config.boxes_per_carton}boxes/carton`;
       
       configProcesses.forEach(p => {
@@ -660,7 +657,7 @@ exports.exportProcesses = async (req, res) => {
           unit_price: p.unit_price
         });
       });
-    });
+    }
     
     const workbook = await ExcelGenerator.generateProcessExcel(processes);
     
@@ -745,7 +742,6 @@ exports.importPackagingMaterials = async (req, res) => {
     console.log('解析结果:', result);
     
     if (!result.success) {
-      // 删除临时文件
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
@@ -758,7 +754,6 @@ exports.importPackagingMaterials = async (req, res) => {
     }
     
     if (result.valid === 0) {
-      // 删除临时文件
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
@@ -773,7 +768,6 @@ exports.importPackagingMaterials = async (req, res) => {
     const configMap = new Map();
     
     result.data.forEach(item => {
-      // 解析包装方式
       const packagingMatch = item.packaging_method.match(/(\d+)pc\/bag.*?(\d+)bags?\/box.*?(\d+)boxes?\/carton/i);
       if (!packagingMatch) {
         return;
@@ -809,14 +803,14 @@ exports.importPackagingMaterials = async (req, res) => {
     // 处理每个配置
     for (const [key, configData] of configMap) {
       // 查找型号
-      const model = Model.findByName(configData.model_name);
+      const model = await Model.findByName(configData.model_name);
       if (!model) {
         errors.push(`型号 "${configData.model_name}" 不存在，请先创建该型号`);
         continue;
       }
       
       // 查找或创建配置
-      const existingConfigs = PackagingConfig.findByModelId(model.id);
+      const existingConfigs = await PackagingConfig.findByModelId(model.id);
       let config = existingConfigs.find(c => 
         c.config_name === configData.config_name &&
         c.pc_per_bag === configData.pc_per_bag &&
@@ -826,19 +820,19 @@ exports.importPackagingMaterials = async (req, res) => {
       
       if (config) {
         // 更新：删除旧包材，添加新包材
-        PackagingMaterial.deleteByPackagingConfigId(config.id);
-        PackagingMaterial.createBatch(config.id, configData.materials);
+        await PackagingMaterial.deleteByPackagingConfigId(config.id);
+        await PackagingMaterial.createBatch(config.id, configData.materials);
         updated++;
       } else {
         // 创建新配置
-        const configId = PackagingConfig.create({
+        const configId = await PackagingConfig.create({
           model_id: model.id,
           config_name: configData.config_name,
           pc_per_bag: configData.pc_per_bag,
           bags_per_box: configData.bags_per_box,
           boxes_per_carton: configData.boxes_per_carton
         });
-        PackagingMaterial.createBatch(configId, configData.materials);
+        await PackagingMaterial.createBatch(configId, configData.materials);
         created++;
       }
     }
@@ -863,7 +857,6 @@ exports.importPackagingMaterials = async (req, res) => {
     });
   } catch (error) {
     console.error('导入包材失败:', error);
-    // 清理临时文件
     if (filePath && fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
@@ -883,11 +876,10 @@ exports.exportPackagingMaterials = async (req, res) => {
     
     let configs;
     if (ids && ids.length > 0) {
-      // 导出选中的配置
-      configs = ids.map(id => PackagingConfig.findById(id)).filter(c => c !== null);
+      const configPromises = ids.map(id => PackagingConfig.findById(id));
+      configs = (await Promise.all(configPromises)).filter(c => c !== null);
     } else {
-      // 如果没有指定ID，导出所有配置
-      configs = PackagingConfig.findAll();
+      configs = await PackagingConfig.findAll();
     }
     
     if (configs.length === 0) {
@@ -899,8 +891,8 @@ exports.exportPackagingMaterials = async (req, res) => {
     
     const materials = [];
     
-    configs.forEach(config => {
-      const configMaterials = PackagingMaterial.findByPackagingConfigId(config.id);
+    for (const config of configs) {
+      const configMaterials = await PackagingMaterial.findByPackagingConfigId(config.id);
       const packagingMethod = `${config.pc_per_bag}pc/bag, ${config.bags_per_box}bags/box, ${config.boxes_per_carton}boxes/carton`;
       
       configMaterials.forEach(m => {
@@ -914,7 +906,7 @@ exports.exportPackagingMaterials = async (req, res) => {
           carton_volume: m.carton_volume
         });
       });
-    });
+    }
     
     const workbook = await ExcelGenerator.generatePackagingMaterialExcel(materials);
     

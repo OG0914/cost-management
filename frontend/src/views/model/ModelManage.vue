@@ -73,7 +73,11 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180" sortable />
+        <el-table-column label="创建时间" width="180" sortable>
+          <template #default="{ row }">
+            {{ formatDateTime(row.created_at) }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="200" v-if="authStore.isAdmin">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
@@ -139,6 +143,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, ArrowLeft, Search, Upload, Download, Delete } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
+import { formatDateTime } from '@/utils/format'
 
 const router = useRouter()
 const authStore = useAuthStore()
