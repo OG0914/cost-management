@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS packaging (
 
 -- ============================================
 -- 包装配置表（型号+包装方式的固定组合）
+-- 注意: packaging_type, layer1_qty, layer2_qty, layer3_qty 字段由迁移脚本 003_add_packaging_type.sql 添加
 -- ============================================
 CREATE TABLE IF NOT EXISTS packaging_configs (
   id SERIAL PRIMARY KEY,
@@ -284,6 +285,7 @@ CREATE INDEX IF NOT EXISTS idx_packaging_model_id ON packaging(model_id);
 
 -- 包装配置表索引
 CREATE INDEX IF NOT EXISTS idx_packaging_configs_model_id ON packaging_configs(model_id);
+-- 注意: idx_packaging_configs_type 索引由迁移脚本 003_add_packaging_type.sql 创建
 
 -- 工序配置表索引
 CREATE INDEX IF NOT EXISTS idx_process_configs_packaging_config_id ON process_configs(packaging_config_id);

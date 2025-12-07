@@ -46,19 +46,26 @@
                 :disabled="!form.regulation_id || isEditMode"
                 filterable
               >
-                <el-option
-                  v-for="config in filteredPackagingConfigs"
-                  :key="config.id"
-                  :label="`${config.model_name} - ${config.config_name} (${config.pc_per_bag}片/袋, ${config.bags_per_box}袋/盒, ${config.boxes_per_carton}盒/箱)`"
-                  :value="config.id"
+                <!-- 按包装类型分组显示 -->
+                <el-option-group
+                  v-for="group in groupedPackagingConfigs"
+                  :key="group.type"
+                  :label="group.typeName"
                 >
-                  <div style="display: flex; justify-content: space-between;">
-                    <span><strong>{{ config.model_name }}</strong> - {{ config.config_name }}</span>
-                    <span style="color: #8492a6; font-size: 12px;">
-                      {{ config.pc_per_bag }}片/袋, {{ config.bags_per_box }}袋/盒, {{ config.boxes_per_carton }}盒/箱
-                    </span>
-                  </div>
-                </el-option>
+                  <el-option
+                    v-for="config in group.configs"
+                    :key="config.id"
+                    :label="`${config.model_name} - ${config.config_name} (${formatPackagingMethodFromConfig(config)})`"
+                    :value="config.id"
+                  >
+                    <div style="display: flex; justify-content: space-between;">
+                      <span><strong>{{ config.model_name }}</strong> - {{ config.config_name }}</span>
+                      <span style="color: #8492a6; font-size: 12px;">
+                        {{ formatPackagingMethodFromConfig(config) }}
+                      </span>
+                    </div>
+                  </el-option>
+                </el-option-group>
               </el-select>
             </el-form-item>
           </el-col>
@@ -776,6 +783,12 @@ import { ArrowLeft, Plus, Delete } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { formatNumber } from '@/utils/format'
 import { useConfigStore } from '@/store/config'
+import { 
+  getPackagingTypeName, 
+  formatPackagingMethodFromConfig,
+  calculateTotalFromConfig,
+  PACKAGING_TYPES
+} from '@/config/packagingTypes'
 
 const router = useRouter()
 const route = useRoute()
@@ -919,6 +932,37 @@ const filteredPackagingConfigs = computed(() => {
   }
   
   return filtered
+})
+
+// 按包装类型分组的配置列表
+const groupedPackagingConfigs = computed(() => {
+  const configs = filteredPackagingConfigs.value
+  if (!configs.length) return []
+  
+  // 按包装类型分组
+  const groups = {}
+  for (const config of configs) {
+    const type = config.packaging_type || 'standard_box'
+    if (!groups[type]) {
+      groups[type] = {
+        type,
+        typeName: getPackagingTypeName(type) || '标准彩盒',
+        configs: []
+      }
+    }
+    groups[type].configs.push(config)
+  }
+  
+  // 按预定义顺序排列分组
+  const orderedTypes = Object.keys(PACKAGING_TYPES)
+  const result = []
+  for (const type of orderedTypes) {
+    if (groups[type] && groups[type].configs.length > 0) {
+      result.push(groups[type])
+    }
+  }
+  
+  return result
 })
 
 // 计算总计
@@ -1072,8 +1116,8 @@ const onPackagingConfigChange = async () => {
       console.log('工序数据:', processes)
       console.log('包材数据:', materials)
 
-      // 计算每箱只数：pc_per_bag * bags_per_box * boxes_per_carton
-      const pcsPerCarton = config.pc_per_bag * config.bags_per_box * config.boxes_per_carton
+      // 计算每箱只数：根据包装类型使用正确的计算方式
+      const pcsPerCarton = calculateTotalFromConfig(config)
       shippingInfo.pcsPerCarton = pcsPerCarton
       
       // 查找外箱材积（从包材中查找）
@@ -1256,7 +1300,7 @@ const calculateShippingInfo = () => {
     const selectedConfig = packagingConfigs.value.find(c => c.id === form.packaging_config_id)
     let packagingInfo = ''
     if (selectedConfig) {
-      packagingInfo = `${selectedConfig.pc_per_bag}片/袋, ${selectedConfig.bags_per_box}袋/盒, ${selectedConfig.boxes_per_carton}盒/箱`
+      packagingInfo = formatPackagingMethodFromConfig(selectedConfig)
     }
     
     ElMessage.warning({

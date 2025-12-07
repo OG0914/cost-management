@@ -53,13 +53,29 @@
           @change="loadPackagingConfigs" 
           clearable
           filterable
-          style="width: 300px"
+          style="width: 300px; margin-right: 16px"
         >
           <el-option
             v-for="model in models"
             :key="model.id"
             :label="`${model.model_name} (${model.regulation_name})`"
             :value="model.id"
+          />
+        </el-select>
+        
+        <!-- 包装类型筛选 -->
+        <el-select 
+          v-model="selectedPackagingType" 
+          placeholder="选择包装类型筛选" 
+          @change="loadPackagingConfigs" 
+          clearable
+          style="width: 200px"
+        >
+          <el-option
+            v-for="type in packagingTypeOptions"
+            :key="type.value"
+            :label="type.label"
+            :value="type.value"
           />
         </el-select>
       </div>
@@ -76,11 +92,24 @@
         <el-table-column prop="model_category" label="产品类别" width="110" sortable />
         <el-table-column prop="model_name" label="型号" width="120" sortable />
         <el-table-column prop="config_name" label="配置名称" width="150" sortable />
+        <!-- 包装类型列（只读） -->
+        <el-table-column label="包装类型" width="120" sortable sort-by="packaging_type">
+          <template #default="{ row }">
+            <el-tag :type="getPackagingTypeTagType(row.packaging_type)">
+              {{ row.packaging_type_name || getPackagingTypeName(row.packaging_type) }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="包装方式" min-width="280" sortable>
           <template #default="{ row }">
             <span class="packaging-info">
-              {{ row.pc_per_bag }}pc/bag, {{ row.bags_per_box }}bags/box, {{ row.boxes_per_carton }}boxes/carton
+              {{ formatPackagingMethodFromConfig(row) }}
             </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="每箱数量" width="100" align="right">
+          <template #default="{ row }">
+            {{ calculateTotalFromConfig(row) }}
           </template>
         </el-table-column>
         <el-table-column label="包材总价" width="130" align="right" sortable sort-by="material_total_price">
@@ -136,21 +165,26 @@
         </el-form-item>
         
         <el-form-item label="配置名称" required>
-          <el-input v-model="form.config_name" placeholder="如：标准包装" />
+          <el-input v-model="form.config_name" placeholder="如：标准包装" :disabled="isEdit" />
         </el-form-item>
 
-        <el-divider content-position="left">包装方式</el-divider>
+        <el-divider content-position="left">包装方式（只读，由工序管理控制）</el-divider>
 
-        <el-form-item label="每袋数量（pcs）" required>
-          <el-input-number v-model="form.pc_per_bag" :min="1" :controls="false" style="width: 200px" />
+        <!-- 包装类型（只读显示） -->
+        <el-form-item label="包装类型">
+          <el-tag :type="getPackagingTypeTagType(form.packaging_type)" size="large">
+            {{ getPackagingTypeName(form.packaging_type) || '标准彩盒' }}
+          </el-tag>
         </el-form-item>
 
-        <el-form-item label="每盒袋数（bags）" required>
-          <el-input-number v-model="form.bags_per_box" :min="1" :controls="false" style="width: 200px" />
+        <!-- 包装方式（只读显示） -->
+        <el-form-item label="包装方式">
+          <span class="readonly-packaging-info">{{ formatPackagingMethodFromConfig(form) }}</span>
         </el-form-item>
 
-        <el-form-item label="每箱盒数（boxes）" required>
-          <el-input-number v-model="form.boxes_per_carton" :min="1" :controls="false" style="width: 200px" />
+        <!-- 每箱总数（只读显示） -->
+        <el-form-item label="每箱总数">
+          <span class="total-per-carton">{{ calculateTotalFromConfig(form) }} pcs</span>
         </el-form-item>
 
         <el-form-item label="状态" v-if="isEdit">
@@ -256,9 +290,11 @@
       <div class="mb-4">
         <p class="text-lg font-bold">{{ currentConfig?.model_name }} - {{ currentConfig?.config_name }}</p>
         <p class="text-gray-600">
-          {{ currentConfig?.pc_per_bag }}pc/bag, 
-          {{ currentConfig?.bags_per_box }}bags/box, 
-          {{ currentConfig?.boxes_per_carton }}boxes/carton
+          <el-tag size="small" :type="getPackagingTypeTagType(currentConfig?.packaging_type)" style="margin-right: 8px">
+            {{ getPackagingTypeName(currentConfig?.packaging_type) }}
+          </el-tag>
+          {{ formatPackagingMethodFromConfig(currentConfig) }}
+          （每箱 {{ calculateTotalFromConfig(currentConfig) }} pcs）
         </p>
       </div>
       
@@ -304,6 +340,13 @@ import { Plus, ArrowLeft, Download, Delete, Upload } from '@element-plus/icons-v
 import request from '../../utils/request';
 import { useAuthStore } from '../../store/auth';
 import { formatNumber, formatDateTime } from '../../utils/format';
+import { 
+  getPackagingTypeOptions, 
+  getPackagingTypeName, 
+  getPackagingTypeByKey,
+  formatPackagingMethodFromConfig,
+  calculateTotalFromConfig
+} from '../../config/packagingTypes';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -316,13 +359,28 @@ const goBack = () => {
 // 权限检查 - 只有管理员和采购人员可以编辑包材
 const canEdit = computed(() => authStore.isAdmin || authStore.isPurchaser);
 
+// 包装类型选项
+const packagingTypeOptions = getPackagingTypeOptions();
+
 // 数据
 const models = ref([]);
 const packagingConfigs = ref([]);
 const selectedConfigs = ref([]);
 const selectedModelId = ref(null);
+const selectedPackagingType = ref(null);
 const loading = ref(false);
 const allMaterials = ref([]); // 所有原料列表
+
+// 包装类型标签颜色
+const getPackagingTypeTagType = (type) => {
+  const typeMap = {
+    standard_box: '',
+    no_box: 'success',
+    blister_direct: 'warning',
+    blister_bag: 'info'
+  };
+  return typeMap[type] || '';
+};
 
 // 对话框
 const dialogVisible = ref(false);
@@ -335,6 +393,11 @@ const form = reactive({
   id: null,
   model_id: null,
   config_name: '',
+  packaging_type: 'standard_box',
+  layer1_qty: null,
+  layer2_qty: null,
+  layer3_qty: null,
+  // 兼容旧字段名
   pc_per_bag: null,
   bags_per_box: null,
   boxes_per_carton: null,
@@ -451,9 +514,21 @@ const handleSelectMaterial = (row, material) => {
 const loadPackagingConfigs = async () => {
   loading.value = true;
   try {
-    const url = selectedModelId.value
-      ? `/processes/packaging-configs/model/${selectedModelId.value}`
-      : '/processes/packaging-configs';
+    let url = '/processes/packaging-configs';
+    const params = new URLSearchParams();
+    
+    if (selectedModelId.value) {
+      url = `/processes/packaging-configs/model/${selectedModelId.value}`;
+    }
+    
+    if (selectedPackagingType.value) {
+      params.append('packaging_type', selectedPackagingType.value);
+    }
+    
+    const queryString = params.toString();
+    if (queryString && !selectedModelId.value) {
+      url += '?' + queryString;
+    }
     
     const response = await request.get(url);
     
@@ -486,6 +561,11 @@ const editConfig = async (row) => {
       form.id = data.id;
       form.model_id = data.model_id;
       form.config_name = data.config_name;
+      form.packaging_type = data.packaging_type || 'standard_box';
+      form.layer1_qty = data.layer1_qty ?? data.pc_per_bag;
+      form.layer2_qty = data.layer2_qty ?? data.bags_per_box;
+      form.layer3_qty = data.layer3_qty ?? data.boxes_per_carton;
+      // 兼容旧字段名
       form.pc_per_bag = data.pc_per_bag;
       form.bags_per_box = data.bags_per_box;
       form.boxes_per_carton = data.boxes_per_carton;
@@ -525,6 +605,11 @@ const copyConfig = async (row) => {
       form.id = null;
       form.model_id = data.model_id;
       form.config_name = copyName;
+      form.packaging_type = data.packaging_type || 'standard_box';
+      form.layer1_qty = data.layer1_qty ?? data.pc_per_bag;
+      form.layer2_qty = data.layer2_qty ?? data.bags_per_box;
+      form.layer3_qty = data.layer3_qty ?? data.boxes_per_carton;
+      // 兼容旧字段名
       form.pc_per_bag = data.pc_per_bag;
       form.bags_per_box = data.bags_per_box;
       form.boxes_per_carton = data.boxes_per_carton;
@@ -656,7 +741,18 @@ const submitForm = async () => {
     ElMessage.warning('请输入配置名称');
     return;
   }
-  if (!form.pc_per_bag || !form.bags_per_box || !form.boxes_per_carton) {
+  
+  // 获取包装类型配置
+  const typeConfig = getPackagingTypeByKey(form.packaging_type);
+  const l1 = form.layer1_qty ?? form.pc_per_bag;
+  const l2 = form.layer2_qty ?? form.bags_per_box;
+  const l3 = form.layer3_qty ?? form.boxes_per_carton;
+  
+  if (!l1 || !l2) {
+    ElMessage.warning('请填写完整的包装方式');
+    return;
+  }
+  if (typeConfig && typeConfig.layers === 3 && !l3) {
     ElMessage.warning('请填写完整的包装方式');
     return;
   }
@@ -666,9 +762,10 @@ const submitForm = async () => {
     const data = {
       model_id: form.model_id,
       config_name: form.config_name,
-      pc_per_bag: form.pc_per_bag,
-      bags_per_box: form.bags_per_box,
-      boxes_per_carton: form.boxes_per_carton,
+      packaging_type: form.packaging_type,
+      layer1_qty: l1,
+      layer2_qty: l2,
+      layer3_qty: typeConfig && typeConfig.layers === 3 ? l3 : null,
       is_active: form.is_active,
       materials: form.materials
     };
@@ -695,6 +792,10 @@ const resetForm = () => {
   form.id = null;
   form.model_id = selectedModelId.value || null;
   form.config_name = '';
+  form.packaging_type = 'standard_box';
+  form.layer1_qty = null;
+  form.layer2_qty = null;
+  form.layer3_qty = null;
   form.pc_per_bag = null;
   form.bags_per_box = null;
   form.boxes_per_carton = null;
@@ -882,5 +983,22 @@ onMounted(() => {
   color: #909399;
   font-size: 12px;
   margin-left: 12px;
+}
+
+.readonly-packaging-info {
+  color: #409EFF;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.total-per-carton {
+  font-size: 18px;
+  font-weight: bold;
+  color: #409EFF;
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
 }
 </style>

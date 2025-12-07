@@ -7,11 +7,23 @@ const PackagingConfig = require('../models/PackagingConfig');
 const ProcessConfig = require('../models/ProcessConfig');
 const PackagingMaterial = require('../models/PackagingMaterial');
 const SystemConfig = require('../models/SystemConfig');
+const { isValidPackagingType, getPackagingTypeName, VALID_PACKAGING_TYPE_KEYS } = require('../config/packagingTypes');
 
 // 获取所有包装配置
+// 支持 packaging_type 查询参数筛选
 exports.getAllPackagingConfigs = async (req, res) => {
   try {
-    const configs = await PackagingConfig.findAll();
+    const { packaging_type } = req.query;
+    
+    // 验证 packaging_type 参数
+    if (packaging_type && !isValidPackagingType(packaging_type)) {
+      return res.status(400).json({
+        success: false,
+        message: `无效的包装类型: ${packaging_type}。有效值: ${VALID_PACKAGING_TYPE_KEYS.join(', ')}`
+      });
+    }
+    
+    const configs = await PackagingConfig.findAll({ packaging_type });
     
     // 获取工价系数
     const processCoefficient = parseFloat(await SystemConfig.getValue('process_coefficient')) || 1.56;
@@ -30,6 +42,7 @@ exports.getAllPackagingConfigs = async (req, res) => {
       
       return {
         ...config,
+        packaging_type_name: getPackagingTypeName(config.packaging_type),
         process_total_price: processTotalPrice,
         material_total_price: materialTotalPrice
       };
@@ -142,12 +155,39 @@ exports.getPackagingConfigFullDetail = async (req, res) => {
 };
 
 // 创建包装配置
+// 支持 packaging_type 和 layer1/2/3_qty 新字段
 exports.createPackagingConfig = async (req, res) => {
   try {
-    const { model_id, config_name, pc_per_bag, bags_per_box, boxes_per_carton, processes, materials } = req.body;
+    const { 
+      model_id, 
+      config_name, 
+      packaging_type = 'standard_box',
+      layer1_qty,
+      layer2_qty,
+      layer3_qty,
+      // 兼容旧字段名
+      pc_per_bag, 
+      bags_per_box, 
+      boxes_per_carton, 
+      processes, 
+      materials 
+    } = req.body;
+
+    // 验证包装类型
+    if (!isValidPackagingType(packaging_type)) {
+      return res.status(400).json({
+        success: false,
+        message: `无效的包装类型: ${packaging_type}。有效值: ${VALID_PACKAGING_TYPE_KEYS.join(', ')}`
+      });
+    }
+
+    // 使用新字段名，如果没有则回退到旧字段名
+    const l1 = layer1_qty !== undefined ? layer1_qty : pc_per_bag;
+    const l2 = layer2_qty !== undefined ? layer2_qty : bags_per_box;
+    const l3 = layer3_qty !== undefined ? layer3_qty : boxes_per_carton;
 
     // 验证必填字段
-    if (!model_id || !config_name || !pc_per_bag || !bags_per_box || !boxes_per_carton) {
+    if (!model_id || !config_name || !l1 || !l2) {
       return res.status(400).json({
         success: false,
         message: '请填写完整的包装配置信息'
@@ -166,9 +206,10 @@ exports.createPackagingConfig = async (req, res) => {
     const configId = await PackagingConfig.create({
       model_id,
       config_name,
-      pc_per_bag,
-      bags_per_box,
-      boxes_per_carton
+      packaging_type,
+      layer1_qty: l1,
+      layer2_qty: l2,
+      layer3_qty: l3
     });
 
     // 如果有工序列表，批量创建
@@ -189,6 +230,14 @@ exports.createPackagingConfig = async (req, res) => {
   } catch (error) {
     console.error('创建包装配置失败:', error);
     
+    // 检查是否是包装类型验证错误
+    if (error.message && error.message.includes('无效的包装类型')) {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+    
     // 检查是否是唯一性约束错误（PostgreSQL）
     if (error.code === '23505' || 
         (error.message && error.message.includes('duplicate key'))) {
@@ -206,17 +255,45 @@ exports.createPackagingConfig = async (req, res) => {
 };
 
 // 更新包装配置
+// 支持 packaging_type 和 layer1/2/3_qty 新字段
 exports.updatePackagingConfig = async (req, res) => {
   try {
     const { id } = req.params;
-    const { config_name, pc_per_bag, bags_per_box, boxes_per_carton, is_active, processes, materials } = req.body;
+    const { 
+      config_name, 
+      packaging_type,
+      layer1_qty,
+      layer2_qty,
+      layer3_qty,
+      // 兼容旧字段名
+      pc_per_bag, 
+      bags_per_box, 
+      boxes_per_carton, 
+      is_active, 
+      processes, 
+      materials 
+    } = req.body;
+
+    // 验证包装类型（如果提供）
+    if (packaging_type !== undefined && !isValidPackagingType(packaging_type)) {
+      return res.status(400).json({
+        success: false,
+        message: `无效的包装类型: ${packaging_type}。有效值: ${VALID_PACKAGING_TYPE_KEYS.join(', ')}`
+      });
+    }
+
+    // 使用新字段名，如果没有则回退到旧字段名
+    const l1 = layer1_qty !== undefined ? layer1_qty : pc_per_bag;
+    const l2 = layer2_qty !== undefined ? layer2_qty : bags_per_box;
+    const l3 = layer3_qty !== undefined ? layer3_qty : boxes_per_carton;
 
     // 更新包装配置
     await PackagingConfig.update(id, {
       config_name,
-      pc_per_bag,
-      bags_per_box,
-      boxes_per_carton,
+      packaging_type,
+      layer1_qty: l1,
+      layer2_qty: l2,
+      layer3_qty: l3,
       is_active: is_active !== undefined ? is_active : true
     });
 
@@ -242,6 +319,15 @@ exports.updatePackagingConfig = async (req, res) => {
     });
   } catch (error) {
     console.error('更新包装配置失败:', error);
+    
+    // 检查是否是包装类型验证错误
+    if (error.message && error.message.includes('无效的包装类型')) {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: '更新包装配置失败'
@@ -264,6 +350,45 @@ exports.deletePackagingConfig = async (req, res) => {
     res.status(500).json({
       success: false,
       message: '删除包装配置失败'
+    });
+  }
+};
+
+// 按包装类型分组获取配置
+// GET /api/processes/packaging-configs/grouped?model_id=1
+// Requirements: 8.4
+exports.getPackagingConfigsGrouped = async (req, res) => {
+  try {
+    const { model_id } = req.query;
+    
+    const options = {};
+    if (model_id) {
+      options.model_id = parseInt(model_id);
+    }
+    
+    const grouped = await PackagingConfig.findGroupedByType(options);
+    
+    // 为每个分组添加中文名称
+    const result = {};
+    for (const [type, configs] of Object.entries(grouped)) {
+      result[type] = {
+        type_name: getPackagingTypeName(type),
+        configs: configs.map(config => ({
+          ...config,
+          packaging_type_name: getPackagingTypeName(config.packaging_type)
+        }))
+      };
+    }
+    
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('获取分组包装配置失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取分组包装配置失败'
     });
   }
 };
@@ -643,15 +768,22 @@ exports.exportProcesses = async (req, res) => {
     }
     
     const processes = [];
+    const { formatPackagingMethod } = require('../config/packagingTypes');
     
     for (const config of configs) {
       const configProcesses = await ProcessConfig.findByPackagingConfigId(config.id);
-      const packagingMethod = `${config.pc_per_bag}pc/bag, ${config.bags_per_box}bags/box, ${config.boxes_per_carton}boxes/carton`;
+      // 使用新的格式化函数，支持不同包装类型
+      const packagingType = config.packaging_type || 'standard_box';
+      const layer1 = config.layer1_qty ?? config.pc_per_bag;
+      const layer2 = config.layer2_qty ?? config.bags_per_box;
+      const layer3 = config.layer3_qty ?? config.boxes_per_carton;
+      const packagingMethod = formatPackagingMethod(packagingType, layer1, layer2, layer3);
       
       configProcesses.forEach(p => {
         processes.push({
           model_name: config.model_name,
           config_name: config.config_name,
+          packaging_type: config.packaging_type || 'standard_box',
           packaging_method: packagingMethod,
           process_name: p.process_name,
           unit_price: p.unit_price
@@ -890,15 +1022,22 @@ exports.exportPackagingMaterials = async (req, res) => {
     }
     
     const materials = [];
+    const { formatPackagingMethod } = require('../config/packagingTypes');
     
     for (const config of configs) {
       const configMaterials = await PackagingMaterial.findByPackagingConfigId(config.id);
-      const packagingMethod = `${config.pc_per_bag}pc/bag, ${config.bags_per_box}bags/box, ${config.boxes_per_carton}boxes/carton`;
+      // 使用新的格式化函数，支持不同包装类型
+      const packagingType = config.packaging_type || 'standard_box';
+      const layer1 = config.layer1_qty ?? config.pc_per_bag;
+      const layer2 = config.layer2_qty ?? config.bags_per_box;
+      const layer3 = config.layer3_qty ?? config.boxes_per_carton;
+      const packagingMethod = formatPackagingMethod(packagingType, layer1, layer2, layer3);
       
       configMaterials.forEach(m => {
         materials.push({
           model_name: config.model_name,
           config_name: config.config_name,
+          packaging_type: config.packaging_type || 'standard_box',
           packaging_method: packagingMethod,
           material_name: m.material_name,
           basic_usage: m.basic_usage,

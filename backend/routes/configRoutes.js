@@ -17,6 +17,9 @@ router.get('/', configController.getAllConfigs);
 // 获取计算器配置（所有角色可访问）
 router.get('/calculator', configController.getCalculatorConfig);
 
+// 获取包装类型列表（所有角色可访问）
+router.get('/packaging-types', configController.getPackagingTypes);
+
 // 获取单个配置（所有角色可访问）
 router.get('/:key', configController.getConfigByKey);
 

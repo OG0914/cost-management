@@ -3,6 +3,38 @@
  */
 
 const ExcelJS = require('exceljs');
+const { isValidPackagingType, PACKAGING_TYPES, VALID_PACKAGING_TYPE_KEYS } = require('../config/packagingTypes');
+
+// 包装类型中文名称到 key 的映射
+const PACKAGING_TYPE_NAME_TO_KEY = {
+  '标准彩盒': 'standard_box',
+  '无彩盒': 'no_box',
+  '泡壳直装': 'blister_direct',
+  '泡壳袋装': 'blister_bag'
+};
+
+/**
+ * 解析包装类型（支持中文名称和英文 key）
+ * @param {string} value - 包装类型值
+ * @returns {string|null} 包装类型 key 或 null
+ */
+function parsePackagingType(value) {
+  if (!value) return 'standard_box'; // 默认值
+  
+  const trimmed = String(value).trim();
+  
+  // 如果是有效的 key，直接返回
+  if (isValidPackagingType(trimmed)) {
+    return trimmed;
+  }
+  
+  // 尝试从中文名称映射
+  if (PACKAGING_TYPE_NAME_TO_KEY[trimmed]) {
+    return PACKAGING_TYPE_NAME_TO_KEY[trimmed];
+  }
+  
+  return null; // 无效值
+}
 
 class ExcelParser {
   /**
@@ -197,7 +229,7 @@ class ExcelParser {
 
   /**
    * 解析工序 Excel
-   * 期望列：型号、配置、包装方式、工序、单价
+   * 期望列：型号、配置、包装类型、包装方式、工序、单价
    */
   static async parseProcessExcel(filePath) {
     try {
@@ -268,9 +300,19 @@ class ExcelParser {
           return;
         }
         
+        // 解析包装类型（支持中文名称和英文 key）
+        const packagingTypeValue = row['包装类型'];
+        const packagingType = parsePackagingType(packagingTypeValue);
+        
+        if (packagingTypeValue && packagingType === null) {
+          errors.push(`第 ${rowNum} 行：无效的包装类型 "${packagingTypeValue}"。有效值：标准彩盒、无彩盒、泡壳直装、泡壳袋装`);
+          return;
+        }
+        
         processes.push({
           model_name: String(row['型号']).trim(),
           config_name: String(row['配置']).trim(),
+          packaging_type: packagingType || 'standard_box',
           packaging_method: String(row['包装方式']).trim(),
           process_name: String(row['工序']).trim(),
           unit_price: unitPrice
@@ -297,7 +339,7 @@ class ExcelParser {
 
   /**
    * 解析包材 Excel
-   * 期望列：型号、配置、包装方式、包材名称、基本用量、单价、纸箱体积
+   * 期望列：型号、配置、包装类型、包装方式、包材名称、基本用量、单价、纸箱体积
    */
   static async parsePackagingMaterialExcel(filePath) {
     try {
@@ -383,9 +425,19 @@ class ExcelParser {
           return;
         }
         
+        // 解析包装类型（支持中文名称和英文 key）
+        const packagingTypeValue = row['包装类型'];
+        const packagingType = parsePackagingType(packagingTypeValue);
+        
+        if (packagingTypeValue && packagingType === null) {
+          errors.push(`第 ${rowNum} 行：无效的包装类型 "${packagingTypeValue}"。有效值：标准彩盒、无彩盒、泡壳直装、泡壳袋装`);
+          return;
+        }
+        
         materials.push({
           model_name: String(row['型号']).trim(),
           config_name: String(row['配置']).trim(),
+          packaging_type: packagingType || 'standard_box',
           packaging_method: String(row['包装方式']).trim(),
           material_name: String(row['包材名称']).trim(),
           basic_usage: basicUsage,

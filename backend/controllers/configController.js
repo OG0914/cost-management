@@ -4,6 +4,7 @@
 
 const SystemConfig = require('../models/SystemConfig');
 const { success, error } = require('../utils/response');
+const { getAllPackagingTypes, PACKAGING_TYPES } = require('../config/packagingTypes');
 
 /**
  * 获取所有配置
@@ -231,6 +232,20 @@ function validateConfigValue(key, value) {
   return null;
 }
 
+/**
+ * 获取包装类型列表
+ * GET /api/config/packaging-types
+ * Requirements: 10.4
+ */
+const getPackagingTypes = async (req, res, next) => {
+  try {
+    const types = getAllPackagingTypes();
+    res.json(success(types));
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getAllConfigs,
   getConfigByKey,
@@ -238,5 +253,6 @@ module.exports = {
   batchUpdateConfigs,
   createConfig,
   deleteConfig,
-  getCalculatorConfig
+  getCalculatorConfig,
+  getPackagingTypes
 };
