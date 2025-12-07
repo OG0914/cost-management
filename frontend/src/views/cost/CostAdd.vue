@@ -136,17 +136,29 @@
         </el-row>
 
         <el-row :gutter="20">
-          <el-col :span="8">
-            <el-form-item label="购买数量" prop="quantity">
+          <el-col :span="4">
+            <el-form-item label="数量单位">
+              <el-radio-group v-model="quantityUnit" @change="onQuantityUnitChange" :disabled="!shippingInfo.pcsPerCarton">
+                <el-radio label="pcs">按片</el-radio>
+                <el-radio label="carton">按箱</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+
+          <el-col :span="6">
+            <el-form-item :label="quantityUnit === 'pcs' ? '购买数量（片）' : '购买数量（箱）'" prop="quantity">
               <el-input-number
-                v-model="form.quantity"
+                v-model="quantityInput"
                 :min="1"
                 :precision="0"
                 :controls="false"
-                @change="onQuantityChange"
+                @change="onQuantityInputChange"
                 style="width: 100%"
                 :disabled="form.sales_type === 'export' && (form.shipping_method === 'fcl_20' || form.shipping_method === 'fcl_40') && form.port_type === 'fob_shenzhen'"
               />
+              <div v-if="quantityUnit === 'carton' && shippingInfo.pcsPerCarton" style="color: #67c23a; font-size: 12px; margin-top: 5px;">
+                = {{ form.quantity }} 片（{{ quantityInput }}箱 × {{ shippingInfo.pcsPerCarton }}片/箱）
+              </div>
               <div v-if="form.sales_type === 'export' && form.shipping_method === 'fcl_20' && form.port_type === 'fob_shenzhen'" style="color: #909399; font-size: 12px; margin-top: 5px;">
                 20尺整柜FOB深圳自动计算数量：950÷单箱材积×每箱只数
               </div>
@@ -156,7 +168,7 @@
             </el-form-item>
           </el-col>
 
-          <el-col :span="8" v-if="shippingInfo.cartons !== null">
+          <el-col :span="6" v-if="shippingInfo.cartons !== null">
             <el-form-item label="箱数">
               <el-input
                 :value="shippingInfo.cartons"
@@ -166,7 +178,7 @@
             </el-form-item>
           </el-col>
 
-          <el-col :span="8" v-if="shippingInfo.cbm !== null">
+          <el-col :span="6" v-if="shippingInfo.cbm !== null">
             <el-form-item label="CBM">
               <el-input
                 :value="shippingInfo.cbm"
@@ -874,6 +886,11 @@ const shippingInfo = reactive({
   pcsPerCarton: null  // 每箱只数
 })
 
+// 数量单位选择（pcs=按片，carton=按箱）
+const quantityUnit = ref('pcs')
+// 数量输入值（根据单位不同，可能是片数或箱数）
+const quantityInput = ref(null)
+
 // FOB深圳运费计算结果
 const freightCalculation = ref(null)
 
@@ -1063,6 +1080,15 @@ const onPackagingConfigChange = async () => {
       const cartonMaterial = materials.find(m => m.carton_volume && m.carton_volume > 0)
       shippingInfo.cartonVolume = cartonMaterial ? cartonMaterial.carton_volume : null
       
+      // 同步数量输入值
+      if (form.quantity) {
+        if (quantityUnit.value === 'carton') {
+          quantityInput.value = Math.ceil(form.quantity / pcsPerCarton)
+        } else {
+          quantityInput.value = form.quantity
+        }
+      }
+      
       console.log('每箱只数:', pcsPerCarton)
       console.log('外箱材积:', shippingInfo.cartonVolume)
 
@@ -1151,8 +1177,52 @@ const onPortTypeChange = () => {
   }
 }
 
-// 数量变化
+// 数量单位切换
+const onQuantityUnitChange = () => {
+  if (!shippingInfo.pcsPerCarton) {
+    quantityUnit.value = 'pcs'
+    return
+  }
+  
+  if (quantityUnit.value === 'carton') {
+    // 从片切换到箱：将当前片数转换为箱数（向上取整）
+    if (form.quantity && form.quantity > 0) {
+      quantityInput.value = Math.ceil(form.quantity / shippingInfo.pcsPerCarton)
+      // 重新计算片数（确保是整箱）
+      form.quantity = quantityInput.value * shippingInfo.pcsPerCarton
+    }
+  } else {
+    // 从箱切换到片：直接使用当前片数
+    quantityInput.value = form.quantity
+  }
+  
+  calculateShippingInfo()
+  calculateCost()
+}
+
+// 数量输入变化
+const onQuantityInputChange = () => {
+  if (quantityUnit.value === 'carton' && shippingInfo.pcsPerCarton) {
+    // 按箱输入：片数 = 箱数 × 每箱片数
+    form.quantity = quantityInput.value * shippingInfo.pcsPerCarton
+  } else {
+    // 按片输入：直接使用输入值
+    form.quantity = quantityInput.value
+  }
+  
+  calculateShippingInfo()
+  calculateCost()
+}
+
+// 数量变化（兼容旧逻辑）
 const onQuantityChange = () => {
+  // 同步quantityInput
+  if (quantityUnit.value === 'carton' && shippingInfo.pcsPerCarton) {
+    quantityInput.value = Math.ceil(form.quantity / shippingInfo.pcsPerCarton)
+  } else {
+    quantityInput.value = form.quantity
+  }
+  
   calculateShippingInfo()
   calculateCost()
 }
@@ -1177,8 +1247,8 @@ const calculateShippingInfo = () => {
   const cartons = Math.ceil(exactCartons)
   shippingInfo.cartons = cartons
   
-  // 检查是否除不尽，如果除不尽则提示用户更准确的数量
-  if (exactCartons !== cartons) {
+  // 只有按片输入时才检查是否除不尽
+  if (quantityUnit.value === 'pcs' && exactCartons !== cartons) {
     // 计算建议的准确数量
     const suggestedQuantity = cartons * shippingInfo.pcsPerCarton
     
@@ -1190,7 +1260,7 @@ const calculateShippingInfo = () => {
     }
     
     ElMessage.warning({
-      message: `当前数量 ${form.quantity} 除不尽！\n包装配置：${packagingInfo}\n建议数量为 ${suggestedQuantity}pcs（${cartons}箱 × ${shippingInfo.pcsPerCarton}pcs/箱），这样后续运费计算会更准确。`,
+      message: `当前数量 ${form.quantity} 除不尽！\n包装配置：${packagingInfo}\n建议数量为 ${suggestedQuantity}pcs（${cartons}箱 × ${shippingInfo.pcsPerCarton}pcs/箱），或切换到"按箱"输入。`,
       duration: 8000,
       showClose: true,
       dangerouslyUseHTMLString: false
@@ -1248,6 +1318,9 @@ const calculateFOBFreight = () => {
       
       // 自动设置数量
       form.quantity = suggestedQuantity
+      // 同步数量输入值（整柜自动计算时按箱显示更直观）
+      quantityUnit.value = 'carton'
+      quantityInput.value = maxCartons
     }
     
     freightCalculation.value = {
@@ -1763,6 +1836,10 @@ const loadQuotationData = async (id, isCopy = false) => {
         const cartonMaterial = items.packaging.items.find(item => item.carton_volume && item.carton_volume > 0)
         shippingInfo.cartonVolume = cartonMaterial ? cartonMaterial.carton_volume : null
         
+        // 同步数量输入值
+        quantityInput.value = form.quantity
+        quantityUnit.value = 'pcs'
+        
         // 计算箱数和CBM
         calculateShippingInfo()
       }
@@ -1853,6 +1930,10 @@ const loadStandardCostData = async (id) => {
         const pcsPerCarton = standardCost.pc_per_bag * standardCost.bags_per_box * standardCost.boxes_per_carton
         shippingInfo.pcsPerCarton = pcsPerCarton
         console.log('每箱只数:', pcsPerCarton)
+        
+        // 同步数量输入值
+        quantityInput.value = standardCost.quantity
+        quantityUnit.value = 'pcs'
       }
       
       // 填充明细数据
