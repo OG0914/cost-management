@@ -1,14 +1,10 @@
 <template>
   <div class="h-screen w-full flex overflow-hidden bg-white">
     <!-- 左侧：品牌展示区 (移动端隐藏) -->
-    <div class="hidden lg:flex w-1/2 items-center justify-center relative overflow-hidden">
-      <!-- 背景图片层 (40%透明度) -->
-      <div class="absolute inset-0 opacity-60" 
-           :style="{ backgroundImage: `url(${bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }"></div>
-      
+    <div class="hidden lg:flex w-1/2 items-center justify-center relative overflow-hidden bg-blue-600">
       <!-- 装饰性背景圆圈 (增加层次感) -->
       <div class="absolute top-0 left-0 w-96 h-96 bg-white opacity-5 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl"></div>
-      <div class="absolute bottom-0 right-0 w-96 h-96 bg-black opacity-10 rounded-full translate-x-1/3 translate-y-1/3 blur-3xl"></div>
+      <div class="absolute bottom-0 right-0 w-96 h-96 bg-white opacity-10 rounded-full translate-x-1/3 translate-y-1/3 blur-3xl"></div>
 
       <div class="z-10 text-white p-12 max-w-lg">
         <!-- 公司Logo -->
@@ -118,7 +114,6 @@ import { ElMessage } from 'element-plus'
 import { TrendCharts } from '@element-plus/icons-vue'
 import { useAuthStore } from '../store/auth'
 import logoImage from '../images/logo.png'
-import bgImage from '../images/mak.png'
 
 const router = useRouter()
 const authStore = useAuthStore()

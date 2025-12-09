@@ -7,7 +7,7 @@ const PackagingConfig = require('../models/PackagingConfig');
 const ProcessConfig = require('../models/ProcessConfig');
 const PackagingMaterial = require('../models/PackagingMaterial');
 const SystemConfig = require('../models/SystemConfig');
-const { isValidPackagingType, getPackagingTypeName, VALID_PACKAGING_TYPE_KEYS } = require('../config/packagingTypes');
+const { isValidPackagingType, getPackagingTypeName, VALID_PACKAGING_TYPE_KEYS, PACKAGING_TYPES } = require('../config/packagingTypes');
 
 // 获取所有包装配置
 // 支持 packaging_type 查询参数筛选
@@ -644,26 +644,58 @@ exports.importProcesses = async (req, res) => {
       });
     }
     
+    // 解析包装方式，支持所有四种包装类型
+    const parsePackagingMethod = (packagingType, packagingMethod) => {
+      const numbers = packagingMethod.match(/\d+/g);
+      if (!numbers) return null;
+      
+      const config = PACKAGING_TYPES[packagingType];
+      if (!config) return null;
+      
+      if (config.layers === 2) {
+        // 无彩盒、泡壳直装：2层
+        if (numbers.length < 2) return null;
+        return {
+          pc_per_bag: parseInt(numbers[0]),
+          bags_per_box: parseInt(numbers[1]),
+          boxes_per_carton: 1  // 2层类型没有第三层，设为1
+        };
+      } else {
+        // 标准彩盒、泡壳袋装：3层
+        if (numbers.length < 3) return null;
+        return {
+          pc_per_bag: parseInt(numbers[0]),
+          bags_per_box: parseInt(numbers[1]),
+          boxes_per_carton: parseInt(numbers[2])
+        };
+      }
+    };
+    
     // 按配置分组处理数据
     const configMap = new Map();
+    const parseErrors = [];
     
-    result.data.forEach(item => {
-      const packagingMatch = item.packaging_method.match(/(\d+)pc\/bag.*?(\d+)bags?\/box.*?(\d+)boxes?\/carton/i);
-      if (!packagingMatch) {
+    result.data.forEach((item, index) => {
+      const rowNum = index + 2;
+      const parsed = parsePackagingMethod(item.packaging_type, item.packaging_method);
+      
+      if (!parsed) {
+        parseErrors.push(`第 ${rowNum} 行：无法解析包装方式 "${item.packaging_method}"`);
         return;
       }
       
-      const [, pc_per_bag, bags_per_box, boxes_per_carton] = packagingMatch;
+      const { pc_per_bag, bags_per_box, boxes_per_carton } = parsed;
       
-      const key = `${item.model_name}|${item.config_name}|${pc_per_bag}|${bags_per_box}|${boxes_per_carton}`;
+      const key = `${item.model_name}|${item.config_name}|${item.packaging_type}|${pc_per_bag}|${bags_per_box}|${boxes_per_carton}`;
       
       if (!configMap.has(key)) {
         configMap.set(key, {
           model_name: item.model_name,
           config_name: item.config_name,
-          pc_per_bag: parseInt(pc_per_bag),
-          bags_per_box: parseInt(bags_per_box),
-          boxes_per_carton: parseInt(boxes_per_carton),
+          packaging_type: item.packaging_type,
+          pc_per_bag: pc_per_bag,
+          bags_per_box: bags_per_box,
+          boxes_per_carton: boxes_per_carton,
           processes: []
         });
       }
@@ -676,7 +708,7 @@ exports.importProcesses = async (req, res) => {
     
     let created = 0;
     let updated = 0;
-    const errors = [];
+    const errors = [...parseErrors];
     
     // 处理每个配置
     for (const [key, configData] of configMap) {
@@ -687,10 +719,11 @@ exports.importProcesses = async (req, res) => {
         continue;
       }
       
-      // 查找或创建配置
+      // 查找或创建配置（包含 packaging_type）
       const existingConfigs = await PackagingConfig.findByModelId(model.id);
       let config = existingConfigs.find(c => 
         c.config_name === configData.config_name &&
+        c.packaging_type === configData.packaging_type &&
         c.pc_per_bag === configData.pc_per_bag &&
         c.bags_per_box === configData.bags_per_box &&
         c.boxes_per_carton === configData.boxes_per_carton
@@ -706,6 +739,7 @@ exports.importProcesses = async (req, res) => {
         const configId = await PackagingConfig.create({
           model_id: model.id,
           config_name: configData.config_name,
+          packaging_type: configData.packaging_type,
           pc_per_bag: configData.pc_per_bag,
           bags_per_box: configData.bags_per_box,
           boxes_per_carton: configData.boxes_per_carton
@@ -896,26 +930,56 @@ exports.importPackagingMaterials = async (req, res) => {
       });
     }
     
+    // 解析包装方式，支持所有四种包装类型
+    const parsePackagingMethod = (packagingType, packagingMethod) => {
+      const numbers = packagingMethod.match(/\d+/g);
+      if (!numbers) return null;
+      
+      const config = PACKAGING_TYPES[packagingType];
+      if (!config) return null;
+      
+      if (config.layers === 2) {
+        if (numbers.length < 2) return null;
+        return {
+          pc_per_bag: parseInt(numbers[0]),
+          bags_per_box: parseInt(numbers[1]),
+          boxes_per_carton: 1
+        };
+      } else {
+        if (numbers.length < 3) return null;
+        return {
+          pc_per_bag: parseInt(numbers[0]),
+          bags_per_box: parseInt(numbers[1]),
+          boxes_per_carton: parseInt(numbers[2])
+        };
+      }
+    };
+    
     // 按配置分组处理数据
     const configMap = new Map();
+    const parseErrors = [];
     
-    result.data.forEach(item => {
-      const packagingMatch = item.packaging_method.match(/(\d+)pc\/bag.*?(\d+)bags?\/box.*?(\d+)boxes?\/carton/i);
-      if (!packagingMatch) {
+    result.data.forEach((item, index) => {
+      const rowNum = index + 2;
+      const parsed = parsePackagingMethod(item.packaging_type, item.packaging_method);
+      
+      if (!parsed) {
+        parseErrors.push(`第 ${rowNum} 行：无法解析包装方式 "${item.packaging_method}"`);
         return;
       }
       
-      const [, pc_per_bag, bags_per_box, boxes_per_carton] = packagingMatch;
+      const { pc_per_bag, bags_per_box, boxes_per_carton } = parsed;
       
-      const key = `${item.model_name}|${item.config_name}|${pc_per_bag}|${bags_per_box}|${boxes_per_carton}`;
+      const key = `${item.model_name}|${item.config_name}|${item.packaging_type}|${pc_per_bag}|${bags_per_box}|${boxes_per_carton}`;
       
       if (!configMap.has(key)) {
         configMap.set(key, {
           model_name: item.model_name,
           config_name: item.config_name,
-          pc_per_bag: parseInt(pc_per_bag),
-          bags_per_box: parseInt(bags_per_box),
-          boxes_per_carton: parseInt(boxes_per_carton),
+          packaging_type: item.packaging_type,
+          pc_per_bag: pc_per_bag,
+          bags_per_box: bags_per_box,
+          boxes_per_carton: boxes_per_carton,
           materials: []
         });
       }
@@ -930,7 +994,7 @@ exports.importPackagingMaterials = async (req, res) => {
     
     let created = 0;
     let updated = 0;
-    const errors = [];
+    const errors = [...parseErrors];
     
     // 处理每个配置
     for (const [key, configData] of configMap) {
@@ -941,10 +1005,11 @@ exports.importPackagingMaterials = async (req, res) => {
         continue;
       }
       
-      // 查找或创建配置
+      // 查找或创建配置（包含 packaging_type）
       const existingConfigs = await PackagingConfig.findByModelId(model.id);
       let config = existingConfigs.find(c => 
         c.config_name === configData.config_name &&
+        c.packaging_type === configData.packaging_type &&
         c.pc_per_bag === configData.pc_per_bag &&
         c.bags_per_box === configData.bags_per_box &&
         c.boxes_per_carton === configData.boxes_per_carton
@@ -960,6 +1025,7 @@ exports.importPackagingMaterials = async (req, res) => {
         const configId = await PackagingConfig.create({
           model_id: model.id,
           config_name: configData.config_name,
+          packaging_type: configData.packaging_type,
           pc_per_bag: configData.pc_per_bag,
           bags_per_box: configData.bags_per_box,
           boxes_per_carton: configData.boxes_per_carton
