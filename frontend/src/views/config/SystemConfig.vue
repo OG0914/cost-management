@@ -206,7 +206,7 @@ onMounted(() => { loadConfig(); });
 </script>
 
 <style scoped>
-.system-config-container { padding: 20px; }
+.system-config-container { /* padding 由 MainLayout 提供 */ }
 .card { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
 .card-header { padding: 16px 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 16px; }
 .header-left { display: flex; align-items: center; gap: 16px; }

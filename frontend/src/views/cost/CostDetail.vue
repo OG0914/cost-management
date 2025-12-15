@@ -3,7 +3,6 @@
     <el-card class="header-card">
       <div class="header-content">
         <div class="header-left">
-          <el-button icon="ArrowLeft" @click="goBack">返回</el-button>
           <h2>报价单详情</h2>
         </div>
         <div class="header-right">
@@ -389,10 +388,7 @@ const getStatusText = (status) => {
   return textMap[status] || status
 }
 
-// 返回
-const goBack = () => {
-  router.back()
-}
+
 
 // 编辑
 const goToEdit = () => {
@@ -453,7 +449,7 @@ onMounted(async () => {
 
 <style scoped>
 .cost-detail-container {
-  padding: 20px;
+  /* padding 由 MainLayout 提供 */
 }
 
 .header-card {

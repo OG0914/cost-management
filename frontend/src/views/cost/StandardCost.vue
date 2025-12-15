@@ -3,7 +3,6 @@
     <el-card class="header-card">
       <div class="header-content">
         <div class="header-left">
-          <el-button icon="ArrowLeft" @click="goBack">返回</el-button>
           <h2>标准成本</h2>
         </div>
         <div class="header-right">
@@ -133,7 +132,7 @@
             {{ formatDateTime(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="350" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <el-button 
               size="small" 
@@ -367,10 +366,7 @@ const goToStandardCostCompare = () => {
   })
 }
 
-// 返回
-const goBack = () => {
-  router.push('/dashboard')
-}
+
 
 onMounted(() => {
   loadModelCategories()
@@ -380,7 +376,7 @@ onMounted(() => {
 
 <style scoped>
 .standard-cost-container {
-  padding: 20px;
+  /* padding 由 MainLayout 提供 */
 }
 
 .header-card {

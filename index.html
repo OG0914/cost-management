@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>成本分析管理系统 | Cost Analysis System</title>
+    
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Remix Icon -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <!-- Google Fonts: Inter -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8FAFC; /* Slate-50 */
+        }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* 菜单过渡动画 */
+        .submenu-enter-active,
+        .submenu-leave-active {
+            transition: all 0.3s ease-in-out;
+            max-height: 200px;
+            opacity: 1;
+            overflow: hidden;
+        }
+        .submenu-enter-from,
+        .submenu-leave-to {
+            max-height: 0;
+            opacity: 0;
+        }
+        
+        [v-cloak] { display: none; }
+    </style>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb', // 主蓝 Inter Blue
+                            700: '#1d4ed8',
+                        },
+                        slate: {
+                            850: '#1e293b', 
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="text-slate-800 antialiased h-screen overflow-hidden">
+
+<div id="app" v-cloak class="flex h-full">
+
+    <!-- 侧边导航栏 (Sidebar) -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col shadow-sm z-10 transition-all duration-300">
+        <!-- Logo -->
+        <div class="h-16 flex items-center px-6 border-b border-slate-100">
+            <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center text-white mr-3 shadow-sm">
+                <i class="ri-calculator-line text-lg"></i>
+            </div>
+            <span class="font-semibold text-lg tracking-tight text-slate-800">成本分析系统</span>
+        </div>
+
+        <!-- 菜单列表 -->
+        <nav class="flex-1 overflow-y-auto py-6 px-3 space-y-1">
+            
+            <template v-for="(item, index) in menuItems" :key="index">
+                
+                <!-- 无子菜单 -->
+                <div v-if="!item.children" 
+                     @click="activeMenu = item.id"
+                     :class="['flex items-center px-3 py-2.5 rounded-lg cursor-pointer transition-colors group mb-1', 
+                              activeMenu === item.id ? 'bg-primary-50 text-primary-700 font-medium' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700']">
+                    <i :class="[item.icon, 'text-xl mr-3 transition-colors', activeMenu === item.id ? 'text-primary-600' : 'text-slate-400 group-hover:text-slate-600']"></i>
+                    <span class="text-sm">{{ item.label }}</span>
+                </div>
+
+                <!-- 有子菜单 -->
+                <div v-else>
+                    <div @click="toggleSubmenu(item.id)"
+                         :class="['flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors group mb-1',
+                                  isSubmenuActive(item) ? 'bg-white text-slate-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700']">
+                        <div class="flex items-center">
+                            <i :class="[item.icon, 'text-xl mr-3 text-slate-400 group-hover:text-slate-600']"></i>
+                            <span class="text-sm font-medium">{{ item.label }}</span>
+                        </div>
+                        <i :class="['ri-arrow-down-s-line transition-transform duration-200 text-slate-400', expandedMenus.includes(item.id) ? 'rotate-180' : '']"></i>
+                    </div>
+                    
+                    <!-- 子菜单项 -->
+                    <transition name="submenu">
+                        <div v-show="expandedMenus.includes(item.id)" class="pl-11 pr-2 space-y-1 mb-2">
+                            <div v-for="sub in item.children" 
+                                 :key="sub.id"
+                                 @click="activeMenu = sub.id"
+                                 :class="['text-sm py-2 px-3 rounded-md cursor-pointer transition-colors block', 
+                                          activeMenu === sub.id ? 'text-primary-600 bg-primary-50 font-medium' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50']">
+                                {{ sub.label }}
+                            </div>
+                        </div>
+                    </transition>
+                </div>
+            </template>
+
+        </nav>
+
+        <!-- 底部用户信息 -->
+        <div class="p-4 border-t border-slate-100">
+            <div class="flex items-center p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors">
+                <img src="https://ui-avatars.com/api/?name=Admin+K&background=EFF6FF&color=2563EB" alt="User" class="w-9 h-9 rounded-full border border-slate-200">
+                <div class="ml-3 overflow-hidden">
+                    <p class="text-sm font-medium text-slate-700 truncate">审核员 K</p>
+                    <p class="text-xs text-slate-400 truncate">管理员权限</p>
+                </div>
+                <i class="ri-logout-box-r-line ml-auto text-slate-400 hover:text-red-500"></i>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 主内容区域 -->
+    <main class="flex-1 flex flex-col min-w-0 bg-[#F8FAFC]">
+        
+        <!-- 顶部通栏 -->
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-20">
+            <div class="text-slate-400">
+                <i class="ri-menu-fold-line text-xl cursor-pointer hover:text-slate-600"></i>
+            </div>
+            
+            <div class="flex items-center space-x-6">
+                <div class="relative">
+                    <i class="ri-notification-3-line text-xl text-slate-400 cursor-pointer hover:text-primary-600"></i>
+                    <span class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                </div>
+                <div class="relative">
+                    <i class="ri-settings-3-line text-xl text-slate-400 cursor-pointer hover:text-primary-600"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- 内容滚动区 -->
+        <div class="flex-1 overflow-y-auto p-8">
+            
+            <!-- 仪表盘视图 -->
+            <div v-if="activeMenu === 'dashboard'" class="max-w-7xl mx-auto animate-fade-in">
+                
+                <!-- 问候语 Header -->
+                <div class="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 mb-8">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-800 mb-2">
+                            {{ timeGreeting }}，审核员 K
+                        </h1>
+                        <p class="text-slate-500">
+                            欢迎回来，今天又是高效工作的一天~
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 核心指标卡片 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <!-- 卡片 1 -->
+                    <div class="bg-white p-6 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow cursor-default">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="bg-blue-50 p-2 rounded-lg text-primary-600">
+                                <i class="ri-file-list-3-line text-xl"></i>
+                            </div>
+                            <span class="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">+12%</span>
+                        </div>
+                        <h3 class="text-slate-500 text-sm font-medium mb-1">本月报价单</h3>
+                        <p class="text-2xl font-bold text-slate-800">1,248</p>
+                    </div>
+
+                    <!-- 卡片 2 -->
+                    <div class="bg-white p-6 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow cursor-default">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="bg-orange-50 p-2 rounded-lg text-orange-500">
+                                <i class="ri-time-line text-xl"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-slate-500 text-sm font-medium mb-1">待复核项目</h3>
+                        <p class="text-2xl font-bold text-slate-800">8</p>
+                    </div>
+
+                    <!-- 卡片 3 -->
+                    <div class="bg-white p-6 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow cursor-default">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="bg-purple-50 p-2 rounded-lg text-purple-500">
+                                <i class="ri-database-2-line text-xl"></i>
+                            </div>
+                            <span class="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-1 rounded-full">更新于 1h 前</span>
+                        </div>
+                        <h3 class="text-slate-500 text-sm font-medium mb-1">有效原料SKU</h3>
+                        <p class="text-2xl font-bold text-slate-800">4,392</p>
+                    </div>
+
+                    <!-- 卡片 4 (本月型号 TOP3) -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow cursor-default flex flex-col justify-between">
+                        <div class="flex items-center mb-3">
+                            <div class="bg-indigo-50 p-1.5 rounded-lg text-indigo-500 mr-2">
+                                <i class="ri-bar-chart-grouped-line text-lg"></i>
+                            </div>
+                            <h3 class="text-slate-700 text-sm font-bold">本月型号 TOP3</h3>
+                        </div>
+                        
+                        <!-- 排行榜列表 -->
+                        <div class="space-y-3">
+                            <!-- Top 1 (金) -->
+                            <div class="flex items-center justify-between text-sm">
+                                <div class="flex items-center">
+                                    <span class="w-5 h-5 rounded-md bg-yellow-50 text-yellow-600 text-xs font-bold flex items-center justify-center mr-2">1</span>
+                                    <span class="text-slate-700 font-medium">KN95-Fold-W</span>
+                                </div>
+                                <span class="text-slate-400 text-xs">158 次</span>
+                            </div>
+                            <!-- Top 2 (银) -->
+                            <div class="flex items-center justify-between text-sm">
+                                <div class="flex items-center">
+                                    <span class="w-5 h-5 rounded-md bg-slate-100 text-slate-500 text-xs font-bold flex items-center justify-center mr-2">2</span>
+                                    <span class="text-slate-700">N95-Cup-Standard</span>
+                                </div>
+                                <span class="text-slate-400 text-xs">92 次</span>
+                            </div>
+                            <!-- Top 3 (铜) -->
+                            <div class="flex items-center justify-between text-sm">
+                                <div class="flex items-center">
+                                    <span class="w-5 h-5 rounded-md bg-orange-50 text-orange-600 text-xs font-bold flex items-center justify-center mr-2">3</span>
+                                    <span class="text-slate-700">FFP2-Flat-Mask</span>
+                                </div>
+                                <span class="text-slate-400 text-xs">64 次</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 快捷入口与最近动态 -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    
+                    <!-- 快捷操作 -->
+                    <div class="lg:col-span-2 bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+                        <h2 class="text-lg font-semibold text-slate-800 mb-6 flex items-center">
+                            <i class="ri-flashlight-line mr-2 text-yellow-500"></i>
+                            快捷导航
+                        </h2>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <!-- 1. 新增报价 -->
+                            <button @click="activeMenu = 'cost_add'" class="flex flex-col items-center justify-center p-4 border border-slate-100 rounded-xl hover:border-primary-200 hover:bg-primary-50 transition-all group">
+                                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-primary-600 mb-3 group-hover:scale-110 transition-transform">
+                                    <i class="ri-add-line text-xl"></i>
+                                </div>
+                                <span class="text-sm font-medium text-slate-600 group-hover:text-primary-700">新增报价</span>
+                            </button>
+
+                            <!-- 2. 成本对比 -->
+                            <button @click="activeMenu = 'cost_compare'" class="flex flex-col items-center justify-center p-4 border border-slate-100 rounded-xl hover:border-primary-200 hover:bg-primary-50 transition-all group">
+                                <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 mb-3 group-hover:scale-110 transition-transform">
+                                    <i class="ri-scales-3-line text-xl"></i>
+                                </div>
+                                <span class="text-sm font-medium text-slate-600 group-hover:text-primary-700">成本对比</span>
+                            </button>
+
+                            <!-- 3. 自定义模块 -->
+                            <button class="flex flex-col items-center justify-center p-4 border border-dashed border-slate-300 rounded-xl hover:border-slate-400 hover:bg-slate-50 transition-all group">
+                                <div class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-3 group-hover:text-slate-600 transition-colors">
+                                    <i class="ri-add-line text-xl"></i>
+                                </div>
+                                <span class="text-sm font-medium text-slate-400 group-hover:text-slate-600">自定义模块</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 系统状态 -->
+                    <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+                        <h2 class="text-lg font-semibold text-slate-800 mb-4">系统概况</h2>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <i class="ri-database-line text-slate-400 mr-3"></i>
+                                    <span class="text-sm text-slate-600">数据库状态</span>
+                                </div>
+                                <span class="flex items-center text-xs font-medium text-green-600">
+                                    <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+                                    正常
+                                </span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <i class="ri-shield-check-line text-slate-400 mr-3"></i>
+                                    <span class="text-sm text-slate-600">最近备份</span>
+                                </div>
+                                <span class="text-xs text-slate-500">今日 02:00</span>
+                            </div>
+                            <div class="mt-4 pt-4 border-t border-slate-100">
+                                <p class="text-xs text-slate-400 text-center">Version 1.2.2 (Build 20250103)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- 其他页面占位 -->
+            <div v-else class="flex flex-col items-center justify-center h-full text-slate-400 animate-fade-in">
+                <div class="bg-white p-12 rounded-2xl shadow-sm border border-slate-100 text-center">
+                    <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
+                        <i class="ri-hammer-line text-3xl"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-slate-700 mb-2">功能模块演示</h2>
+                    <p class="max-w-xs mx-auto text-sm">
+                        您当前选择了 <span class="text-primary-600 font-medium">"{{ getCurrentLabel() }}"</span> 页面。<br>
+                        此为UI预览，具体逻辑请参考后端文档。
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+</div>
+
+<script>
+    const { createApp, ref, computed } = Vue;
+
+    createApp({
+        setup() {
+            const activeMenu = ref('dashboard');
+            const expandedMenus = ref(['cost']); 
+
+            // 菜单配置
+            const menuItems = [
+                { id: 'dashboard', label: '仪表盘', icon: 'ri-dashboard-3-line' },
+                { 
+                    id: 'cost', 
+                    label: '成本管理', 
+                    icon: 'ri-money-cny-box-line',
+                    children: [
+                        { id: 'cost_add', label: '新增报价' },
+                        { id: 'cost_standard', label: '标准成本' },
+                        { id: 'cost_records', label: '成本记录' }
+                    ]
+                },
+                { id: 'regulation', label: '法规管理', icon: 'ri-government-line' },
+                { id: 'model', label: '型号管理', icon: 'ri-price-tag-3-line' },
+                { id: 'material', label: '原料管理', icon: 'ri-stack-line' },
+                { id: 'packaging', label: '包材管理', icon: 'ri-box-3-line' },
+                { id: 'process', label: '工序管理', icon: 'ri-settings-4-line' },
+                { id: 'config', label: '系统配置', icon: 'ri-equalizer-line' },
+                { id: 'user', label: '用户管理', icon: 'ri-user-settings-line' },
+            ];
+
+            const toggleSubmenu = (id) => {
+                const index = expandedMenus.value.indexOf(id);
+                if (index > -1) {
+                    expandedMenus.value.splice(index, 1);
+                } else {
+                    expandedMenus.value.push(id);
+                }
+            };
+
+            const isSubmenuActive = (item) => {
+                if (!item.children) return false;
+                return item.children.some(sub => sub.id === activeMenu.value);
+            };
+
+            const getCurrentLabel = () => {
+                for (let item of menuItems) {
+                    if (item.id === activeMenu.value) return item.label;
+                    if (item.children) {
+                        const sub = item.children.find(s => s.id === activeMenu.value);
+                        if (sub) return sub.label;
+                    }
+                }
+                return '未知页面';
+            };
+
+            // 时间问候语
+            const timeGreeting = computed(() => {
+                const hour = new Date().getHours();
+                if (hour >= 8 && hour < 11) return '早上好';
+                if (hour >= 11 && hour < 14) return '中午好';
+                if (hour >= 14 && hour < 18) return '下午好';
+                return '您辛苦了';
+            });
+
+            return {
+                activeMenu,
+                expandedMenus,
+                menuItems,
+                toggleSubmenu,
+                isSubmenuActive,
+                timeGreeting,
+                getCurrentLabel
+            };
+        }
+    }).mount('#app');
+</script>
+
+<style>
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+        animation: fadeIn 0.4s ease-out forwards;
+    }
+</style>
+
+</body>
+</html>

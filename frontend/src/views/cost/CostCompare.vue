@@ -3,7 +3,6 @@
     <el-card class="header-card">
       <div class="header-content">
         <div class="header-left">
-          <el-button icon="ArrowLeft" @click="goBack">返回列表</el-button>
           <h2>报价单对比分析</h2>
         </div>
       </div>
@@ -349,7 +348,7 @@ const loadCompareData = async () => {
   const ids = route.query.ids
   if (!ids) {
     ElMessage.error('缺少报价单ID参数')
-    goBack()
+    router.push('/cost/records')
     return
   }
 
@@ -357,13 +356,13 @@ const loadCompareData = async () => {
   
   if (idArray.length < 2) {
     ElMessage.error('至少需要2个报价单进行对比')
-    goBack()
+    router.push('/cost/records')
     return
   }
 
   if (idArray.length > 4) {
     ElMessage.error('最多只能对比4个报价单')
-    goBack()
+    router.push('/cost/records')
     return
   }
 
@@ -415,10 +414,7 @@ const loadCompareData = async () => {
   }
 }
 
-// 返回列表
-const goBack = () => {
-  router.push('/cost/records')
-}
+
 
 // 打印（只打印对比概览）
 const handlePrint = () => {
@@ -642,7 +638,7 @@ onMounted(() => {
 
 <style scoped>
 .cost-compare-container {
-  padding: 20px;
+  /* padding 由 MainLayout 提供 */
 }
 
 .header-card {

@@ -1,13 +1,5 @@
 <template>
   <div class="material-manage">
-    <!-- 返回按钮 -->
-    <div class="page-header">
-      <el-button @click="goBack" class="back-button">
-        <el-icon><ArrowLeft /></el-icon>
-        返回上一级
-      </el-button>
-    </div>
-
     <el-card>
       <template #header>
         <div class="card-header">
@@ -63,16 +55,16 @@
       <!-- 数据表格 -->
       <el-table :data="filteredMaterials" border stripe @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="item_no" label="品号" width="120" />
-        <el-table-column prop="name" label="原料名称" />
-        <el-table-column prop="unit" label="单位" width="100" />
-        <el-table-column prop="price" label="单价" width="120">
+        <el-table-column prop="item_no" label="品号" width="140" />
+        <el-table-column prop="name" label="原料名称" width="300" />
+        <el-table-column prop="unit" label="单位" width="80" />
+        <el-table-column prop="price" label="单价" width="100">
           <template #default="{ row }">
             {{ formatNumber(row.price) }}
           </template>
         </el-table-column>
         <el-table-column prop="currency" label="币别" width="100" />
-        <el-table-column prop="manufacturer" label="厂商" width="150" />
+        <el-table-column prop="manufacturer" label="厂商" width="120" />
         <el-table-column label="更新时间" width="180">
           <template #default="{ row }">
             {{ formatDateTime(row.updated_at) }}
@@ -95,13 +87,13 @@
     >
       <el-form :model="form" label-width="100px">
         <el-form-item label="品号" required>
-          <el-input v-model="form.item_no" placeholder="请输入品号（如：MAT001）" />
+          <el-input v-model="form.item_no" placeholder="请输入品号" />
         </el-form-item>
         <el-form-item label="原料名称" required>
           <el-input v-model="form.name" placeholder="请输入原料名称" />
         </el-form-item>
         <el-form-item label="单位" required>
-          <el-input v-model="form.unit" placeholder="请输入单位（如：kg、个）" />
+          <el-input v-model="form.unit" placeholder="请输入单位" />
         </el-form-item>
         <el-form-item label="单价" required>
           <el-input-number v-model="form.price" :precision="2" :min="0" :controls="false" style="width: 100%" />
@@ -137,10 +129,7 @@ import { formatNumber, formatDateTime } from '../../utils/format'
 const router = useRouter()
 const authStore = useAuthStore()
 
-// 返回上一级
-const goBack = () => {
-  router.push('/dashboard')
-}
+
 
 const materials = ref([])
 const filteredMaterials = ref([])
@@ -394,7 +383,7 @@ onMounted(() => {
 
 <style scoped>
 .material-manage {
-  padding: 20px;
+  /* padding 由 MainLayout 提供 */
 }
 
 .page-header {

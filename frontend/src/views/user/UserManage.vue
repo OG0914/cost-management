@@ -1,13 +1,5 @@
 <template>
   <div class="user-manage">
-    <!-- 返回按钮 -->
-    <div class="page-header">
-      <el-button @click="goBack" class="back-button">
-        <el-icon><ArrowLeft /></el-icon>
-        返回上一级
-      </el-button>
-    </div>
-
     <el-card>
       <template #header>
         <div class="card-header">
@@ -21,7 +13,7 @@
 
       <!-- 用户列表 -->
       <el-table :data="users" border stripe v-loading="loading">
-        <el-table-column prop="username" label="用户名" min-width="120" />
+        <el-table-column prop="username" label="用户代号" min-width="120" />
         <el-table-column prop="real_name" label="真实姓名" min-width="120" />
         <el-table-column prop="role" label="角色" width="110">
           <template #default="{ row }">
@@ -49,10 +41,11 @@
       v-model="dialogVisible"
       :title="isEdit ? '编辑用户' : '新增用户'"
       width="500px"
+      append-to-body
     >
       <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="form.username" :disabled="isEdit" placeholder="请输入用户名" />
+        <el-form-item label="用户代号" prop="username">
+          <el-input v-model="form.username" :disabled="isEdit" placeholder="请输入用户代号" />
         </el-form-item>
 
         <el-form-item label="密码" prop="password" v-if="!isEdit">
@@ -66,11 +59,11 @@
         <el-form-item label="角色" prop="role">
           <el-select v-model="form.role" placeholder="请选择角色" style="width: 100%">
             <el-option label="管理员" value="admin" />
-            <el-option label="采购人员" value="purchaser" />
-            <el-option label="生产人员" value="producer" />
-            <el-option label="审核人员" value="reviewer" />
-            <el-option label="业务员" value="salesperson" />
-            <el-option label="只读用户" value="readonly" />
+            <el-option label="采购" value="purchaser" />
+            <el-option label="生产" value="producer" />
+            <el-option label="审核" value="reviewer" />
+            <el-option label="业务" value="salesperson" />
+            <el-option label="只读" value="readonly" />
           </el-select>
         </el-form-item>
 
@@ -89,18 +82,10 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, ArrowLeft } from '@element-plus/icons-vue';
+import { Plus } from '@element-plus/icons-vue';
 import request from '../../utils/request';
 import { formatDateTime } from '@/utils/format';
-
-const router = useRouter();
-
-// 返回上一级
-const goBack = () => {
-  router.push('/dashboard');
-};
 
 // 数据
 const users = ref([]);
@@ -146,11 +131,11 @@ const rules = {
 const getRoleName = (role) => {
   const roleMap = {
     admin: '管理员',
-    purchaser: '采购人员',
-    producer: '生产人员',
-    reviewer: '审核人员',
-    salesperson: '业务员',
-    readonly: '只读用户'
+    purchaser: '采购',
+    producer: '生产',
+    reviewer: '审核',
+    salesperson: '业务',
+    readonly: '只读'
   };
   return roleMap[role] || role;
 };
@@ -315,16 +300,10 @@ onMounted(() => {
 
 <style scoped>
 .user-manage {
-  padding: 20px;
+  /* padding 由 MainLayout 提供 */
 }
 
-.page-header {
-  margin-bottom: 16px;
-}
 
-.back-button {
-  font-size: 14px;
-}
 
 .card-header {
   display: flex;

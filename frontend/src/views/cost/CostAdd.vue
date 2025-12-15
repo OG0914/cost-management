@@ -2267,7 +2267,7 @@ onMounted(async () => {
 
 <style scoped>
 .cost-add-container {
-  padding: 20px;
+  /* padding 由 MainLayout 提供 */
 }
 
 .header-card {

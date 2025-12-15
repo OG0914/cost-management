@@ -1,0 +1,205 @@
+<template>
+  <aside :class="[
+    'bg-white border-r border-slate-200 flex flex-col shadow-sm z-10 transition-all duration-300',
+    collapsed ? 'w-16' : 'w-64'
+  ]">
+    <!-- Logo + 折叠按钮 -->
+    <div class="h-16 flex items-center justify-between border-b border-slate-100" :class="collapsed ? 'px-2' : 'px-4'">
+      <div class="flex items-center overflow-hidden">
+        <img src="../../images/logo.png" alt="Logo" class="h-7 w-auto object-contain scale-[0.7] flex-shrink-0" :class="collapsed ? '' : 'mr-0.1'" />
+        <span v-if="!collapsed" class="font-semibold text-base tracking-tight text-slate-800 whitespace-nowrap">成本分析系统</span>
+      </div>
+      <div 
+        @click="toggleCollapse"
+        class="flex-shrink-0 p-1.5 rounded-lg cursor-pointer text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors"
+      >
+        <i :class="collapsed ? 'ri-menu-unfold-line' : 'ri-menu-fold-line'" class="text-lg"></i>
+      </div>
+    </div>
+
+    <!-- 菜单列表 -->
+    <nav class="flex-1 overflow-y-auto py-4 px-2 space-y-1">
+      <template v-for="item in visibleMenuItems" :key="item.id">
+        <!-- 无子菜单 -->
+        <div 
+          v-if="!item.children"
+          @click="handleMenuClick(item)"
+          :title="collapsed ? item.label : ''"
+          :class="[
+            'flex items-center rounded-lg cursor-pointer transition-colors group mb-1',
+            collapsed ? 'px-2 py-2.5 justify-center' : 'px-3 py-2.5',
+            isActive(item.id) 
+              ? 'bg-primary-50 text-primary-700 font-medium' 
+              : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+          ]"
+        >
+          <i :class="[
+            item.icon, 
+            'text-xl transition-colors',
+            collapsed ? '' : 'mr-3',
+            isActive(item.id) ? 'text-primary-600' : 'text-slate-400 group-hover:text-slate-600'
+          ]"></i>
+          <span v-if="!collapsed" class="text-sm">{{ item.label }}</span>
+        </div>
+
+        <!-- 有子菜单 -->
+        <div v-else>
+          <div 
+            @click="collapsed ? handleMenuClick(item.children[0]) : toggleSubmenu(item.id)"
+            :title="collapsed ? item.label : ''"
+            :class="[
+              'flex items-center rounded-lg cursor-pointer transition-colors group mb-1',
+              collapsed ? 'px-2 py-2.5 justify-center' : 'px-3 py-2.5 justify-between',
+              isSubmenuActive(item) ? 'bg-white text-slate-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+            ]"
+          >
+            <div class="flex items-center" :class="collapsed ? 'justify-center' : ''">
+              <i :class="[item.icon, 'text-xl text-slate-400 group-hover:text-slate-600', collapsed ? '' : 'mr-3']"></i>
+              <span v-if="!collapsed" class="text-sm font-medium">{{ item.label }}</span>
+            </div>
+            <i v-if="!collapsed" :class="[
+              'ri-arrow-down-s-line transition-transform duration-200 text-slate-400',
+              expandedMenus.includes(item.id) ? 'rotate-180' : ''
+            ]"></i>
+          </div>
+          
+          <!-- 子菜单项 -->
+          <Transition name="submenu">
+            <div v-if="!collapsed" v-show="expandedMenus.includes(item.id)" class="pl-11 pr-2 space-y-1 mb-2">
+              <div 
+                v-for="sub in item.children" 
+                :key="sub.id"
+                @click="handleMenuClick(sub)"
+                :class="[
+                  'text-sm py-2 px-3 rounded-md cursor-pointer transition-colors block',
+                  isActive(sub.id) 
+                    ? 'text-primary-600 bg-primary-50 font-medium' 
+                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                ]"
+              >
+                {{ sub.label }}
+              </div>
+            </div>
+          </Transition>
+        </div>
+      </template>
+    </nav>
+
+    <!-- 底部用户信息 -->
+    <div class="p-3 border-t border-slate-100">
+      <div :class="[
+        'flex items-center p-2 rounded-lg hover:bg-slate-50 transition-colors',
+        collapsed ? 'justify-center' : 'justify-between'
+      ]">
+        <div v-if="!collapsed" class="overflow-hidden">
+          <p class="text-sm font-medium text-slate-700 truncate">{{ userName }}</p>
+          <p class="text-xs text-slate-400 truncate">{{ roleName }}</p>
+        </div>
+        <i 
+          @click="handleLogout"
+          class="ri-logout-box-r-line text-slate-400 hover:text-red-500 cursor-pointer transition-colors text-xl"
+          title="退出登录"
+        ></i>
+      </div>
+    </div>
+  </aside>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { useAuthStore } from '../../store/auth'
+import { ElMessageBox, ElMessage } from 'element-plus'
+import { menuConfig, filterMenuByRole, findMenuItem as findMenuItemUtil, getRoleName } from '../../config/menuConfig'
+
+const router = useRouter()
+const route = useRoute()
+const authStore = useAuthStore()
+
+// 侧边栏折叠状态
+const collapsed = ref(false)
+
+// 展开的菜单
+const expandedMenus = ref(['cost'])
+
+// 用户信息
+const userName = computed(() => authStore.realName || authStore.username || '未知用户')
+const roleName = computed(() => getRoleName(authStore.userRole))
+
+// 根据权限过滤菜单
+const visibleMenuItems = computed(() => filterMenuByRole(menuConfig, authStore.userRole))
+
+// 切换折叠状态
+const toggleCollapse = () => {
+  collapsed.value = !collapsed.value
+}
+
+// 判断菜单是否激活
+const isActive = (menuId) => {
+  const currentPath = route.path
+  const item = findMenuItem(menuId)
+  if (item?.route) {
+    return currentPath === item.route || currentPath.startsWith(item.route + '/')
+  }
+  return false
+}
+
+// 判断子菜单是否有激活项
+const isSubmenuActive = (item) => {
+  if (!item.children) return false
+  return item.children.some(sub => isActive(sub.id))
+}
+
+// 查找菜单项
+const findMenuItem = (menuId) => findMenuItemUtil(menuConfig, menuId)
+
+// 切换子菜单展开状态
+const toggleSubmenu = (menuId) => {
+  const index = expandedMenus.value.indexOf(menuId)
+  if (index > -1) {
+    expandedMenus.value.splice(index, 1)
+  } else {
+    expandedMenus.value.push(menuId)
+  }
+}
+
+// 点击菜单项
+const handleMenuClick = (item) => {
+  if (item.route) {
+    router.push(item.route)
+  }
+}
+
+// 退出登录
+const handleLogout = async () => {
+  try {
+    await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    authStore.logout()
+    ElMessage.success('已退出登录')
+    router.push('/login')
+  } catch {
+    // 用户取消
+  }
+}
+</script>
+
+<style scoped>
+/* 子菜单过渡动画 */
+.submenu-enter-active,
+.submenu-leave-active {
+  transition: all 0.3s ease-in-out;
+  max-height: 200px;
+  opacity: 1;
+  overflow: hidden;
+}
+
+.submenu-enter-from,
+.submenu-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+</style>

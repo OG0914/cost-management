@@ -3,7 +3,6 @@
     <el-card class="header-card">
       <div class="header-content">
         <div class="header-left">
-          <el-button icon="ArrowLeft" @click="goBack">返回</el-button>
           <h2>报价单记录</h2>
         </div>
         <div class="header-right">
@@ -244,10 +243,7 @@ const getStatusText = (status) => {
 }
 
 
-// 返回
-const goBack = () => {
-  router.push('/dashboard')
-}
+
 
 // 显示产品类别选择弹窗
 const showCategoryModal = () => {
@@ -370,7 +366,7 @@ onMounted(() => {
 
 <style scoped>
 .cost-records-container {
-  padding: 20px;
+  /* padding 由 MainLayout 提供 */
 }
 
 .header-card {

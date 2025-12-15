@@ -1,13 +1,5 @@
 <template>
   <div class="packaging-management">
-    <!-- 返回按钮 -->
-    <div class="page-header">
-      <el-button @click="goBack" class="back-button">
-        <el-icon><ArrowLeft /></el-icon>
-        返回上一级
-      </el-button>
-    </div>
-
     <el-card>
       <template #header>
         <div class="card-header">
@@ -351,10 +343,7 @@ import {
 const router = useRouter();
 const authStore = useAuthStore();
 
-// 返回上一级
-const goBack = () => {
-  router.push('/dashboard');
-};
+
 
 // 权限检查 - 只有管理员和采购人员可以编辑包材
 const canEdit = computed(() => authStore.isAdmin || authStore.isPurchaser);
@@ -893,7 +882,7 @@ onMounted(() => {
 
 <style scoped>
 .packaging-management {
-  padding: 20px;
+  /* padding 由 MainLayout 提供 */
 }
 
 .page-header {

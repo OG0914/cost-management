@@ -13,94 +13,97 @@ const routes = [
     meta: { requiresAuth: false }
   },
   {
-    path: '/dashboard',
-    name: 'Dashboard',
-    component: () => import('../views/Dashboard.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/regulations',
-    name: 'RegulationManage',
-    component: () => import('../views/regulation/RegulationManage.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
-  {
-    path: '/models',
-    name: 'ModelManage',
-    component: () => import('../views/model/ModelManage.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
-  {
-    path: '/materials',
-    name: 'MaterialManage',
-    component: () => import('../views/material/MaterialManage.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/processes',
-    name: 'ProcessManage',
-    component: () => import('../views/process/ProcessManage.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/packaging',
-    name: 'PackagingManage',
-    component: () => import('../views/packaging/PackagingManage.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/users',
-    name: 'UserManage',
-    component: () => import('../views/user/UserManage.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
-  {
-    path: '/config',
-    name: 'SystemConfig',
-    component: () => import('../views/config/SystemConfig.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/cost/add',
-    name: 'CostAdd',
-    component: () => import('../views/cost/CostAdd.vue'),
-    meta: { requiresAuth: true, forbidPurchaserProducer: true }
-  },
-  {
-    path: '/cost/edit/:id',
-    name: 'CostEdit',
-    component: () => import('../views/cost/CostAdd.vue'),
-    meta: { requiresAuth: true, forbidPurchaserProducer: true }
-  },
-  {
-    path: '/cost/detail/:id',
-    name: 'CostDetail',
-    component: () => import('../views/cost/CostDetail.vue'),
-    meta: { requiresAuth: true, forbidPurchaserProducer: true }
-  },
-  {
-    path: '/cost/standard',
-    name: 'StandardCost',
-    component: () => import('../views/cost/StandardCost.vue'),
-    meta: { requiresAuth: true, forbidPurchaserProducer: true }
-  },
-  {
-    path: '/cost/records',
-    name: 'CostRecords',
-    component: () => import('../views/cost/CostRecords.vue'),
-    meta: { requiresAuth: true, forbidPurchaserProducer: true }
-  },
-  {
-    path: '/cost/compare',
-    name: 'CostCompare',
-    component: () => import('../views/cost/CostCompare.vue'),
-    meta: { requiresAuth: true, forbidPurchaserProducer: true }
-  },
-  {
     path: '/home',
     name: 'Home',
     component: () => import('../views/Home.vue'),
     meta: { requiresAuth: false }
+  },
+  // 使用 MainLayout 的页面
+  {
+    path: '/',
+    component: () => import('../components/layout/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: 'dashboard',
+        name: 'Dashboard',
+        component: () => import('../views/Dashboard.vue')
+      },
+      {
+        path: 'regulations',
+        name: 'RegulationManage',
+        component: () => import('../views/regulation/RegulationManage.vue'),
+        meta: { requiresAdmin: true }
+      },
+      {
+        path: 'models',
+        name: 'ModelManage',
+        component: () => import('../views/model/ModelManage.vue'),
+        meta: { requiresAdmin: true }
+      },
+      {
+        path: 'materials',
+        name: 'MaterialManage',
+        component: () => import('../views/material/MaterialManage.vue')
+      },
+      {
+        path: 'processes',
+        name: 'ProcessManage',
+        component: () => import('../views/process/ProcessManage.vue')
+      },
+      {
+        path: 'packaging',
+        name: 'PackagingManage',
+        component: () => import('../views/packaging/PackagingManage.vue')
+      },
+      {
+        path: 'users',
+        name: 'UserManage',
+        component: () => import('../views/user/UserManage.vue'),
+        meta: { requiresAdmin: true }
+      },
+      {
+        path: 'config',
+        name: 'SystemConfig',
+        component: () => import('../views/config/SystemConfig.vue')
+      },
+      {
+        path: 'cost/add',
+        name: 'CostAdd',
+        component: () => import('../views/cost/CostAdd.vue'),
+        meta: { forbidPurchaserProducer: true }
+      },
+      {
+        path: 'cost/edit/:id',
+        name: 'CostEdit',
+        component: () => import('../views/cost/CostAdd.vue'),
+        meta: { forbidPurchaserProducer: true }
+      },
+      {
+        path: 'cost/detail/:id',
+        name: 'CostDetail',
+        component: () => import('../views/cost/CostDetail.vue'),
+        meta: { forbidPurchaserProducer: true }
+      },
+      {
+        path: 'cost/standard',
+        name: 'StandardCost',
+        component: () => import('../views/cost/StandardCost.vue'),
+        meta: { forbidPurchaserProducer: true }
+      },
+      {
+        path: 'cost/records',
+        name: 'CostRecords',
+        component: () => import('../views/cost/CostRecords.vue'),
+        meta: { forbidPurchaserProducer: true }
+      },
+      {
+        path: 'cost/compare',
+        name: 'CostCompare',
+        component: () => import('../views/cost/CostCompare.vue'),
+        meta: { forbidPurchaserProducer: true }
+      }
+    ]
   }
 ]
 
@@ -109,57 +112,68 @@ const router = createRouter({
   routes
 })
 
+
 // 路由守卫
 router.beforeEach(async (to, from, next) => {
   const token = getToken()
   
+  // 检查路由或其父路由是否需要认证
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin)
+  const forbidPurchaserProducer = to.matched.some(record => record.meta.forbidPurchaserProducer)
+  
   // 需要认证的页面
-  if (to.meta.requiresAuth) {
+  if (requiresAuth) {
     if (!token) {
-      // 没有token，跳转登录
       next('/login')
       return
     }
 
-    // 检查token是否过期
     if (isTokenExpired()) {
       clearAuth()
       next('/login')
       return
     }
 
-    // 如果是应用首次加载（刷新页面或直接访问），验证token有效性
+    // 如果是应用首次加载，验证 token 有效性
     if (from.path === '/' || from.name === null) {
       try {
         const { useAuthStore } = await import('../store/auth')
         const authStore = useAuthStore()
         await authStore.fetchUserInfo()
         
-        // 检查采购人员和生产人员的访问限制
-        if (to.meta.forbidPurchaserProducer) {
-          const role = authStore.user?.role
-          if (role === 'purchaser' || role === 'producer') {
-            next('/dashboard')
-            return
-          }
+        const role = authStore.user?.role
+        
+        // 检查管理员权限
+        if (requiresAdmin && role !== 'admin') {
+          next('/dashboard')
+          return
+        }
+        
+        // 检查采购/生产人员限制
+        if (forbidPurchaserProducer && (role === 'purchaser' || role === 'producer')) {
+          next('/dashboard')
+          return
         }
         
         next()
       } catch (error) {
-        // Token无效，清除并跳转登录
         clearAuth()
         next('/login')
       }
     } else {
-      // 检查采购人员和生产人员的访问限制
-      if (to.meta.forbidPurchaserProducer) {
-        const { useAuthStore } = await import('../store/auth')
-        const authStore = useAuthStore()
-        const role = authStore.user?.role
-        if (role === 'purchaser' || role === 'producer') {
-          next('/dashboard')
-          return
-        }
+      const { useAuthStore } = await import('../store/auth')
+      const authStore = useAuthStore()
+      const role = authStore.user?.role
+      
+      if (requiresAdmin && role !== 'admin') {
+        next('/dashboard')
+        return
+      }
+      
+      if (forbidPurchaserProducer && (role === 'purchaser' || role === 'producer')) {
+        next('/dashboard')
+        return
       }
       
       next()
