@@ -19,10 +19,27 @@
 
     <!-- 菜单列表 -->
     <nav class="flex-1 overflow-y-auto py-4 px-2 space-y-1">
-      <template v-for="item in visibleMenuItems" :key="item.id">
+      <template v-for="(item, index) in visibleMenuItems" :key="item.id || `divider-${index}`">
+        
+        <!-- 分割线 (Divider) -->
+        <div v-if="item.type === 'divider'" class="flex items-center px-3 py-2 mt-3 mb-1">
+          <template v-if="collapsed">
+            <!-- 折叠时只显示横线 -->
+            <div class="h-px bg-slate-200 w-full"></div>
+          </template>
+          <template v-else>
+            <!-- 
+              ★ 调节分割线文字大小 ★
+              text-[10px] = 10像素，可改为 text-xs (12px)、text-[11px] 等
+            -->
+            <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mr-2">{{ item.label }}</span>
+            <div class="h-px bg-slate-200 flex-1"></div>
+          </template>
+        </div>
+
         <!-- 无子菜单 -->
         <div 
-          v-if="!item.children"
+          v-else-if="!item.children"
           @click="handleMenuClick(item)"
           :title="collapsed ? item.label : ''"
           :class="[
@@ -30,7 +47,7 @@
             collapsed ? 'px-2 py-2.5 justify-center' : 'px-3 py-2.5',
             isActive(item.id) 
               ? 'bg-primary-50 text-primary-700 font-medium' 
-              : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+              : 'text-slate-800 hover:bg-slate-50 hover:text-slate-900'
           ]"
         >
           <i :class="[
@@ -50,7 +67,7 @@
             :class="[
               'flex items-center rounded-lg cursor-pointer transition-colors group mb-1',
               collapsed ? 'px-2 py-2.5 justify-center' : 'px-3 py-2.5 justify-between',
-              isSubmenuActive(item) ? 'bg-white text-slate-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+              isSubmenuActive(item) ? 'bg-white text-slate-800' : 'text-slate-800 hover:bg-slate-50 hover:text-slate-900'
             ]"
           >
             <div class="flex items-center" :class="collapsed ? 'justify-center' : ''">
@@ -74,7 +91,7 @@
                   'text-sm py-2 px-3 rounded-md cursor-pointer transition-colors block',
                   isActive(sub.id) 
                     ? 'text-primary-600 bg-primary-50 font-medium' 
-                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                    : 'text-slate-800 hover:text-slate-900 hover:bg-slate-50'
                 ]"
               >
                 {{ sub.label }}

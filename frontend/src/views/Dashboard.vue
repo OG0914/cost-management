@@ -1,13 +1,35 @@
 <template>
   <div class="animate-fade-in">
     <!-- 问候语区域 -->
-    <div class="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 mb-8">
-      <h1 class="text-2xl font-bold text-slate-800 mb-2">
-        {{ greeting }}
-      </h1>
-      <p class="text-slate-500">
-        欢迎回来，今天又是高效工作的一天~
-      </p>
+    <div class="bg-white rounded-2xl p-8 shadow-sm border border-slate-200 mb-8 relative overflow-hidden flex items-end justify-between group">
+      <!-- 装饰水印 -->
+      <i class="ri-calendar-check-line absolute -right-6 -bottom-6 text-9xl text-slate-50 pointer-events-none z-0 group-hover:text-slate-100 transition-colors duration-500"></i>
+      
+      <!-- 左侧装饰条 -->
+      <div class="absolute left-0 top-6 bottom-6 w-1 bg-primary-600 rounded-r-full"></div>
+
+      <!-- 左侧文案 -->
+      <div class="relative z-10 pl-4">
+        <h1 class="text-3xl font-bold text-slate-800 mb-2 tracking-tight">
+          {{ greeting }}
+        </h1>
+        <p class="text-slate-500 flex items-center text-m">
+          <span class="w-1.5 h-1.5 rounded-full bg-slate-300 mr-2"></span>
+          欢迎回来，今天又是高效工作的一天~
+        </p>
+      </div>
+
+      <!-- 右侧日期排版 -->
+      <div class="relative z-10 text-right">
+        <div class="flex items-baseline justify-end leading-none text-slate-700">
+          <span class="text-4xl font-bold tracking-tighter mr-1">{{ dateDay }}</span>
+          <span class="text-3xl font-light text-slate-300 mr-1 italic">/</span>
+          <span class="text-2xl font-semibold text-slate-500">{{ dateMonth }}</span>
+        </div>
+        <div class="text-sm font-medium text-slate-400 mt-1 uppercase tracking-widest">
+          {{ currentWeekDayCN }}
+        </div>
+      </div>
     </div>
 
     <!-- 统计卡片区域 -->
@@ -28,8 +50,8 @@
         </div>
         <div class="bg-slate-50 px-5 py-3 border-t border-slate-100 flex items-center justify-between">
           <span class="text-xs text-slate-500">环比增长</span>
-          <span v-if="stats.growthRate" class="text-xs font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full flex items-center">
-            <i class="ri-arrow-up-line mr-1"></i> {{ stats.growthRate }}%
+          <span v-if="stats.growthRate" class="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+            +{{ stats.growthRate }}%
           </span>
           <span v-else class="text-xs text-slate-400">--</span>
         </div>
@@ -75,37 +97,22 @@
         </div>
       </div>
 
-      <!-- 卡片 4: 本月型号 TOP3 -->
+      <!-- 卡片 4: 在售型号 -->
       <div class="stat-card bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col">
-        <div class="p-5 flex-1 flex items-center">
-          <!-- 左侧：垂直堆叠 -->
-          <div class="flex flex-col items-center justify-center pr-4 border-r border-slate-100 min-w-[90px]">
-            <div class="w-12 h-12 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2 shadow-sm">
-              <i class="ri-bar-chart-grouped-line text-2xl"></i>
+        <div class="p-5 flex-1">
+          <div class="flex items-center mb-4">
+            <div class="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center mr-3">
+              <i class="ri-layout-grid-line text-xl"></i>
             </div>
-            <h3 class="text-slate-600 font-bold text-s text-center leading-tight">本月型号<br>TOP3</h3>
+            <h3 class="text-slate-600 font-medium">在售型号</h3>
           </div>
-          <!-- 右侧：榜单列表 -->
-          <div class="flex-1 pl-4 space-y-3">
-            <template v-if="topModels.length > 0">
-              <div v-for="(item, index) in topModels" :key="index" class="flex items-center justify-between">
-                <div class="flex items-center min-w-0">
-                  <span :class="[
-                    'w-4 h-4 rounded-sm flex-shrink-0 text-[10px] font-bold flex items-center justify-center mr-2',
-                    index === 0 ? 'bg-yellow-400 text-white' : 
-                    index === 1 ? 'bg-slate-200 text-slate-600' : 
-                    'bg-orange-200 text-orange-700'
-                  ]">{{ index + 1 }}</span>
-                  <span class="text-xs text-slate-700 font-medium truncate">{{ item.modelName }}</span>
-                </div>
-                <span class="text-xs font-semibold text-slate-400 ml-1">{{ item.count }}</span>
-              </div>
-            </template>
-            <div v-else class="text-xs text-slate-400 text-center py-4">暂无数据</div>
+          <div class="flex items-baseline space-x-2">
+            <span class="text-3xl font-bold text-slate-800">{{ stats.activeModels || 45 }}</span>
+            <span class="text-sm font-medium text-slate-400">款</span>
           </div>
         </div>
         <div class="bg-slate-50 px-5 py-3 border-t border-slate-100 flex items-center justify-between">
-          <span class="text-xs text-slate-500">统计周期: 自然月</span>
+          <span class="text-xs text-slate-500">包含折叠/杯型/平面</span>
         </div>
       </div>
     </div>
@@ -168,6 +175,115 @@
         </div>
       </div>
     </div>
+
+    <!-- 图表区域 -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+      <!-- 左侧图表：报价单对比 (双折线图) -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-lg font-semibold text-slate-800 flex items-center">
+            <i class="ri-line-chart-line mr-2 text-blue-500"></i>
+            报价单对比 (环比)
+          </h2>
+          <!-- 图例 -->
+          <div class="flex items-center space-x-4 text-xs text-slate-500">
+            <div class="flex items-center">
+              <span class="w-8 h-0.5 bg-slate-300 border-t border-dashed border-slate-400 mr-1"></span> 上月
+            </div>
+            <div class="flex items-center">
+              <span class="w-8 h-0.5 bg-blue-500 mr-1"></span> 本月
+            </div>
+          </div>
+        </div>
+        
+        <!-- SVG 折线图 -->
+        <div class="h-48 w-full relative">
+          <svg viewBox="0 0 300 120" class="w-full h-full overflow-visible">
+            <!-- 网格线 -->
+            <line x1="0" y1="0" x2="300" y2="0" stroke="#f1f5f9" stroke-width="1" />
+            <line x1="0" y1="40" x2="300" y2="40" stroke="#f1f5f9" stroke-width="1" />
+            <line x1="0" y1="80" x2="300" y2="80" stroke="#f1f5f9" stroke-width="1" />
+            <line x1="0" y1="120" x2="300" y2="120" stroke="#e2e8f0" stroke-width="1" />
+            
+            <!-- 上月 (灰色虚线) -->
+            <polyline points="20,80 106,65 192,75 280,50" 
+                      fill="none" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4" />
+            <circle cx="20" cy="80" r="3" fill="#cbd5e1" />
+            <circle cx="106" cy="65" r="3" fill="#cbd5e1" />
+            <circle cx="192" cy="75" r="3" fill="#cbd5e1" />
+            <circle cx="280" cy="50" r="3" fill="#cbd5e1" />
+
+            <!-- 本月 (蓝色实线) -->
+            <path d="M20,100 L106,50 L192,40 L280,10" 
+                  fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="line-draw"/>
+            <!-- 本月数据点 -->
+            <circle cx="20" cy="100" r="4" fill="#ffffff" stroke="#3b82f6" stroke-width="2" />
+            <circle cx="106" cy="50" r="4" fill="#ffffff" stroke="#3b82f6" stroke-width="2" />
+            <circle cx="192" cy="40" r="4" fill="#ffffff" stroke="#3b82f6" stroke-width="2" />
+            <circle cx="280" cy="10" r="4" fill="#ffffff" stroke="#3b82f6" stroke-width="2" />
+          </svg>
+          <!-- X轴标签 -->
+          <div class="flex justify-between text-xs text-slate-400 mt-2 px-4">
+            <span>Week 1</span><span>Week 2</span><span>Week 3</span><span>Week 4</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧图表：型号分布 (柱状图) -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-lg font-semibold text-slate-800 flex items-center">
+            <i class="ri-bar-chart-line mr-2 text-indigo-500"></i>
+            本月型号分布
+          </h2>
+          <span class="text-xs text-slate-400">Top 5</span>
+        </div>
+        
+        <!-- CSS 柱状图 -->
+        <div class="h-48 w-full flex items-end justify-between space-x-6 pt-6 px-2">
+          <!-- Bar 1 (Blue) -->
+          <div class="flex flex-col items-center flex-1 group relative">
+            <span class="text-xs font-bold text-slate-600 mb-1 transition-transform group-hover:-translate-y-1">158</span>
+            <div class="w-full bg-slate-50 rounded-t-md relative h-32 overflow-hidden">
+              <div class="absolute bottom-0 w-full bg-blue-500 rounded-t-md bar-grow" style="height: 85%"></div>
+            </div>
+            <span class="text-xs text-slate-500 mt-2 font-medium">KN95</span>
+          </div>
+          <!-- Bar 2 (Emerald) -->
+          <div class="flex flex-col items-center flex-1 group relative">
+            <span class="text-xs font-bold text-slate-600 mb-1 transition-transform group-hover:-translate-y-1">120</span>
+            <div class="w-full bg-slate-50 rounded-t-md relative h-32 overflow-hidden">
+              <div class="absolute bottom-0 w-full bg-emerald-500 rounded-t-md bar-grow" style="height: 65%; animation-delay: 0.1s"></div>
+            </div>
+            <span class="text-xs text-slate-500 mt-2 font-medium">N95</span>
+          </div>
+          <!-- Bar 3 (Amber) -->
+          <div class="flex flex-col items-center flex-1 group relative">
+            <span class="text-xs font-bold text-slate-600 mb-1 transition-transform group-hover:-translate-y-1">96</span>
+            <div class="w-full bg-slate-50 rounded-t-md relative h-32 overflow-hidden">
+              <div class="absolute bottom-0 w-full bg-amber-500 rounded-t-md bar-grow" style="height: 50%; animation-delay: 0.2s"></div>
+            </div>
+            <span class="text-xs text-slate-500 mt-2 font-medium">FFP2</span>
+          </div>
+          <!-- Bar 4 (Rose) -->
+          <div class="flex flex-col items-center flex-1 group relative">
+            <span class="text-xs font-bold text-slate-600 mb-1 transition-transform group-hover:-translate-y-1">64</span>
+            <div class="w-full bg-slate-50 rounded-t-md relative h-32 overflow-hidden">
+              <div class="absolute bottom-0 w-full bg-rose-500 rounded-t-md bar-grow" style="height: 35%; animation-delay: 0.3s"></div>
+            </div>
+            <span class="text-xs text-slate-500 mt-2 font-medium">FFP3</span>
+          </div>
+          <!-- Bar 5 (Purple) -->
+          <div class="flex flex-col items-center flex-1 group relative">
+            <span class="text-xs font-bold text-slate-600 mb-1 transition-transform group-hover:-translate-y-1">42</span>
+            <div class="w-full bg-slate-50 rounded-t-md relative h-32 overflow-hidden">
+              <div class="absolute bottom-0 w-full bg-purple-500 rounded-t-md bar-grow" style="height: 25%; animation-delay: 0.4s"></div>
+            </div>
+            <span class="text-xs text-slate-500 mt-2 font-medium">Flat</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -208,6 +324,12 @@ const totalRegulations = computed(() => {
 const regulationNames = computed(() => {
   return regulations.value.map(r => r.name).slice(0, 3).join('/') || '--'
 })
+
+// 日期相关
+const daysCN = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+const dateDay = computed(() => String(new Date().getDate()).padStart(2, '0'))
+const dateMonth = computed(() => String(new Date().getMonth() + 1).padStart(2, '0'))
+const currentWeekDayCN = computed(() => daysCN[new Date().getDay()])
 
 // 系统状态
 const systemStatus = ref({
@@ -262,5 +384,25 @@ onMounted(() => {
 .stat-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* 柱状图增长动画 */
+.bar-grow {
+  animation: growUp 0.8s ease-out forwards;
+  transform-origin: bottom;
+  transform: scaleY(0);
+}
+@keyframes growUp {
+  to { transform: scaleY(1); }
+}
+
+/* 折线图动画 */
+.line-draw {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: dash 1.5s ease-out forwards;
+}
+@keyframes dash {
+  to { stroke-dashoffset: 0; }
 }
 </style>

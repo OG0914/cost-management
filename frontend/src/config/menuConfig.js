@@ -10,6 +10,10 @@ export const menuConfig = [
     icon: 'ri-dashboard-3-line',
     route: '/dashboard'
   },
+
+  // 分割线：成本数据
+  { type: 'divider', label: '成本数据' },
+
   {
     id: 'cost',
     label: '成本管理',
@@ -22,6 +26,10 @@ export const menuConfig = [
       { id: 'cost_records', label: '成本记录', route: '/cost/records' }
     ]
   },
+
+  // 分割线：基础数据
+  { type: 'divider', label: '基础数据' },
+
   {
     id: 'regulation',
     label: '法规管理',
@@ -54,6 +62,10 @@ export const menuConfig = [
     icon: 'ri-settings-4-line',
     route: '/processes'
   },
+
+  // 分割线：系统管理
+  { type: 'divider', label: '系统管理' },
+
   {
     id: 'config',
     label: '系统配置',
@@ -79,6 +91,11 @@ export function filterMenuByRole(menuItems, userRole) {
   if (!userRole) return []
 
   return menuItems.filter(item => {
+    // 分割线始终显示
+    if (item.type === 'divider') {
+      return true
+    }
+
     // 采购和生产人员不能看到成本管理
     if ((userRole === 'purchaser' || userRole === 'producer') && item.id === 'cost') {
       return false
