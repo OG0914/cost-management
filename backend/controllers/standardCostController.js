@@ -94,6 +94,11 @@ const createStandardCost = async (req, res, next) => {
       return res.status(404).json(error('报价单不存在', 404));
     }
     
+    // 只有已审核通过的报价单才能设为标准成本
+    if (quotation.status !== 'approved') {
+      return res.status(400).json(error('只有已审核通过的报价单才能设为标准成本', 400));
+    }
+    
     if (!quotation.packaging_config_id) {
       return res.status(400).json(error('该报价单没有关联包装配置，无法设为标准成本', 400));
     }

@@ -102,6 +102,19 @@ const routes = [
         name: 'CostCompare',
         component: () => import('../views/cost/CostCompare.vue'),
         meta: { forbidPurchaserProducer: true }
+      },
+      // 审核管理路由 - admin/reviewer/salesperson 可访问
+      {
+        path: 'review/pending',
+        name: 'PendingReview',
+        component: () => import('../views/review/PendingReview.vue'),
+        meta: { requiresReviewAccess: true }
+      },
+      {
+        path: 'review/approved',
+        name: 'ApprovedReview',
+        component: () => import('../views/review/ApprovedReview.vue'),
+        meta: { requiresReviewAccess: true }
       }
     ]
   }
@@ -120,6 +133,8 @@ router.beforeEach(async (to, from, next) => {
   // 检查路由或其父路由是否需要认证
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin)
+  const requiresReviewer = to.matched.some(record => record.meta.requiresReviewer)
+  const requiresReviewAccess = to.matched.some(record => record.meta.requiresReviewAccess)
   const forbidPurchaserProducer = to.matched.some(record => record.meta.forbidPurchaserProducer)
   
   // 需要认证的页面
@@ -150,6 +165,18 @@ router.beforeEach(async (to, from, next) => {
           return
         }
         
+        // 检查审核人员权限（仅admin和reviewer可访问）
+        if (requiresReviewer && role !== 'admin' && role !== 'reviewer') {
+          next('/dashboard')
+          return
+        }
+        
+        // 检查审核管理访问权限（admin/reviewer/salesperson可访问）
+        if (requiresReviewAccess && role !== 'admin' && role !== 'reviewer' && role !== 'salesperson') {
+          next('/dashboard')
+          return
+        }
+        
         // 检查采购/生产人员限制
         if (forbidPurchaserProducer && (role === 'purchaser' || role === 'producer')) {
           next('/dashboard')
@@ -167,6 +194,18 @@ router.beforeEach(async (to, from, next) => {
       const role = authStore.user?.role
       
       if (requiresAdmin && role !== 'admin') {
+        next('/dashboard')
+        return
+      }
+      
+      // 检查审核人员权限
+      if (requiresReviewer && role !== 'admin' && role !== 'reviewer') {
+        next('/dashboard')
+        return
+      }
+      
+      // 检查审核管理访问权限（admin/reviewer/salesperson可访问）
+      if (requiresReviewAccess && role !== 'admin' && role !== 'reviewer' && role !== 'salesperson') {
         next('/dashboard')
         return
       }

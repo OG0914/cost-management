@@ -19,6 +19,10 @@ class StandardCost {
       SELECT 
         sc.*,
         pc.config_name as packaging_config_name,
+        pc.packaging_type,
+        pc.layer1_qty,
+        pc.layer2_qty,
+        pc.layer3_qty,
         pc.pc_per_bag,
         pc.bags_per_box,
         pc.boxes_per_carton,

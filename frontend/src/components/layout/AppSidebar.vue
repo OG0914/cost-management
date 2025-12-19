@@ -65,7 +65,7 @@
             @click="collapsed ? handleMenuClick(item.children[0]) : toggleSubmenu(item.id)"
             :title="collapsed ? item.label : ''"
             :class="[
-              'flex items-center rounded-lg cursor-pointer transition-colors group mb-1',
+              'flex items-center rounded-lg cursor-pointer transition-colors group mb-1 relative',
               collapsed ? 'px-2 py-2.5 justify-center' : 'px-3 py-2.5 justify-between',
               isSubmenuActive(item) ? 'bg-white text-slate-800' : 'text-slate-800 hover:bg-slate-50 hover:text-slate-900'
             ]"
@@ -73,11 +73,27 @@
             <div class="flex items-center" :class="collapsed ? 'justify-center' : ''">
               <i :class="[item.icon, 'text-xl text-slate-400 group-hover:text-slate-600', collapsed ? '' : 'mr-3']"></i>
               <span v-if="!collapsed" class="text-sm font-medium">{{ item.label }}</span>
+              <!-- 审核管理菜单的红色气泡（折叠时显示在图标旁） -->
+              <span 
+                v-if="item.id === 'review' && pendingCount > 0 && collapsed"
+                class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-medium w-4 h-4 rounded-full flex items-center justify-center"
+              >
+                {{ pendingCount > 9 ? '!' : pendingCount }}
+              </span>
             </div>
-            <i v-if="!collapsed" :class="[
-              'ri-arrow-down-s-line transition-transform duration-200 text-slate-400',
-              expandedMenus.includes(item.id) ? 'rotate-180' : ''
-            ]"></i>
+            <div v-if="!collapsed" class="flex items-center">
+              <!-- 审核管理菜单的红色气泡（展开时显示在箭头旁） -->
+              <span 
+                v-if="item.id === 'review' && pendingCount > 0 && !expandedMenus.includes(item.id)"
+                class="bg-red-500 text-white text-xs font-medium px-1.5 py-0.5 rounded-full min-w-[18px] text-center mr-2"
+              >
+                {{ pendingCount > 99 ? '99+' : pendingCount }}
+              </span>
+              <i :class="[
+                'ri-arrow-down-s-line transition-transform duration-200 text-slate-400',
+                expandedMenus.includes(item.id) ? 'rotate-180' : ''
+              ]"></i>
+            </div>
           </div>
           
           <!-- 子菜单项 -->
@@ -88,13 +104,20 @@
                 :key="sub.id"
                 @click="handleMenuClick(sub)"
                 :class="[
-                  'text-sm py-2 px-3 rounded-md cursor-pointer transition-colors block',
+                  'text-sm py-2 px-3 rounded-md cursor-pointer transition-colors block relative',
                   isActive(sub.id) 
                     ? 'text-primary-600 bg-primary-50 font-medium' 
                     : 'text-slate-800 hover:text-slate-900 hover:bg-slate-50'
                 ]"
               >
                 {{ sub.label }}
+                <!-- 待审核数量红色气泡 -->
+                <span 
+                  v-if="sub.id === 'review_pending' && pendingCount > 0"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 bg-red-500 text-white text-xs font-medium px-1.5 py-0.5 rounded-full min-w-[18px] text-center"
+                >
+                  {{ pendingCount > 99 ? '99+' : pendingCount }}
+                </span>
               </div>
             </div>
           </Transition>
@@ -123,21 +146,47 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../../store/auth'
+import { useReviewStore } from '../../store/review'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { menuConfig, filterMenuByRole, findMenuItem as findMenuItemUtil, getRoleName } from '../../config/menuConfig'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const reviewStore = useReviewStore()
 
 // 侧边栏折叠状态
 const collapsed = ref(false)
 
 // 展开的菜单
 const expandedMenus = ref(['cost'])
+
+// 待审核数量
+const pendingCount = computed(() => reviewStore.pendingPagination.total)
+
+// 加载待审核数量
+const loadPendingCount = async () => {
+  const role = authStore.userRole
+  // 只有管理员、审核人员和业务员需要显示待审核数量
+  if (role === 'admin' || role === 'reviewer' || role === 'salesperson') {
+    await reviewStore.fetchPendingCount()
+  }
+}
+
+// 组件挂载时加载待审核数量
+onMounted(() => {
+  loadPendingCount()
+})
+
+// 监听路由变化，刷新待审核数量
+watch(() => route.path, () => {
+  if (route.path.includes('/review')) {
+    loadPendingCount()
+  }
+})
 
 // 用户信息
 const userName = computed(() => authStore.realName || authStore.username || '未知用户')

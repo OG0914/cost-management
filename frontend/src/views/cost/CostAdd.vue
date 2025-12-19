@@ -1980,15 +1980,15 @@ const loadStandardCostData = async (id) => {
         quantityUnit.value = 'pcs'
       }
       
-      // 填充明细数据
+      // 填充明细数据（确保数值类型正确）
       if (items && items.material) {
         form.materials = items.material.items.map(item => ({
           category: 'material',
           material_id: item.material_id || null,
           item_name: item.item_name,
-          usage_amount: item.usage_amount,
-          unit_price: item.unit_price,
-          subtotal: item.subtotal,
+          usage_amount: parseFloat(item.usage_amount) || 0,
+          unit_price: parseFloat(item.unit_price) || 0,
+          subtotal: parseFloat(item.subtotal) || 0,
           is_changed: 0,
           from_standard: true,
           after_overhead: item.after_overhead || false,
@@ -2000,9 +2000,9 @@ const loadStandardCostData = async (id) => {
         form.processes = items.process.items.map(item => ({
           category: 'process',
           item_name: item.item_name,
-          usage_amount: item.usage_amount,
-          unit_price: item.unit_price,
-          subtotal: item.subtotal,
+          usage_amount: parseFloat(item.usage_amount) || 0,
+          unit_price: parseFloat(item.unit_price) || 0,
+          subtotal: parseFloat(item.subtotal) || 0,
           is_changed: 0,
           from_standard: true
         }))
@@ -2013,10 +2013,10 @@ const loadStandardCostData = async (id) => {
           category: 'packaging',
           material_id: item.material_id || null,
           item_name: item.item_name,
-          usage_amount: item.usage_amount,
-          unit_price: item.unit_price,
-          carton_volume: item.carton_volume || null,
-          subtotal: item.subtotal,
+          usage_amount: parseFloat(item.usage_amount) || 0,
+          unit_price: parseFloat(item.unit_price) || 0,
+          carton_volume: item.carton_volume ? parseFloat(item.carton_volume) : null,
+          subtotal: parseFloat(item.subtotal) || 0,
           is_changed: 0,
           from_standard: true
         }))

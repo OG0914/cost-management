@@ -89,7 +89,7 @@
             <div v-if="row.packaging_config_name">
               <div>{{ row.packaging_config_name }}</div>
               <div style="color: #909399; font-size: 12px;">
-                {{ row.pc_per_bag }}片/袋, {{ row.bags_per_box }}袋/盒, {{ row.boxes_per_carton }}盒/箱
+                {{ formatPackagingSpec(row) }}
               </div>
             </div>
             <span v-else>-</span>
@@ -160,6 +160,21 @@ const categoryModalVisible = ref(false)
 
 // 用户权限
 const user = getUser()
+
+// 格式化包装规格显示（根据二层或三层）
+const formatPackagingSpec = (row) => {
+  if (!row.packaging_type) return ''
+  // 二层包装类型：no_box, blister_direct
+  if (row.packaging_type === 'no_box') {
+    return `${row.layer1_qty}pc/袋, ${row.layer2_qty}袋/箱`
+  } else if (row.packaging_type === 'blister_direct') {
+    return `${row.layer1_qty}pc/泡壳, ${row.layer2_qty}泡壳/箱`
+  } else if (row.packaging_type === 'blister_bag') {
+    return `${row.layer1_qty}pc/袋, ${row.layer2_qty}袋/泡壳, ${row.layer3_qty}泡壳/箱`
+  }
+  // 默认三层：standard_box
+  return `${row.layer1_qty}片/袋, ${row.layer2_qty}袋/盒, ${row.layer3_qty}盒/箱`
+}
 
 // 搜索表单
 const searchForm = reactive({

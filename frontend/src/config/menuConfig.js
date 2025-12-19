@@ -26,6 +26,17 @@ export const menuConfig = [
       { id: 'cost_records', label: '成本记录', route: '/cost/records' }
     ]
   },
+  {
+    id: 'review',
+    label: '审核管理',
+    icon: 'ri-checkbox-circle-line',
+    // 管理员、审核人员和业务员可见（业务员只能看自己的）
+    roles: ['admin', 'reviewer', 'salesperson'],
+    children: [
+      { id: 'review_pending', label: '待审核记录', route: '/review/pending' },
+      { id: 'review_approved', label: '已审核记录', route: '/review/approved' }
+    ]
+  },
 
   // 分割线：基础数据
   { type: 'divider', label: '基础数据' },

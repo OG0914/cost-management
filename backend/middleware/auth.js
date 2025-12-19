@@ -61,7 +61,23 @@ const optionalAuth = (req, res, next) => {
   }
 };
 
+// 角色权限验证
+const requireRole = (allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json(error('未认证', 401));
+    }
+    
+    if (!allowedRoles.includes(req.user.role)) {
+      return res.status(403).json(error('无权限执行此操作', 403));
+    }
+    
+    next();
+  };
+};
+
 module.exports = {
   verifyToken,
-  optionalAuth
+  optionalAuth,
+  requireRole
 };
