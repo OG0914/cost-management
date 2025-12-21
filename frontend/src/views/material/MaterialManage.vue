@@ -53,7 +53,7 @@
       </div>
 
       <!-- 数据表格 -->
-      <el-table :data="filteredMaterials" border stripe @selection-change="handleSelectionChange">
+      <el-table :data="paginatedMaterials" border stripe @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="item_no" label="品号" width="140" />
         <el-table-column prop="name" label="原料名称" width="300" />
@@ -77,6 +77,21 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 分页 -->
+      <div class="pagination-wrapper">
+        <div class="pagination-total">共 {{ filteredMaterials.length }} 条记录</div>
+        <div class="pagination-right">
+          <span class="pagination-info">{{ currentPage }} / {{ totalPages }} 页</span>
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="filteredMaterials.length"
+            layout="sizes, prev, pager, next, jumper"
+          />
+        </div>
+      </div>
     </el-card>
 
     <!-- 新增/编辑对话框 -->
@@ -139,6 +154,22 @@ const dialogTitle = ref('新增原料')
 const isEdit = ref(false)
 const loading = ref(false)
 const searchKeyword = ref('')
+
+// 分页状态
+const currentPage = ref(1)
+const pageSize = ref(10)
+
+// 总页数
+const totalPages = computed(() => {
+  return Math.ceil(filteredMaterials.value.length / pageSize.value) || 1
+})
+
+// 分页后的数据
+const paginatedMaterials = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredMaterials.value.slice(start, end)
+})
 
 const form = reactive({
   id: null,
@@ -404,5 +435,31 @@ onMounted(() => {
   margin-bottom: 16px;
   display: flex;
   align-items: center;
+}
+
+/* 分页样式 */
+.pagination-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #ebeef5;
+}
+
+.pagination-total {
+  font-size: 14px;
+  color: #606266;
+}
+
+.pagination-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: #606266;
 }
 </style>

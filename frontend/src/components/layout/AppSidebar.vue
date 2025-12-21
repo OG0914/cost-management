@@ -247,10 +247,9 @@ const handleMenuClick = (item) => {
 // 退出登录
 const handleLogout = async () => {
   try {
-    await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+    await ElMessageBox.confirm('确定要退出当前账号吗？', '退出登录', {
       confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+      cancelButtonText: '取消'
     })
     authStore.logout()
     ElMessage.success('已退出登录')

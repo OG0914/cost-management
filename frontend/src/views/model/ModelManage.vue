@@ -53,7 +53,7 @@
       </div>
 
       <!-- 数据表格 -->
-      <el-table :data="filteredModels" border stripe @selection-change="handleSelectionChange">
+      <el-table :data="paginatedModels" border stripe @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="regulation_name" label="法规类别" width="150" sortable />
         <el-table-column prop="model_name" label="型号名称" sortable />
@@ -77,6 +77,21 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 分页 -->
+      <div class="pagination-wrapper">
+        <div class="pagination-total">共 {{ filteredModels.length }} 条记录</div>
+        <div class="pagination-right">
+          <span class="pagination-info">{{ currentPage }} / {{ totalPages }} 页</span>
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="filteredModels.length"
+            layout="sizes, prev, pager, next, jumper"
+          />
+        </div>
+      </div>
     </el-card>
 
     <!-- 新增/编辑对话框 -->
@@ -129,7 +144,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, ArrowLeft, Search, Upload, Download, Delete } from '@element-plus/icons-vue'
@@ -139,9 +154,6 @@ import { formatDateTime } from '@/utils/format'
 
 const router = useRouter()
 const authStore = useAuthStore()
-
-
-
 const models = ref([])
 const filteredModels = ref([])
 const selectedModels = ref([])
@@ -151,6 +163,22 @@ const dialogTitle = ref('新增型号')
 const isEdit = ref(false)
 const loading = ref(false)
 const searchKeyword = ref('')
+
+// 分页状态
+const currentPage = ref(1)
+const pageSize = ref(10)
+
+// 总页数
+const totalPages = computed(() => {
+  return Math.ceil(filteredModels.value.length / pageSize.value) || 1
+})
+
+// 分页后的数据
+const paginatedModels = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredModels.value.slice(start, end)
+})
 
 const form = reactive({
   id: null,
@@ -433,5 +461,31 @@ onMounted(() => {
   margin-bottom: 16px;
   display: flex;
   align-items: center;
+}
+
+/* 分页样式 */
+.pagination-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #ebeef5;
+}
+
+.pagination-total {
+  font-size: 14px;
+  color: #606266;
+}
+
+.pagination-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: #606266;
 }
 </style>

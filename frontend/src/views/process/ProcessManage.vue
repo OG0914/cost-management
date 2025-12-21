@@ -74,7 +74,7 @@
 
       <!-- 包装配置列表 -->
       <el-table 
-        :data="packagingConfigs" 
+        :data="paginatedConfigs" 
         border 
         stripe 
         v-loading="loading"
@@ -130,6 +130,21 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 分页 -->
+      <div class="pagination-wrapper">
+        <div class="pagination-total">共 {{ packagingConfigs.length }} 条记录</div>
+        <div class="pagination-right">
+          <span class="pagination-info">{{ currentPage }} / {{ totalPages }} 页</span>
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="packagingConfigs.length"
+            layout="sizes, prev, pager, next, jumper"
+          />
+        </div>
+      </div>
     </el-card>
 
     <!-- 创建/编辑包装配置对话框 -->
@@ -326,6 +341,22 @@ const selectedConfigs = ref([])
 const selectedModelId = ref(null)
 const selectedPackagingType = ref(null)
 const loading = ref(false)
+
+// 分页状态
+const currentPage = ref(1)
+const pageSize = ref(10)
+
+// 总页数
+const totalPages = computed(() => {
+  return Math.ceil(packagingConfigs.value.length / pageSize.value) || 1
+})
+
+// 分页后的数据
+const paginatedConfigs = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return packagingConfigs.value.slice(start, end)
+})
 
 // 对话框
 const dialogVisible = ref(false)
@@ -791,6 +822,32 @@ onMounted(async () => {
   margin-bottom: 16px;
   display: flex;
   align-items: center;
+}
+
+/* 分页样式 */
+.pagination-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #ebeef5;
+}
+
+.pagination-total {
+  font-size: 14px;
+  color: #606266;
+}
+
+.pagination-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: #606266;
 }
 
 .packaging-info {

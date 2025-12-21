@@ -205,3 +205,62 @@ body {
   color: #606266;
   margin-top: 8px;
 }
+
+
+/* ========== 现代化 MessageBox 样式 ========== */
+
+/* 弹窗圆角 */
+.el-message-box {
+  border-radius: 12px;
+  padding-bottom: 10px;
+}
+
+/* 隐藏顶部关闭按钮 */
+.el-message-box__headerbtn {
+  display: none;
+}
+
+/* 标题区域 */
+.el-message-box__header {
+  padding: 20px 20px 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.el-message-box__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* 内容区域 */
+.el-message-box__content {
+  padding: 16px 20px 20px 20px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* 隐藏默认图标 */
+.el-message-box__status {
+  display: none;
+}
+
+/* 内容文字不需要左边距 */
+.el-message-box__message {
+  padding-left: 0;
+}
+
+/* 按钮区域 */
+.el-message-box__btns {
+  padding: 0 20px 10px 20px;
+}
+
+/* 按钮圆角 */
+.el-message-box__btns .el-button {
+  border-radius: 8px;
+  padding: 8px 20px;
+}
+
+/* 按钮间距 */
+.el-message-box__btns .el-button + .el-button {
+  margin-left: 12px;
+}
