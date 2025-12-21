@@ -70,10 +70,72 @@
             :value="type.value"
           />
         </el-select>
+
+        <!-- 视图切换按钮 -->
+        <el-button-group class="view-toggle">
+          <el-button
+            :type="viewMode === 'card' ? 'primary' : 'default'"
+            :icon="Grid"
+            @click="viewMode = 'card'"
+          />
+          <el-button
+            :type="viewMode === 'list' ? 'primary' : 'default'"
+            :icon="List"
+            @click="viewMode = 'list'"
+          />
+        </el-button-group>
+      </div>
+
+      <!-- 卡片视图 -->
+      <div v-if="viewMode === 'card'" class="config-cards" v-loading="loading">
+        <div v-if="paginatedConfigs.length === 0" class="empty-tip">
+          暂无匹配数据
+        </div>
+        <div
+          v-for="config in paginatedConfigs"
+          :key="config.id"
+          class="config-card"
+        >
+          <!-- 卡片头部 -->
+          <div class="card-header-section">
+            <div class="header-info">
+              <div class="model-name">{{ config.model_name }}</div>
+              <div class="config-name">{{ config.config_name }}</div>
+            </div>
+            <div class="category-badge">
+              {{ config.model_category || '未分类' }}
+            </div>
+          </div>
+          
+          <!-- 卡片内容 -->
+          <div class="card-body">
+            <el-tag :type="getPackagingTypeTagType(config.packaging_type)" size="small">
+              {{ config.packaging_type_name || getPackagingTypeName(config.packaging_type) }}
+            </el-tag>
+            <div class="packaging-method">
+              {{ formatPackagingMethodFromConfig(config) }}
+            </div>
+            <div class="total-qty">
+              每箱: {{ calculateTotalFromConfig(config) }} pcs
+            </div>
+            <div class="price">
+              工序总价: ¥{{ formatNumber(config.process_total_price || 0) }}
+            </div>
+          </div>
+          
+          <!-- 操作栏 -->
+          <div class="card-actions">
+            <el-button :icon="View" circle @click="viewProcesses(config)" title="查看" />
+            <el-button :icon="EditPen" circle @click="editConfig(config)" v-if="canEdit" title="编辑" />
+            <el-button :icon="CopyDocument" circle @click="copyConfig(config)" v-if="canEdit" title="复制" />
+            <el-button :icon="Delete" circle class="delete-btn" @click="deleteConfig(config)" v-if="canEdit" title="删除" />
+          </div>
+        </div>
       </div>
 
       <!-- 包装配置列表 -->
       <el-table 
+        v-if="viewMode === 'list'" 
         :data="paginatedConfigs" 
         border 
         stripe 
@@ -121,12 +183,12 @@
             {{ formatDateTime(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" type="success" @click="viewProcesses(row)">查看</el-button>
-            <el-button size="small" type="primary" @click="editConfig(row)" v-if="canEdit">编辑</el-button>
-            <el-button size="small" type="warning" @click="copyConfig(row)" v-if="canEdit">复制</el-button>
-            <el-button size="small" type="danger" @click="deleteConfig(row)" v-if="canEdit">删除</el-button>
+            <el-button :icon="View" circle size="small" @click="viewProcesses(row)" title="查看" />
+            <el-button :icon="EditPen" circle size="small" @click="editConfig(row)" v-if="canEdit" title="编辑" />
+            <el-button :icon="CopyDocument" circle size="small" @click="copyConfig(row)" v-if="canEdit" title="复制" />
+            <el-button :icon="Delete" circle size="small" class="delete-btn" @click="deleteConfig(row)" v-if="canEdit" title="删除" />
           </template>
         </el-table-column>
       </el-table>
@@ -152,6 +214,7 @@
       v-model="dialogVisible"
       :title="isEdit ? '编辑包装配置' : '新增工序配置'"
       width="700px"
+      append-to-body
     >
       <el-form :model="form" ref="formRef" label-width="140px">
         <el-form-item label="型号" required>
@@ -305,10 +368,10 @@
 
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, ArrowLeft, Download, Delete, Upload } from '@element-plus/icons-vue'
+import { Plus, ArrowLeft, Download, Delete, Upload, Grid, List, View, EditPen, CopyDocument } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { useConfigStore } from '../../store/config'
@@ -341,6 +404,16 @@ const selectedConfigs = ref([])
 const selectedModelId = ref(null)
 const selectedPackagingType = ref(null)
 const loading = ref(false)
+
+// 视图切换状态: 'card' | 'list'
+const viewMode = ref('card')
+
+// 切换视图时清空选择
+watch(viewMode, (newMode) => {
+  if (newMode === 'card') {
+    selectedConfigs.value = []
+  }
+})
 
 // 分页状态
 const currentPage = ref(1)
@@ -416,6 +489,19 @@ const getPackagingTypeTagType = (type) => {
     blister_bag: 'info'
   }
   return typeMap[type] || ''
+}
+
+// 产品类别颜色映射
+const CATEGORY_COLORS = {
+  '半面罩': '#409EFF',
+  '全面罩': '#67C23A',
+  '滤盒': '#E6A23C',
+  '滤棉': '#F56C6C',
+  '配件': '#909399'
+}
+
+const getCategoryColor = (category) => {
+  return CATEGORY_COLORS[category] || '#909399'
 }
 
 // 包装类型变更时重置层级数量
@@ -822,6 +908,178 @@ onMounted(async () => {
   margin-bottom: 16px;
   display: flex;
   align-items: center;
+}
+
+.view-toggle {
+  margin-left: auto;
+}
+
+/* 卡片视图样式 */
+.config-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1199px) {
+  .config-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 991px) {
+  .config-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .config-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+.empty-tip {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #909399;
+  padding: 40px 0;
+}
+
+.config-card {
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  background: #fff;
+  transition: box-shadow 0.3s, border-color 0.3s;
+}
+
+.config-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.card-header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.model-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.config-name {
+  font-size: 14px;
+  color: #606266;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #303133;
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.2;
+  flex-shrink: 0;
+  margin-left: 12px;
+  background-color: transparent;
+  border: 1px solid #dcdfe6;
+}
+
+.config-card .card-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.packaging-method {
+  color: #303133;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.total-qty {
+  font-size: 13px;
+  color: #606266;
+}
+
+.price {
+  font-size: 14px;
+  color: #303133;
+  font-weight: 500;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #606266;
+}
+
+.status-active {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #67c23a;
+}
+
+.status-inactive {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #909399;
+}
+
+.card-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid #ebeef5;
+  background: #fafafa;
+  border-radius: 0 0 8px 8px;
+}
+
+.card-actions .el-button {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card-actions .el-button:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+/* 删除按钮样式 */
+.delete-btn {
+  color: #F56C6C;
+}
+
+.delete-btn:hover:not(:disabled) {
+  color: #f78989;
+  border-color: #f78989;
 }
 
 /* 分页样式 */
