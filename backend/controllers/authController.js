@@ -180,7 +180,7 @@ const getAllUsers = async (req, res, next) => {
 const updateUser = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { real_name, email, role, is_active } = req.body;
+    const { username, real_name, email, role, is_active } = req.body;
 
     // 检查用户是否存在
     const user = await User.findById(id);
@@ -193,13 +193,21 @@ const updateUser = async (req, res, next) => {
       return res.status(400).json(error('不能禁用管理员账号', 400));
     }
 
+    // 如果修改用户名，检查新用户名是否已存在
+    if (username && username !== user.username) {
+      const existingUser = await User.findByUsername(username);
+      if (existingUser) {
+        return res.status(400).json(error('用户代号已存在', 400));
+      }
+    }
+
     // 验证角色是否合法
     const validRoles = ['admin', 'purchaser', 'producer', 'reviewer', 'salesperson', 'readonly'];
     if (role && !validRoles.includes(role)) {
       return res.status(400).json(error('无效的角色类型', 400));
     }
 
-    await User.update(id, { real_name, email, role, is_active });
+    await User.update(id, { username, real_name, email, role, is_active });
 
     res.json(success(null, '用户信息更新成功'));
   } catch (err) {

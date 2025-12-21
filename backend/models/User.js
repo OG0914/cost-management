@@ -71,13 +71,18 @@ class User {
    * @returns {Promise<Object>} 更新结果 { rowCount }
    */
   static async update(id, userData) {
-    const { role, real_name, email, is_active } = userData;
+    const { username, role, real_name, email, is_active } = userData;
 
     // 构建动态更新语句
     const fields = [];
     const values = [];
     let paramIndex = 0;
 
+    if (username !== undefined) {
+      paramIndex++;
+      fields.push(`username = $${paramIndex}`);
+      values.push(username);
+    }
     if (role !== undefined) {
       paramIndex++;
       fields.push(`role = $${paramIndex}`);
