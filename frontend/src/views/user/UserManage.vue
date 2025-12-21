@@ -187,6 +187,24 @@
         <el-button type="primary" @click="submitForm" :loading="loading">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- 重置密码对话框 -->
+    <el-dialog v-model="resetPasswordVisible" title="重置密码" width="400px">
+      <el-form :model="resetPasswordForm" :rules="resetPasswordRules" ref="resetPasswordFormRef" label-width="80px">
+        <el-form-item label="新密码" prop="newPassword">
+          <el-input
+            v-model="resetPasswordForm.newPassword"
+            type="password"
+            placeholder="请输入新密码（至少6位）"
+            show-password
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="resetPasswordVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitResetPassword" :loading="resetPasswordLoading">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -257,6 +275,21 @@ const rules = {
   ],
   email: [
     { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+  ]
+};
+
+// 重置密码对话框
+const resetPasswordVisible = ref(false);
+const resetPasswordLoading = ref(false);
+const resetPasswordFormRef = ref(null);
+const resetPasswordUserId = ref(null);
+const resetPasswordForm = reactive({
+  newPassword: ''
+});
+const resetPasswordRules = {
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, message: '密码长度至少 6 个字符', trigger: 'blur' }
   ]
 };
 
@@ -334,30 +367,35 @@ const editUser = (row) => {
 };
 
 // 重置密码
-const resetPassword = async (row) => {
-  try {
-    const result = await ElMessageBox.prompt('请输入新密码（至少6位）', '重置密码', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      inputType: 'password',
-      inputPattern: /.{6,}/,
-      inputErrorMessage: '密码长度至少 6 个字符'
-    });
+const resetPassword = (row) => {
+  resetPasswordUserId.value = row.id;
+  resetPasswordForm.newPassword = '';
+  resetPasswordVisible.value = true;
+};
 
-    if (result.value) {
-      const response = await request.post(`/auth/users/${row.id}/reset-password`, {
-        newPassword: result.value
+// 提交重置密码
+const submitResetPassword = async () => {
+  if (!resetPasswordFormRef.value) return;
+
+  await resetPasswordFormRef.value.validate(async (valid) => {
+    if (!valid) return;
+
+    resetPasswordLoading.value = true;
+    try {
+      const response = await request.post(`/auth/users/${resetPasswordUserId.value}/reset-password`, {
+        newPassword: resetPasswordForm.newPassword
       });
 
       if (response.success) {
         ElMessage.success('密码重置成功');
+        resetPasswordVisible.value = false;
       }
-    }
-  } catch (error) {
-    if (error !== 'cancel') {
+    } catch (error) {
       // 错误已在拦截器处理
+    } finally {
+      resetPasswordLoading.value = false;
     }
-  }
+  });
 };
 
 // 删除用户
@@ -532,7 +570,7 @@ onMounted(() => {
 .user-header {
   display: flex;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .avatar {
@@ -575,7 +613,7 @@ onMounted(() => {
 .user-details {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 .email {

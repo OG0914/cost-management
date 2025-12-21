@@ -254,7 +254,7 @@
     </el-dialog>
 
     <!-- 查看工序对话框 -->
-    <el-dialog v-model="processDialogVisible" title="工序列表" width="600px">
+    <el-dialog v-model="processDialogVisible" title="工序列表" width="600px" class="view-dialog" append-to-body>
       <div class="mb-4">
         <p class="text-lg font-bold">{{ currentConfig?.model_name }} - {{ currentConfig?.config_name }}</p>
         <p class="text-gray-600">
@@ -813,5 +813,11 @@ onMounted(async () => {
   font-size: 18px;
   font-weight: bold;
   color: #409EFF;
+}
+
+/* 查看对话框样式 */
+:deep(.view-dialog .el-dialog__body) {
+  max-height: 60vh;
+  overflow-y: auto;
 }
 </style>

@@ -278,7 +278,7 @@
     </el-dialog>
 
     <!-- 查看包材对话框 -->
-    <el-dialog v-model="materialDialogVisible" title="包材列表" width="700px">
+    <el-dialog v-model="materialDialogVisible" title="包材列表" width="700px" class="view-dialog" append-to-body>
       <div class="mb-4">
         <p class="text-lg font-bold">{{ currentConfig?.model_name }} - {{ currentConfig?.config_name }}</p>
         <p class="text-gray-600">
@@ -989,5 +989,11 @@ onMounted(() => {
 .filter-bar {
   display: flex;
   align-items: center;
+}
+
+/* 查看对话框样式 */
+:deep(.view-dialog .el-dialog__body) {
+  max-height: 60vh;
+  overflow-y: auto;
 }
 </style>

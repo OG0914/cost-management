@@ -84,6 +84,13 @@ export const menuConfig = [
     route: '/config'
   },
   {
+    id: 'profile',
+    label: '个人设置',
+    icon: 'ri-user-line',
+    route: '/profile',
+    roles: ['purchaser', 'producer', 'reviewer', 'salesperson', 'readonly']
+  },
+  {
     id: 'user',
     label: '用户管理',
     icon: 'ri-user-settings-line',
@@ -143,11 +150,11 @@ export function findMenuItem(menuItems, menuId) {
  */
 export const roleNameMap = {
   admin: '管理员',
-  purchaser: '采购人员',
-  producer: '生产人员',
-  reviewer: '审核人员',
-  salesperson: '业务员',
-  readonly: '只读用户'
+  purchaser: '采购',
+  producer: '生产',
+  reviewer: '审核',
+  salesperson: '业务',
+  readonly: '只读'
 }
 
 /**

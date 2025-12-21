@@ -131,7 +131,15 @@
         'flex items-center p-2 rounded-lg hover:bg-slate-50 transition-colors',
         collapsed ? 'justify-center' : 'justify-between'
       ]">
-        <div v-if="!collapsed" class="overflow-hidden">
+        <!-- 头像（仅展开时显示） -->
+        <div 
+          v-if="!collapsed"
+          class="user-avatar flex-shrink-0 mr-3"
+          :style="{ backgroundColor: getRoleColor(authStore.userRole) }"
+        >
+          {{ getInitial(authStore.realName) }}
+        </div>
+        <div v-if="!collapsed" class="overflow-hidden flex-1">
           <p class="text-sm font-medium text-slate-700 truncate">{{ userName }}</p>
           <p class="text-xs text-slate-400 truncate">{{ roleName }}</p>
         </div>
@@ -251,9 +259,43 @@ const handleLogout = async () => {
     // 用户取消
   }
 }
+
+// 角色颜色映射
+const ROLE_COLORS = {
+  admin: '#F56C6C',
+  purchaser: '#E6A23C',
+  producer: '#67C23A',
+  reviewer: '#409EFF',
+  salesperson: '#9B59B6',
+  readonly: '#909399'
+}
+
+// 获取角色颜色
+const getRoleColor = (role) => {
+  return ROLE_COLORS[role] || '#909399'
+}
+
+// 获取姓名首字母
+const getInitial = (name) => {
+  if (!name) return '?'
+  return name.charAt(0).toUpperCase()
+}
 </script>
 
 <style scoped>
+/* 用户头像样式 */
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 /* 子菜单过渡动画 */
 .submenu-enter-active,
 .submenu-leave-active {

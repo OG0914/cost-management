@@ -115,6 +115,11 @@ const routes = [
         name: 'ApprovedReview',
         component: () => import('../views/review/ApprovedReview.vue'),
         meta: { requiresReviewAccess: true }
+      },
+      {
+        path: 'profile',
+        name: 'ProfileSettings',
+        component: () => import('../views/user/ProfileSettings.vue')
       }
     ]
   }

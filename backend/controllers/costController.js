@@ -609,8 +609,8 @@ const getQuotationList = async (req, res) => {
             pageSize: parseInt(pageSize)
         };
 
-        // 如果不是管理员或审核人，只能查看自己创建的报价单
-        if (!['admin', 'reviewer'].includes(req.user.role)) {
+        // 如果不是管理员、审核人或只读用户，只能查看自己创建的报价单
+        if (!['admin', 'reviewer', 'readonly'].includes(req.user.role)) {
             options.created_by = req.user.id;
         }
 
@@ -638,14 +638,14 @@ const getQuotationDetail = async (req, res) => {
             return res.status(404).json(error('报价单不存在', 404));
         }
 
-        // 检查权限：创建者、管理员、审核人可以查看
+        // 检查权限：创建者、管理员、审核人、只读用户可以查看
         // 如果报价单已被设为标准成本，所有用户都可以查看（用于标准成本对比）
         const StandardCost = require('../models/StandardCost');
         const isStandardCost = await StandardCost.findByQuotationId(quotation.id);
         
         if (
             quotation.created_by !== req.user.id &&
-            !['admin', 'reviewer'].includes(req.user.role) &&
+            !['admin', 'reviewer', 'readonly'].includes(req.user.role) &&
             !isStandardCost
         ) {
             return res.status(403).json(error('无权限查看此报价单', 403));

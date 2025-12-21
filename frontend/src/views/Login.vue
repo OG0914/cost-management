@@ -42,15 +42,17 @@
           <div class="space-y-5">
             <!-- 账号输入 -->
             <div>
-              <label for="username" class="block text-sm font-medium text-gray-700 mb-1">账号</label>
               <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <el-icon :size="18"><User /></el-icon>
+                </span>
                 <input 
                   id="username" 
                   v-model="loginForm.username"
                   type="text" 
                   autocomplete="username" 
                   required 
-                  class="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 sm:text-sm" 
+                  class="appearance-none block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 sm:text-sm" 
                   placeholder=""
                 >
               </div>
@@ -58,17 +60,17 @@
 
             <!-- 密码输入 -->
             <div>
-              <div class="flex items-center justify-between mb-1">
-                <label for="password" class="block text-sm font-medium text-gray-700">密码</label>
-              </div>
               <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <el-icon :size="18"><Lock /></el-icon>
+                </span>
                 <input 
                   id="password" 
                   v-model="loginForm.password"
                   type="password" 
                   autocomplete="current-password" 
                   required 
-                  class="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 sm:text-sm" 
+                  class="appearance-none block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 sm:text-sm" 
                   placeholder=""
                   @keyup.enter="handleLogin"
                 >
@@ -111,7 +113,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { TrendCharts } from '@element-plus/icons-vue'
+import { TrendCharts, User, Lock } from '@element-plus/icons-vue'
 import { useAuthStore } from '../store/auth'
 import logoImage from '../images/logo.png'
 
