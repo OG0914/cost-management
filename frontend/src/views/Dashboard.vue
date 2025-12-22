@@ -133,8 +133,9 @@
             :icon-bg-color="nav.iconBgColor"
             :icon-color="nav.iconColor"
             :label="nav.label"
+            :badge="nav.key === 'review-pending' ? pendingCount : 0"
             :show-delete="true"
-            @click="$router.push(nav.route)"
+            @click="router.push(nav.route)"
             @delete="confirmRemoveQuickNav(index, nav.label)"
           />
           <!-- 添加按钮 -->
@@ -177,22 +178,45 @@
     </div>
 
     <!-- 快捷导航选择弹窗 -->
-    <el-dialog v-model="showNavSelector" title="添加快捷方式" width="400px">
+    <el-dialog 
+      v-model="showNavSelector" 
+      width="700px" 
+      align-center
+      append-to-body
+      :show-close="false"
+      class="quick-nav-dialog"
+    >
+      <template #header>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <div class="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center mr-3">
+              <i class="ri-apps-line text-primary-600"></i>
+            </div>
+            <span class="text-lg font-semibold text-slate-800">添加快捷导航</span>
+          </div>
+          <button @click="showNavSelector = false" class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors">
+            <i class="ri-close-line text-slate-400 text-xl"></i>
+          </button>
+        </div>
+      </template>
+      <p class="text-sm text-slate-500 mb-4">选择要添加到快捷导航的功能</p>
       <div class="grid grid-cols-2 gap-3">
         <div
           v-for="option in availableNavOptions"
           :key="option.key"
           @click="addQuickNav(option)"
-          class="flex items-center p-3 border border-slate-200 rounded-lg cursor-pointer hover:border-primary-300 hover:bg-primary-50 transition-colors"
+          class="flex items-center p-4 border border-slate-200 rounded-xl cursor-pointer hover:border-primary-400 hover:bg-primary-50 hover:shadow-sm transition-all group"
         >
-          <div :class="['w-8 h-8 rounded-full flex items-center justify-center mr-3', option.iconBgColor]">
-            <i :class="[option.icon, 'text-lg', option.iconColor]"></i>
+          <div :class="['w-10 h-10 rounded-xl flex items-center justify-center mr-3 transition-transform group-hover:scale-110', option.iconBgColor]">
+            <i :class="[option.icon, 'text-xl', option.iconColor]"></i>
           </div>
-          <span class="text-sm text-slate-700">{{ option.label }}</span>
+          <span class="text-sm font-medium text-slate-700 group-hover:text-primary-700">{{ option.label }}</span>
         </div>
       </div>
       <template #footer>
-        <el-button @click="showNavSelector = false">取消</el-button>
+        <div class="flex justify-end">
+          <el-button @click="showNavSelector = false" round>取消</el-button>
+        </div>
       </template>
     </el-dialog>
 
@@ -347,12 +371,17 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { useAuthStore } from '../store/auth'
+import { useReviewStore } from '../store/review'
 import { getTimeGreeting } from '../utils/greeting'
 import request from '../utils/request'
 import QuickNavButton from '../components/dashboard/QuickNavButton.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const reviewStore = useReviewStore()
+
+// 待审核数量
+const pendingCount = ref(0)
 
 // 问候语
 const greeting = computed(() => {
@@ -494,8 +523,11 @@ const systemStatus = ref({
   version: 'Version 1.0'
 })
 
-// 快捷导航配置
-const STORAGE_KEY = 'dashboard_quick_nav'
+// 快捷导航配置 - 基于用户ID存储
+const getStorageKey = () => {
+  const userId = authStore.user?.id || 'guest'
+  return `dashboard_quick_nav_${userId}`
+}
 
 // 所有可选的导航选项
 const allNavOptions = [
@@ -524,7 +556,7 @@ const availableNavOptions = computed(() => {
 // 从 localStorage 加载快捷导航
 const loadQuickNav = () => {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY)
+    const saved = localStorage.getItem(getStorageKey())
     if (saved) {
       const keys = JSON.parse(saved)
       quickNavList.value = keys.map(key => allNavOptions.find(opt => opt.key === key)).filter(Boolean)
@@ -543,7 +575,7 @@ const loadQuickNav = () => {
 // 保存快捷导航到 localStorage
 const saveQuickNav = () => {
   const keys = quickNavList.value.map(n => n.key)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(keys))
+  localStorage.setItem(getStorageKey(), JSON.stringify(keys))
 }
 
 // 添加快捷导航
@@ -613,6 +645,9 @@ const loadDashboardData = async () => {
         lastMonth: weeklyRes.data.lastMonth || [0, 0, 0, 0]
       }
     }
+
+    // 获取待审核数量
+    pendingCount.value = await reviewStore.fetchPendingCount()
   } catch (err) {
     console.error('加载仪表盘数据失败:', err)
   }
@@ -652,5 +687,24 @@ onMounted(() => {
 }
 @keyframes dash {
   to { stroke-dashoffset: 0; }
+}
+</style>
+
+<style>
+/* 快捷导航弹窗样式 */
+.quick-nav-dialog .el-dialog {
+  border-radius: 16px;
+  overflow: hidden;
+}
+.quick-nav-dialog .el-dialog__header {
+  padding: 20px 24px 12px;
+  margin: 0;
+}
+.quick-nav-dialog .el-dialog__body {
+  padding: 0 24px 16px;
+}
+.quick-nav-dialog .el-dialog__footer {
+  padding: 12px 24px 20px;
+  border-top: 1px solid #f1f5f9;
 }
 </style>

@@ -13,13 +13,13 @@
     <span 
       v-if="showDelete && !isDashed"
       @click.stop="handleDelete"
-      class="absolute -top-2 -right-2 w-5 h-5 bg-slate-400 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-500 cursor-pointer z-10"
+      class="absolute top-1 right-1 w-5 h-5 text-slate-300 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-all hover:text-red-500 hover:bg-red-50 cursor-pointer z-10"
     >
-      <i class="ri-close-line"></i>
+      <i class="ri-close-line text-sm"></i>
     </span>
     
     <div :class="[
-      'w-10 h-10 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform',
+      'w-10 h-10 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform relative',
       isDashed ? 'bg-slate-100' : iconBgColor
     ]">
       <i :class="[
@@ -27,6 +27,13 @@
         'text-xl',
         isDashed ? 'text-slate-400 group-hover:text-slate-600' : iconColor
       ]"></i>
+      <!-- 气泡徽章 -->
+      <span 
+        v-if="badge && badge > 0"
+        class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-xs font-medium rounded-full flex items-center justify-center"
+      >
+        {{ badge > 99 ? '99+' : badge }}
+      </span>
     </div>
     <span :class="[
       'text-sm font-medium',
@@ -64,6 +71,10 @@ const props = defineProps({
   showDelete: {
     type: Boolean,
     default: false
+  },
+  badge: {
+    type: Number,
+    default: 0
   }
 })
 

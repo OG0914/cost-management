@@ -70,10 +70,10 @@
             {{ formatDateTime(row.updated_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" v-if="canEdit">
+        <el-table-column label="操作" width="90" fixed="right" v-if="canEdit">
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+            <el-button :icon="EditPen" circle size="small" @click="handleEdit(row)" title="编辑" />
+            <el-button :icon="Delete" circle size="small" class="delete-btn" @click="handleDelete(row)" title="删除" />
           </template>
         </el-table-column>
       </el-table>
@@ -99,6 +99,7 @@
       v-model="dialogVisible"
       :title="dialogTitle"
       width="500px"
+      append-to-body
     >
       <el-form :model="form" label-width="100px">
         <el-form-item label="品号" required>
@@ -136,7 +137,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Upload, Download, ArrowLeft, Delete, Search } from '@element-plus/icons-vue'
+import { Plus, Upload, Download, ArrowLeft, Delete, Search, EditPen } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { formatNumber, formatDateTime } from '../../utils/format'
@@ -461,5 +462,25 @@ onMounted(() => {
 .pagination-info {
   font-size: 14px;
   color: #606266;
+}
+
+/* 操作按钮悬停效果 */
+.el-table .el-button.is-circle {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.el-table .el-button.is-circle:hover:not(:disabled) {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 删除按钮样式 */
+.delete-btn {
+  color: #F56C6C;
+}
+
+.delete-btn:hover:not(:disabled) {
+  color: #f78989;
+  border-color: #f78989;
 }
 </style>

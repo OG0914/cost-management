@@ -33,20 +33,31 @@
                 <div class="info-line"><span class="label">法规类别:</span><span class="value">{{ quotationDetail.regulation_name || '-' }}</span></div>
                 <div class="info-line"><span class="label">产品型号:</span><span class="value">{{ quotationDetail.model_name }}</span></div>
                 <div class="info-line"><span class="label">订单数量:</span><span class="value">{{ formatQuantity(quotationDetail.quantity) }}</span></div>
-                <div class="info-line"><span class="label">包装配置:</span><span class="value">{{ formatPackaging(quotationDetail.packaging_config) }}</span></div>
+                <div class="info-line"><span class="label">包装配置:</span>
+                  <span class="value">
+                    <template v-if="quotationDetail.packaging_config_name">
+                      {{ quotationDetail.packaging_config_name }}
+                      <span style="color: #909399; font-size: 12px; margin-left: 8px;">
+                        {{ formatPackagingSpec(quotationDetail) }}
+                      </span>
+                    </template>
+                    <template v-else>-</template>
+                  </span>
+                </div>
               </div>
             </div>
             <div class="summary-card">
               <div class="card-title">💰 价格信息</div>
               <div class="card-content">
-                <div class="info-line"><span class="label">成本价格:</span><span class="value">{{ quotationDetail.base_cost?.toFixed(4) }} CNY</span></div>
-                <div class="info-line"><span class="label">管销价格:</span><span class="value">{{ quotationDetail.overhead_price?.toFixed(4) }} CNY</span></div>
+                <div class="info-line"><span class="label">成本价格:</span><span class="value">{{ Number(quotationDetail.base_cost || 0).toFixed(4) }} CNY</span></div>
+                <div class="info-line"><span class="label">管销价格:</span><span class="value">{{ Number(quotationDetail.overhead_price || 0).toFixed(4) }} CNY</span></div>
                 <div class="info-line"><span class="label">最终价格:</span><span class="value highlight">{{ formatAmount(quotationDetail.final_price, quotationDetail.currency) }}</span></div>
                 <div class="profit-section">
                   <div class="profit-title">利润报价:</div>
                   <div class="profit-list">
-                    <div v-for="item in profitPricing" :key="item.rate" class="profit-line">
-                      {{ item.rate }}%: {{ item.price.toFixed(4) }} {{ item.currency }}
+                    <div v-for="item in profitPricing" :key="item.rate" class="profit-line" :class="{ 'custom-tier': item.isCustom }">
+                      {{ item.rate }}%: {{ Number(item.price || 0).toFixed(4) }} {{ item.currency }}
+                      <span v-if="item.isCustom" class="custom-tag">自定义</span>
                     </div>
                   </div>
                 </div>
@@ -83,23 +94,23 @@
           <div class="cost-composition">
             <div class="cost-item">
               <div class="cost-label">原料成本</div>
-              <div class="cost-value">{{ costComposition.material.toFixed(4) }} CNY</div>
-              <div class="cost-percent">({{ costComposition.materialPercent.toFixed(1) }}%)</div>
+              <div class="cost-value">{{ Number(costComposition.material || 0).toFixed(4) }} CNY</div>
+              <div class="cost-percent">({{ Number(costComposition.materialPercent || 0).toFixed(1) }}%)</div>
             </div>
             <div class="cost-item">
               <div class="cost-label">工序成本</div>
-              <div class="cost-value">{{ costComposition.process.toFixed(4) }} CNY</div>
-              <div class="cost-percent">({{ costComposition.processPercent.toFixed(1) }}%)</div>
+              <div class="cost-value">{{ Number(costComposition.process || 0).toFixed(4) }} CNY</div>
+              <div class="cost-percent">({{ Number(costComposition.processPercent || 0).toFixed(1) }}%)</div>
             </div>
             <div class="cost-item">
               <div class="cost-label">包材成本</div>
-              <div class="cost-value">{{ costComposition.packaging.toFixed(4) }} CNY</div>
-              <div class="cost-percent">({{ costComposition.packagingPercent.toFixed(1) }}%)</div>
+              <div class="cost-value">{{ Number(costComposition.packaging || 0).toFixed(4) }} CNY</div>
+              <div class="cost-percent">({{ Number(costComposition.packagingPercent || 0).toFixed(1) }}%)</div>
             </div>
             <div class="cost-item">
               <div class="cost-label">运费成本</div>
-              <div class="cost-value">{{ costComposition.shipping.toFixed(4) }} CNY</div>
-              <div class="cost-percent">({{ costComposition.shippingPercent.toFixed(1) }}%)</div>
+              <div class="cost-value">{{ Number(costComposition.shipping || 0).toFixed(4) }} CNY</div>
+              <div class="cost-percent">({{ Number(costComposition.shippingPercent || 0).toFixed(1) }}%)</div>
             </div>
           </div>
         </div>
@@ -108,14 +119,14 @@
         <div class="section">
           <div class="section-title">审核历史</div>
           <div class="timeline">
-            <div v-for="(history, index) in reviewHistory" :key="history.id" class="timeline-item">
-              <div class="timeline-dot" :class="{ 'active': index === reviewHistory.length - 1 }"></div>
+            <div v-for="(history, index) in fullTimeline" :key="history.id" class="timeline-item">
+              <div class="timeline-dot" :class="{ 'active': index === fullTimeline.length - 1 }"></div>
               <div class="timeline-content">
                 <div class="timeline-action">{{ getReviewActionName(history.action) }}</div>
                 <div class="timeline-operator">{{ history.operator_name }}</div>
                 <div class="timeline-time">{{ formatDateTime(history.created_at) }}</div>
               </div>
-              <div v-if="index < reviewHistory.length - 1" class="timeline-line"></div>
+              <div v-if="index < fullTimeline.length - 1" class="timeline-line"></div>
             </div>
           </div>
         </div>
@@ -159,20 +170,26 @@ const quotationDetail = ref(null)
 const items = ref([])
 const reviewHistory = ref([])
 const reviewComment = ref('')
+const customProfitTiers = ref([])
 
-// 监听 modelValue
-watch(() => props.modelValue, (val) => {
-  if (val && props.quotationId) {
-    loadDetail()
-  }
-  // 关闭时清空数据
-  if (!val) {
-    quotationDetail.value = null
-    items.value = []
-    reviewHistory.value = []
-    reviewComment.value = ''
-  }
-}, { immediate: true })
+// 监听 modelValue 和 quotationId
+watch(
+  () => [props.modelValue, props.quotationId],
+  ([visible, id]) => {
+    if (visible && id) {
+      loadDetail()
+    }
+    // 关闭时清空数据
+    if (!visible) {
+      quotationDetail.value = null
+      items.value = []
+      reviewHistory.value = []
+      reviewComment.value = ''
+      customProfitTiers.value = []
+    }
+  },
+  { immediate: true }
+)
 
 // 处理弹窗关闭前的回调
 const handleBeforeClose = (done) => {
@@ -180,23 +197,74 @@ const handleBeforeClose = (done) => {
   done()
 }
 
-// 利润报价
+// 利润报价 - 合并系统默认和自定义利润区间
 const profitPricing = computed(() => {
   if (!quotationDetail.value) return []
-  return calculateProfitPricing(
+  
+  // 系统默认利润区间
+  const systemTiers = calculateProfitPricing(
     quotationDetail.value.base_cost,
     0.25,
     7.2,
     quotationDetail.value.sales_type
-  )
+  ).map(tier => ({ ...tier, isCustom: false }))
+  
+  // 自定义利润区间
+  const customTiers = customProfitTiers.value.map(tier => ({
+    rate: tier.profitRate * 100,
+    price: parseFloat(tier.price),
+    currency: quotationDetail.value.sales_type === 'export' ? 'USD' : 'CNY',
+    isCustom: true
+  }))
+  
+  // 合并并按利润率排序
+  const allTiers = [...systemTiers, ...customTiers]
+  allTiers.sort((a, b) => a.rate - b.rate)
+  
+  return allTiers
+})
+
+// 完整的审核历史时间线（包含创建、提交、审核操作）
+const fullTimeline = computed(() => {
+  const timeline = []
+  
+  // 添加创建时间
+  if (quotationDetail.value?.created_at) {
+    timeline.push({
+      id: 'created',
+      action: 'created',
+      operator_name: quotationDetail.value.creator_name || '-',
+      created_at: quotationDetail.value.created_at
+    })
+  }
+  
+  // 添加提交时间
+  if (quotationDetail.value?.submitted_at) {
+    timeline.push({
+      id: 'submitted',
+      action: 'submitted',
+      operator_name: quotationDetail.value.creator_name || '-',
+      created_at: quotationDetail.value.submitted_at
+    })
+  }
+  
+  // 添加审核历史记录
+  reviewHistory.value.forEach(h => {
+    timeline.push(h)
+  })
+  
+  // 按时间排序
+  timeline.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+  
+  return timeline
 })
 
 // 成本构成
 const costComposition = computed(() => {
-  const material = items.value.filter(i => i.category === 'material').reduce((sum, i) => sum + (i.subtotal || 0), 0)
-  const process = items.value.filter(i => i.category === 'process').reduce((sum, i) => sum + (i.subtotal || 0), 0)
-  const packaging = items.value.filter(i => i.category === 'packaging').reduce((sum, i) => sum + (i.subtotal || 0), 0)
-  const shipping = quotationDetail.value?.shipping_cost || 0
+  const material = items.value.filter(i => i.category === 'material').reduce((sum, i) => sum + Number(i.subtotal || 0), 0)
+  const process = items.value.filter(i => i.category === 'process').reduce((sum, i) => sum + Number(i.subtotal || 0), 0)
+  const packaging = items.value.filter(i => i.category === 'packaging').reduce((sum, i) => sum + Number(i.subtotal || 0), 0)
+  const shipping = Number(quotationDetail.value?.freight_per_unit || 0)
   const total = material + process + packaging + shipping || 1
   
   return {
@@ -223,6 +291,18 @@ const loadDetail = async () => {
       // 获取最新的审核批注
       const comments = response.data.comments || []
       reviewComment.value = comments.length > 0 ? comments[comments.length - 1].content : ''
+      
+      // 解析自定义利润区间
+      if (quotationDetail.value.custom_profit_tiers) {
+        try {
+          customProfitTiers.value = JSON.parse(quotationDetail.value.custom_profit_tiers)
+        } catch (e) {
+          console.error('解析自定义利润档位失败:', e)
+          customProfitTiers.value = []
+        }
+      } else {
+        customProfitTiers.value = []
+      }
     }
   } catch (error) {
     ElMessage.error('加载详情失败')
@@ -231,21 +311,19 @@ const loadDetail = async () => {
   }
 }
 
-// 格式化包装配置
-const formatPackaging = (config) => {
-  if (!config) return '-'
-  if (typeof config === 'string') {
-    try {
-      config = JSON.parse(config)
-    } catch {
-      return config
-    }
+// 格式化包装规格显示（根据二层或三层）
+const formatPackagingSpec = (row) => {
+  if (!row.packaging_type) return ''
+  // 二层包装类型：no_box, blister_direct
+  if (row.packaging_type === 'no_box') {
+    return `${row.layer1_qty}pc/袋, ${row.layer2_qty}袋/箱`
+  } else if (row.packaging_type === 'blister_direct') {
+    return `${row.layer1_qty}pc/泡壳, ${row.layer2_qty}泡壳/箱`
+  } else if (row.packaging_type === 'blister_bag') {
+    return `${row.layer1_qty}pc/袋, ${row.layer2_qty}袋/泡壳, ${row.layer3_qty}泡壳/箱`
   }
-  const parts = []
-  if (config.pieces_per_bag) parts.push(`${config.pieces_per_bag}片/袋`)
-  if (config.bags_per_box) parts.push(`${config.bags_per_box}袋/盒`)
-  if (config.boxes_per_carton) parts.push(`${config.boxes_per_carton}盒/箱`)
-  return parts.join(', ') || '-'
+  // 默认三层：standard_box
+  return `${row.layer1_qty}片/袋, ${row.layer2_qty}袋/盒, ${row.layer3_qty}盒/箱`
 }
 
 // 导出
@@ -367,6 +445,19 @@ const closeDialog = () => {
   font-size: 13px;
   color: #303133;
   padding-left: 12px;
+}
+
+.profit-line.custom-tier {
+  color: #E6A23C;
+}
+
+.custom-tag {
+  font-size: 10px;
+  background: #fdf6ec;
+  color: #E6A23C;
+  padding: 1px 4px;
+  border-radius: 2px;
+  margin-left: 6px;
 }
 
 .result-box {

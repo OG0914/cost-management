@@ -186,8 +186,9 @@
             <div class="profit-pricing">
               <div class="profit-title">利润报价:</div>
               <div class="profit-items">
-                <div v-for="item in profitPricing" :key="item.rate" class="profit-item">
+                <div v-for="item in profitPricing" :key="item.rate" class="profit-item" :class="{ 'custom-tier': item.isCustom }">
                   {{ item.rate }}%: {{ formatNumber(item.price) }} {{ item.currency }}
+                  <span v-if="item.isCustom" class="custom-tag">自定义</span>
                 </div>
               </div>
             </div>
@@ -263,6 +264,7 @@ const rejectDialogVisible = ref(false)
 const quotationDetail = ref(null)
 const items = ref([])
 const standardItems = ref([])
+const customProfitTiers = ref([])
 
 // 监听 modelValue 变化，打开时加载数据
 watch(() => props.modelValue, (val) => {
@@ -274,6 +276,7 @@ watch(() => props.modelValue, (val) => {
     quotationDetail.value = null
     items.value = []
     standardItems.value = []
+    customProfitTiers.value = []
     activeTab.value = 'material'
   }
 }, { immediate: true })
@@ -305,15 +308,31 @@ const packagingStandardSubtotal = computed(() => {
   return standardItems.value.filter(i => i.category === 'packaging').reduce((sum, i) => sum + (parseFloat(i.subtotal) || 0), 0)
 })
 
-// 利润报价
+// 利润报价 - 合并系统默认和自定义利润区间
 const profitPricing = computed(() => {
   if (!quotationDetail.value) return []
-  return calculateProfitPricing(
+  
+  // 系统默认利润区间
+  const systemTiers = calculateProfitPricing(
     quotationDetail.value.base_cost,
     0.25,
     7.2,
     quotationDetail.value.sales_type
-  )
+  ).map(tier => ({ ...tier, isCustom: false }))
+  
+  // 自定义利润区间
+  const customTiers = customProfitTiers.value.map(tier => ({
+    rate: tier.profitRate * 100,
+    price: parseFloat(tier.price),
+    currency: quotationDetail.value.sales_type === 'export' ? 'USD' : 'CNY',
+    isCustom: true
+  }))
+  
+  // 合并并按利润率排序
+  const allTiers = [...systemTiers, ...customTiers]
+  allTiers.sort((a, b) => a.rate - b.rate)
+  
+  return allTiers
 })
 
 // 加载详情
@@ -334,6 +353,18 @@ const loadDetail = async () => {
       items.value = response.data.items || []
       standardItems.value = response.data.standardItems || []
       console.log('加载的明细数据:', items.value)
+      
+      // 解析自定义利润区间
+      if (quotationDetail.value.custom_profit_tiers) {
+        try {
+          customProfitTiers.value = JSON.parse(quotationDetail.value.custom_profit_tiers)
+        } catch (e) {
+          console.error('解析自定义利润档位失败:', e)
+          customProfitTiers.value = []
+        }
+      } else {
+        customProfitTiers.value = []
+      }
     } else {
       ElMessage.error(response.message || '加载详情失败')
     }
@@ -541,6 +572,19 @@ const confirmReject = async (reason) => {
 
 .profit-item {
   color: #303133;
+}
+
+.profit-item.custom-tier {
+  color: #E6A23C;
+}
+
+.custom-tag {
+  font-size: 10px;
+  background: #fdf6ec;
+  color: #E6A23C;
+  padding: 1px 4px;
+  border-radius: 2px;
+  margin-left: 6px;
 }
 
 .dialog-footer {

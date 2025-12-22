@@ -132,35 +132,12 @@
             {{ formatDateTime(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
-            <el-button 
-              size="small" 
-              type="info"
-              @click="viewQuotation(row)"
-              :disabled="!row.quotation_id"
-            >
-              查看
-            </el-button>
-            <el-button size="small" type="primary" @click="copyStandardCost(row)">
-              复制
-            </el-button>
-            <el-button 
-              v-if="isAdminOrReviewer" 
-              size="small" 
-              type="warning"
-              @click="showHistory(row)"
-            >
-              历史
-            </el-button>
-            <el-button 
-              v-if="isAdminOrReviewer" 
-              size="small" 
-              type="danger"
-              @click="deleteStandardCost(row)"
-            >
-              删除
-            </el-button>
+            <el-button :icon="View" circle size="small" @click="viewQuotation(row)" :disabled="!row.quotation_id" title="查看" />
+            <el-button :icon="CopyDocument" circle size="small" @click="copyStandardCost(row)" title="复制" />
+            <el-button v-if="isAdminOrReviewer" :icon="Clock" circle size="small" @click="showHistory(row)" title="历史" />
+            <el-button v-if="isAdminOrReviewer" :icon="Delete" circle size="small" class="delete-btn" @click="deleteStandardCost(row)" title="删除" />
           </template>
         </el-table-column>
       </el-table>
@@ -172,7 +149,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, DataAnalysis } from '@element-plus/icons-vue'
+import { ArrowLeft, DataAnalysis, View, CopyDocument, Clock, Delete } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { formatNumber, formatDateTime } from '@/utils/format'
 import { getUser } from '@/utils/auth'
@@ -424,5 +401,25 @@ onMounted(() => {
 
 .search-form {
   margin-bottom: 20px;
+}
+
+/* 操作按钮悬停效果 */
+.el-table .el-button.is-circle {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.el-table .el-button.is-circle:hover:not(:disabled) {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 删除按钮样式 */
+.delete-btn {
+  color: #F56C6C;
+}
+
+.delete-btn:hover:not(:disabled) {
+  color: #f78989;
+  border-color: #f78989;
 }
 </style>

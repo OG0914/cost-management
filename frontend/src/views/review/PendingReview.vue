@@ -9,35 +9,23 @@
     </el-card>
 
     <el-card>
-      <!-- 筛选条件 -->
-      <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item label="客户名称">
-          <el-input v-model="searchForm.customer_name" placeholder="请输入客户名称" clearable style="width: 180px" />
-        </el-form-item>
-        <el-form-item label="型号">
-          <el-input v-model="searchForm.model_name" placeholder="请输入型号" clearable style="width: 150px" />
-        </el-form-item>
-        <el-form-item label="提交日期">
-          <el-date-picker
-            v-model="searchForm.date_range"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
-            clearable
-            style="width: 260px"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" icon="Search" @click="handleSearch">查询</el-button>
-          <el-button icon="Refresh" @click="handleReset">重置</el-button>
-        </el-form-item>
-      </el-form>
+      <!-- 搜索框 -->
+      <div class="filter-bar">
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索报价单编号、客户名称、型号"
+          clearable
+          @input="handleLocalSearch"
+          style="width: 350px"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+      </div>
 
       <!-- 数据表格 -->
-      <el-table :data="pendingList" border v-loading="loading" style="width: 100%">
+      <el-table :data="paginatedList" border v-loading="loading" style="width: 100%">
         <el-table-column prop="quotation_no" label="报价单编号" width="160" />
         <el-table-column prop="status" label="状态" width="90">
           <template #default="{ row }">
@@ -99,17 +87,18 @@
       </el-table>
 
       <!-- 分页 -->
-      <div class="pagination-container">
-        <span class="total-text">共 {{ pagination.total }} 条记录</span>
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="pagination.total"
-          layout="sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handlePageChange"
-        />
+      <div class="pagination-wrapper">
+        <div class="pagination-total">共 {{ filteredList.length }} 条记录</div>
+        <div class="pagination-right">
+          <span class="pagination-info">{{ currentPage }} / {{ totalPages }} 页</span>
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="filteredList.length"
+            layout="sizes, prev, pager, next, jumper"
+          />
+        </div>
       </div>
     </el-card>
 
@@ -132,6 +121,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search } from '@element-plus/icons-vue'
 import { useReviewStore } from '@/store/review'
 import { useAuthStore } from '@/store/auth'
 import { 
@@ -148,11 +138,27 @@ import ApprovedDetailDialog from '@/components/review/ApprovedDetailDialog.vue'
 const reviewStore = useReviewStore()
 const authStore = useAuthStore()
 
-// 搜索表单
-const searchForm = ref({
-  customer_name: '',
-  model_name: '',
-  date_range: []
+// 搜索关键词
+const searchKeyword = ref('')
+
+// 全量数据和过滤后数据
+const allList = ref([])
+const filteredList = ref([])
+
+// 分页状态
+const currentPage = ref(1)
+const pageSize = ref(20)
+
+// 总页数
+const totalPages = computed(() => {
+  return Math.ceil(filteredList.value.length / pageSize.value) || 1
+})
+
+// 分页后的数据
+const paginatedList = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredList.value.slice(start, end)
 })
 
 // 弹窗状态
@@ -162,15 +168,12 @@ const currentQuotationId = ref(null)
 
 // 计算属性
 const loading = computed(() => reviewStore.loading)
-const pendingList = computed(() => reviewStore.pendingList)
-const pagination = computed(() => reviewStore.pendingPagination)
 const isAdmin = computed(() => authStore.user?.role === 'admin')
 const canReview = computed(() => authStore.user?.role === 'admin' || authStore.user?.role === 'reviewer')
 
 // 格式化包装规格显示（根据二层或三层）
 const formatPackagingSpec = (row) => {
   if (!row.packaging_type) return ''
-  // 二层包装类型：no_box, blister_direct
   if (row.packaging_type === 'no_box') {
     return `${row.layer1_qty}pc/袋, ${row.layer2_qty}袋/箱`
   } else if (row.packaging_type === 'blister_direct') {
@@ -178,50 +181,35 @@ const formatPackagingSpec = (row) => {
   } else if (row.packaging_type === 'blister_bag') {
     return `${row.layer1_qty}pc/袋, ${row.layer2_qty}袋/泡壳, ${row.layer3_qty}泡壳/箱`
   }
-  // 默认三层：standard_box
   return `${row.layer1_qty}片/袋, ${row.layer2_qty}袋/盒, ${row.layer3_qty}盒/箱`
 }
 
-// 加载数据
+// 本地搜索过滤
+const handleLocalSearch = () => {
+  let result = allList.value
+
+  if (searchKeyword.value) {
+    const keyword = searchKeyword.value.toLowerCase()
+    result = result.filter(item =>
+      (item.quotation_no && item.quotation_no.toLowerCase().includes(keyword)) ||
+      (item.customer_name && item.customer_name.toLowerCase().includes(keyword)) ||
+      (item.model_name && item.model_name.toLowerCase().includes(keyword))
+    )
+  }
+
+  filteredList.value = result
+  currentPage.value = 1
+}
+
+// 加载数据（一次性加载全部）
 const loadData = async () => {
   try {
-    await reviewStore.fetchPendingList({
-      ...searchForm.value,
-      page: pagination.value.page,
-      pageSize: pagination.value.pageSize
-    })
+    await reviewStore.fetchPendingList({ page: 1, pageSize: 9999 })
+    allList.value = reviewStore.pendingList
+    handleLocalSearch()
   } catch (error) {
     ElMessage.error('加载数据失败')
   }
-}
-
-// 搜索
-const handleSearch = () => {
-  reviewStore.pendingPagination.page = 1
-  loadData()
-}
-
-// 重置
-const handleReset = () => {
-  searchForm.value = {
-    customer_name: '',
-    model_name: '',
-    date_range: []
-  }
-  reviewStore.resetPendingSearchParams()
-  loadData()
-}
-
-// 分页
-const handleSizeChange = (size) => {
-  reviewStore.pendingPagination.pageSize = size
-  reviewStore.pendingPagination.page = 1
-  loadData()
-}
-
-const handlePageChange = (page) => {
-  reviewStore.pendingPagination.page = page
-  loadData()
 }
 
 // 审核（管理员/审核人）
@@ -233,7 +221,6 @@ const handleReview = (row) => {
 // 查看（业务员）
 const handleView = (row) => {
   currentQuotationId.value = row.id
-  // 业务员使用简略视图弹窗
   viewDialogVisible.value = true
 }
 
@@ -293,19 +280,33 @@ onMounted(() => {
   font-size: 18px;
 }
 
-.search-form {
-  margin-bottom: 20px;
+.filter-bar {
+  margin-bottom: 16px;
 }
 
-.pagination-container {
+/* 分页样式 */
+.pagination-wrapper {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 20px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #ebeef5;
 }
 
-.total-text {
-  color: #606266;
+.pagination-total {
   font-size: 14px;
+  color: #606266;
+}
+
+.pagination-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: #606266;
 }
 </style>

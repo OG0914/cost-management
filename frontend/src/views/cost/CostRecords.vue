@@ -26,44 +26,23 @@
     />
 
     <el-card>
-      <!-- 搜索筛选 -->
-      <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item label="客户名称">
-          <el-input v-model="searchForm.customer_name" placeholder="请输入客户名称" clearable style="width: 180px" />
-        </el-form-item>
-        <el-form-item label="型号">
-          <el-input v-model="searchForm.model_name" placeholder="请输入型号" clearable style="width: 150px" />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 120px">
-            <el-option label="草稿" value="draft" />
-            <el-option label="已提交" value="submitted" />
-            <el-option label="已审核" value="approved" />
-            <el-option label="已退回" value="rejected" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="创建日期">
-          <el-date-picker
-            v-model="searchForm.date_range"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
-            clearable
-            style="width: 260px"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="loadQuotations">查询</el-button>
-          <el-button @click="resetSearch">重置</el-button>
-        </el-form-item>
-      </el-form>
-
+      <!-- 搜索框 -->
+      <div class="filter-bar">
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索报价单编号、客户名称、型号"
+          clearable
+          @input="handleSearch"
+          style="width: 350px"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+      </div>
 
       <!-- 数据表格 -->
-      <el-table :data="quotations" border v-loading="loading" @selection-change="handleSelectionChange">
+      <el-table :data="paginatedQuotations" border v-loading="loading" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" :selectable="checkSelectable" />
         <el-table-column prop="quotation_no" label="报价单编号" width="180" />
         <el-table-column prop="status" label="状态" width="100">
@@ -111,43 +90,40 @@
             {{ formatDateTime(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="viewDetail(row.id)">查看</el-button>
-            <el-button size="small" type="primary" @click="editQuotation(row.id)" v-if="canEdit(row)">
-              编辑
-            </el-button>
-            <el-button size="small" type="warning" @click="copyQuotation(row.id)">
-              复制
-            </el-button>
-            <el-button size="small" type="danger" @click="deleteQuotation(row.id)" v-if="canDelete(row)">
-              删除
-            </el-button>
+            <el-button :icon="View" circle size="small" @click="viewDetail(row.id)" title="查看" />
+            <el-button v-if="canEdit(row)" :icon="EditPen" circle size="small" @click="editQuotation(row.id)" title="编辑" />
+            <el-button :icon="CopyDocument" circle size="small" @click="copyQuotation(row.id)" title="复制" />
+            <el-button v-if="canDelete(row)" :icon="Delete" circle size="small" class="delete-btn" @click="deleteQuotation(row.id)" title="删除" />
           </template>
         </el-table-column>
       </el-table>
 
       <!-- 分页 -->
-      <el-pagination
-        v-model:current-page="pagination.page"
-        v-model:page-size="pagination.pageSize"
-        :total="pagination.total"
-        :page-sizes="[10, 20, 50, 100]"
-        layout="total, sizes, prev, pager, next, jumper"
-        @size-change="loadQuotations"
-        @current-change="loadQuotations"
-        class="pagination"
-      />
+      <div class="pagination-wrapper">
+        <div class="pagination-total">共 {{ filteredQuotations.length }} 条记录</div>
+        <div class="pagination-right">
+          <span class="pagination-info">{{ currentPage }} / {{ totalPages }} 页</span>
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="filteredQuotations.length"
+            layout="sizes, prev, pager, next, jumper"
+          />
+        </div>
+      </div>
     </el-card>
   </div>
 </template>
 
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, Plus, DataAnalysis } from '@element-plus/icons-vue'
+import { ArrowLeft, Plus, DataAnalysis, Search, View, EditPen, CopyDocument, Delete } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { formatNumber, formatDateTime } from '@/utils/format'
 import { getUser } from '@/utils/auth'
@@ -160,6 +136,29 @@ const categoryModalVisible = ref(false)
 
 // 用户权限
 const user = getUser()
+
+// 搜索关键词
+const searchKeyword = ref('')
+
+// 全量数据和过滤后数据
+const allQuotations = ref([])
+const filteredQuotations = ref([])
+
+// 分页状态
+const currentPage = ref(1)
+const pageSize = ref(20)
+
+// 总页数
+const totalPages = computed(() => {
+  return Math.ceil(filteredQuotations.value.length / pageSize.value) || 1
+})
+
+// 分页后的数据
+const paginatedQuotations = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredQuotations.value.slice(start, end)
+})
 
 // 格式化包装规格显示（根据二层或三层）
 const formatPackagingSpec = (row) => {
@@ -176,46 +175,37 @@ const formatPackagingSpec = (row) => {
   return `${row.layer1_qty}片/袋, ${row.layer2_qty}袋/盒, ${row.layer3_qty}盒/箱`
 }
 
-// 搜索表单
-const searchForm = reactive({
-  customer_name: '',
-  model_name: '',
-  status: '',
-  date_range: []
-})
-
-const quotations = ref([])
 const loading = ref(false)
 const selectedQuotations = ref([])
 
-const pagination = reactive({
-  page: 1,
-  pageSize: 20,
-  total: 0
-})
+// 搜索过滤
+const handleSearch = () => {
+  let result = allQuotations.value
 
-// 加载报价单列表
+  if (searchKeyword.value) {
+    const keyword = searchKeyword.value.toLowerCase()
+    result = result.filter(item =>
+      (item.quotation_no && item.quotation_no.toLowerCase().includes(keyword)) ||
+      (item.customer_name && item.customer_name.toLowerCase().includes(keyword)) ||
+      (item.model_name && item.model_name.toLowerCase().includes(keyword))
+    )
+  }
+
+  filteredQuotations.value = result
+  currentPage.value = 1
+}
+
+// 加载报价单列表（一次性加载全部）
 const loadQuotations = async () => {
   loading.value = true
   try {
-    const params = {
-      page: pagination.page,
-      pageSize: pagination.pageSize,
-      customer_name: searchForm.customer_name,
-      model_name: searchForm.model_name,
-      status: searchForm.status
-    }
-
-    if (searchForm.date_range && searchForm.date_range.length === 2) {
-      params.start_date = searchForm.date_range[0]
-      params.end_date = searchForm.date_range[1]
-    }
-
-    const res = await request.get('/cost/quotations', { params })
+    const res = await request.get('/cost/quotations', { 
+      params: { page: 1, pageSize: 9999 } 
+    })
     
     if (res.success) {
-      quotations.value = res.data
-      pagination.total = res.pagination.total
+      allQuotations.value = res.data
+      handleSearch() // 初始化过滤
     }
   } catch (error) {
     console.error('加载报价单列表失败:', error)
@@ -223,16 +213,6 @@ const loadQuotations = async () => {
   } finally {
     loading.value = false
   }
-}
-
-// 重置搜索
-const resetSearch = () => {
-  searchForm.customer_name = ''
-  searchForm.model_name = ''
-  searchForm.status = ''
-  searchForm.date_range = []
-  pagination.page = 1
-  loadQuotations()
 }
 
 // 获取状态类型
@@ -412,13 +392,53 @@ onMounted(() => {
   color: #303133;
 }
 
-.search-form {
-  margin-bottom: 20px;
+.filter-bar {
+  margin-bottom: 16px;
 }
 
-.pagination {
-  margin-top: 20px;
+/* 分页样式 */
+.pagination-wrapper {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #ebeef5;
+}
+
+.pagination-total {
+  font-size: 14px;
+  color: #606266;
+}
+
+.pagination-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: #606266;
+}
+
+/* 操作按钮悬停效果 */
+.el-table .el-button.is-circle {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.el-table .el-button.is-circle:hover:not(:disabled) {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 删除按钮样式 */
+.delete-btn {
+  color: #F56C6C;
+}
+
+.delete-btn:hover:not(:disabled) {
+  color: #f78989;
+  border-color: #f78989;
 }
 </style>
