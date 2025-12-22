@@ -40,16 +40,25 @@ const getStats = async (req, res) => {
       growthRate = Math.round(((monthlyQuotations - lastMonthQuotations) / lastMonthQuotations) * 100);
     }
 
-    // 有效原料 SKU 数量
+    // 有效原料 SKU 数量及最近更新时间
     const materialsResult = await dbManager.query(
-      `SELECT COUNT(*) as count FROM materials`
+      `SELECT COUNT(*) as count, MAX(updated_at) as last_updated FROM materials`
     );
     const activeMaterials = parseInt(materialsResult.rows[0]?.count || 0);
+    const materialsLastUpdated = materialsResult.rows[0]?.last_updated || null;
+
+    // 在售型号数量
+    const modelsResult = await dbManager.query(
+      `SELECT COUNT(*) as count FROM models WHERE is_active = true`
+    );
+    const activeModels = parseInt(modelsResult.rows[0]?.count || 0);
 
     res.json(success({
       monthlyQuotations,
       activeMaterials,
-      growthRate
+      activeModels,
+      growthRate,
+      materialsLastUpdated
     }, '获取统计数据成功'));
 
   } catch (err) {
@@ -126,8 +135,66 @@ const getTopModels = async (req, res) => {
   }
 };
 
+/**
+ * 获取周报价统计
+ * GET /api/dashboard/weekly-quotations
+ * 返回本月和上月每周的报价单数量
+ */
+const getWeeklyQuotations = async (req, res) => {
+  try {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    // 本月开始和结束
+    const thisMonthStart = new Date(currentYear, currentMonth, 1);
+    const thisMonthEnd = new Date(currentYear, currentMonth + 1, 0);
+
+    // 上月开始和结束
+    const lastMonthStart = new Date(currentYear, currentMonth - 1, 1);
+    const lastMonthEnd = new Date(currentYear, currentMonth, 0);
+
+    // 获取本月每周数据
+    const thisMonthData = await getWeeklyData(thisMonthStart, thisMonthEnd);
+    // 获取上月每周数据
+    const lastMonthData = await getWeeklyData(lastMonthStart, lastMonthEnd);
+
+    res.json(success({
+      thisMonth: thisMonthData,
+      lastMonth: lastMonthData
+    }, '获取周报价统计成功'));
+
+  } catch (err) {
+    console.error('获取周报价统计失败:', err);
+    res.status(500).json(error('获取周报价统计失败: ' + err.message, 500));
+  }
+};
+
+/**
+ * 辅助函数：获取指定月份每周的报价数量
+ */
+const getWeeklyData = async (monthStart, monthEnd) => {
+  const weeks = [0, 0, 0, 0];
+  
+  const result = await dbManager.query(
+    `SELECT created_at FROM quotations WHERE created_at >= $1 AND created_at <= $2`,
+    [monthStart.toISOString().split('T')[0], monthEnd.toISOString().split('T')[0]]
+  );
+
+  result.rows.forEach(row => {
+    const date = new Date(row.created_at);
+    const dayOfMonth = date.getDate();
+    // 简单按日期分周：1-7为第1周，8-14为第2周，15-21为第3周，22+为第4周
+    const weekIndex = Math.min(Math.floor((dayOfMonth - 1) / 7), 3);
+    weeks[weekIndex]++;
+  });
+
+  return weeks;
+};
+
 module.exports = {
   getStats,
   getRegulations,
-  getTopModels
+  getTopModels,
+  getWeeklyQuotations
 };

@@ -93,7 +93,7 @@
         </div>
         <div class="bg-slate-50 px-5 py-3 border-t border-slate-100 flex items-center justify-between">
           <span class="text-xs text-slate-500">最近更新</span>
-          <span class="text-xs text-slate-400">1小时前</span>
+          <span class="text-xs text-slate-400">{{ materialsLastUpdatedText }}</span>
         </div>
       </div>
 
@@ -107,12 +107,12 @@
             <h3 class="text-slate-600 font-medium">在售型号</h3>
           </div>
           <div class="flex items-baseline space-x-2">
-            <span class="text-3xl font-bold text-slate-800">{{ stats.activeModels || 45 }}</span>
+            <span class="text-3xl font-bold text-slate-800">{{ stats.activeModels }}</span>
             <span class="text-sm font-medium text-slate-400">款</span>
           </div>
         </div>
         <div class="bg-slate-50 px-5 py-3 border-t border-slate-100 flex items-center justify-between">
-          <span class="text-xs text-slate-500">包含折叠/杯型/平面</span>
+          <span class="text-xs text-slate-500">包含 折叠/杯型/平面/半面罩</span>
         </div>
       </div>
     </div>
@@ -127,23 +127,23 @@
         </h2>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <QuickNavButton
-            icon="ri-add-line"
-            icon-bg-color="bg-blue-100"
-            icon-color="text-primary-600"
-            label="新增报价"
-            @click="$router.push('/cost/add')"
+            v-for="(nav, index) in quickNavList"
+            :key="nav.key"
+            :icon="nav.icon"
+            :icon-bg-color="nav.iconBgColor"
+            :icon-color="nav.iconColor"
+            :label="nav.label"
+            :show-delete="true"
+            @click="$router.push(nav.route)"
+            @delete="confirmRemoveQuickNav(index, nav.label)"
           />
+          <!-- 添加按钮 -->
           <QuickNavButton
-            icon="ri-file-list-3-line"
-            icon-bg-color="bg-purple-100"
-            icon-color="text-purple-600"
-            label="标准成本"
-            @click="$router.push('/cost/standard')"
-          />
-          <QuickNavButton
+            v-if="quickNavList.length < 4"
             icon="ri-add-line"
             :is-dashed="true"
-            label="自定义"
+            label="添加"
+            @click="showNavSelector = true"
           />
         </div>
       </div>
@@ -176,6 +176,26 @@
       </div>
     </div>
 
+    <!-- 快捷导航选择弹窗 -->
+    <el-dialog v-model="showNavSelector" title="添加快捷方式" width="400px">
+      <div class="grid grid-cols-2 gap-3">
+        <div
+          v-for="option in availableNavOptions"
+          :key="option.key"
+          @click="addQuickNav(option)"
+          class="flex items-center p-3 border border-slate-200 rounded-lg cursor-pointer hover:border-primary-300 hover:bg-primary-50 transition-colors"
+        >
+          <div :class="['w-8 h-8 rounded-full flex items-center justify-center mr-3', option.iconBgColor]">
+            <i :class="[option.icon, 'text-lg', option.iconColor]"></i>
+          </div>
+          <span class="text-sm text-slate-700">{{ option.label }}</span>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="showNavSelector = false">取消</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 图表区域 -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
       <!-- 左侧图表：报价单对比 (双折线图) -->
@@ -197,34 +217,45 @@
         </div>
         
         <!-- SVG 折线图 -->
-        <div class="h-48 w-full relative">
-          <svg viewBox="0 0 300 120" class="w-full h-full overflow-visible">
-            <!-- 网格线 -->
-            <line x1="0" y1="0" x2="300" y2="0" stroke="#f1f5f9" stroke-width="1" />
-            <line x1="0" y1="40" x2="300" y2="40" stroke="#f1f5f9" stroke-width="1" />
-            <line x1="0" y1="80" x2="300" y2="80" stroke="#f1f5f9" stroke-width="1" />
-            <line x1="0" y1="120" x2="300" y2="120" stroke="#e2e8f0" stroke-width="1" />
-            
-            <!-- 上月 (灰色虚线) -->
-            <polyline points="20,80 106,65 192,75 280,50" 
-                      fill="none" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4" />
-            <circle cx="20" cy="80" r="3" fill="#cbd5e1" />
-            <circle cx="106" cy="65" r="3" fill="#cbd5e1" />
-            <circle cx="192" cy="75" r="3" fill="#cbd5e1" />
-            <circle cx="280" cy="50" r="3" fill="#cbd5e1" />
+        <div class="h-48 w-full relative flex">
+          <!-- Y轴标签 -->
+          <div class="flex flex-col justify-between text-xs text-slate-400 pr-2 py-1" style="width: 30px;">
+            <span>{{ yAxisLabels[0] }}</span>
+            <span>{{ yAxisLabels[1] }}</span>
+            <span>{{ yAxisLabels[2] }}</span>
+          </div>
+          <!-- 图表区域 -->
+          <div class="flex-1 relative">
+            <svg viewBox="0 0 300 120" class="w-full h-full overflow-visible">
+              <!-- 网格线 -->
+              <line x1="0" y1="10" x2="300" y2="10" stroke="#f1f5f9" stroke-width="1" />
+              <line x1="0" y1="55" x2="300" y2="55" stroke="#f1f5f9" stroke-width="1" />
+              <line x1="0" y1="110" x2="300" y2="110" stroke="#e2e8f0" stroke-width="1" />
+              
+              <!-- 上月 (灰色虚线) -->
+              <polyline :points="lastMonthPoints" 
+                        fill="none" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4" />
+              <circle :cx="20" :cy="getChartY(weeklyQuotations.lastMonth[0])" r="3" fill="#cbd5e1" />
+              <circle :cx="106" :cy="getChartY(weeklyQuotations.lastMonth[1])" r="3" fill="#cbd5e1" />
+              <circle :cx="192" :cy="getChartY(weeklyQuotations.lastMonth[2])" r="3" fill="#cbd5e1" />
+              <circle :cx="280" :cy="getChartY(weeklyQuotations.lastMonth[3])" r="3" fill="#cbd5e1" />
 
-            <!-- 本月 (蓝色实线) -->
-            <path d="M20,100 L106,50 L192,40 L280,10" 
-                  fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="line-draw"/>
-            <!-- 本月数据点 -->
-            <circle cx="20" cy="100" r="4" fill="#ffffff" stroke="#3b82f6" stroke-width="2" />
-            <circle cx="106" cy="50" r="4" fill="#ffffff" stroke="#3b82f6" stroke-width="2" />
-            <circle cx="192" cy="40" r="4" fill="#ffffff" stroke="#3b82f6" stroke-width="2" />
-            <circle cx="280" cy="10" r="4" fill="#ffffff" stroke="#3b82f6" stroke-width="2" />
-          </svg>
-          <!-- X轴标签 -->
-          <div class="flex justify-between text-xs text-slate-400 mt-2 px-4">
-            <span>Week 1</span><span>Week 2</span><span>Week 3</span><span>Week 4</span>
+              <!-- 本月 (蓝色实线) -->
+              <path :d="thisMonthPath" 
+                    fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="line-draw"/>
+              <!-- 本月数据点 -->
+              <circle :cx="20" :cy="getChartY(weeklyQuotations.thisMonth[0])" r="4" fill="#ffffff" stroke="#3b82f6" stroke-width="2" />
+              <circle :cx="106" :cy="getChartY(weeklyQuotations.thisMonth[1])" r="4" fill="#ffffff" stroke="#3b82f6" stroke-width="2" />
+              <circle :cx="192" :cy="getChartY(weeklyQuotations.thisMonth[2])" r="4" fill="#ffffff" stroke="#3b82f6" stroke-width="2" />
+              <circle :cx="280" :cy="getChartY(weeklyQuotations.thisMonth[3])" r="4" fill="#ffffff" stroke="#3b82f6" stroke-width="2" />
+            </svg>
+            <!-- X轴标签 -->
+            <div class="flex justify-between text-xs text-slate-400 mt-2 px-4">
+              <span>{{ xAxisDateLabels[0] }}</span>
+              <span>{{ xAxisDateLabels[1] }}</span>
+              <span>{{ xAxisDateLabels[2] }}</span>
+              <span>{{ xAxisDateLabels[3] }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -239,47 +270,71 @@
           <span class="text-xs text-slate-400">Top 5</span>
         </div>
         
-        <!-- CSS 柱状图 -->
+        <!-- CSS 柱状图 - 固定5条柱 -->
         <div class="h-48 w-full flex items-end justify-between space-x-6 pt-6 px-2">
           <!-- Bar 1 (Blue) -->
           <div class="flex flex-col items-center flex-1 group relative">
-            <span class="text-xs font-bold text-slate-600 mb-1 transition-transform group-hover:-translate-y-1">158</span>
+            <span class="text-xs font-bold text-slate-600 mb-1 transition-transform group-hover:-translate-y-1">{{ chartData[0]?.count || '' }}</span>
             <div class="w-full bg-slate-50 rounded-t-md relative h-32 overflow-hidden">
-              <div class="absolute bottom-0 w-full bg-blue-500 rounded-t-md bar-grow" style="height: 85%"></div>
+              <div 
+                v-if="chartData[0]" 
+                class="absolute bottom-0 w-full bg-blue-500 rounded-t-md bar-grow" 
+                :style="{ height: getBarHeight(chartData[0].count) + '%' }"
+              ></div>
             </div>
-            <span class="text-xs text-slate-500 mt-2 font-medium">KN95</span>
+            <span class="text-xs text-slate-500 mt-2 font-medium truncate w-full text-center" :title="chartData[0]?.modelName">{{ chartData[0]?.modelName || '--' }}</span>
           </div>
           <!-- Bar 2 (Emerald) -->
           <div class="flex flex-col items-center flex-1 group relative">
-            <span class="text-xs font-bold text-slate-600 mb-1 transition-transform group-hover:-translate-y-1">120</span>
+            <span class="text-xs font-bold text-slate-600 mb-1 transition-transform group-hover:-translate-y-1">{{ chartData[1]?.count || '' }}</span>
             <div class="w-full bg-slate-50 rounded-t-md relative h-32 overflow-hidden">
-              <div class="absolute bottom-0 w-full bg-emerald-500 rounded-t-md bar-grow" style="height: 65%; animation-delay: 0.1s"></div>
+              <div 
+                v-if="chartData[1]" 
+                class="absolute bottom-0 w-full bg-emerald-500 rounded-t-md bar-grow" 
+                style="animation-delay: 0.1s"
+                :style="{ height: getBarHeight(chartData[1].count) + '%' }"
+              ></div>
             </div>
-            <span class="text-xs text-slate-500 mt-2 font-medium">N95</span>
+            <span class="text-xs text-slate-500 mt-2 font-medium truncate w-full text-center" :title="chartData[1]?.modelName">{{ chartData[1]?.modelName || '--' }}</span>
           </div>
           <!-- Bar 3 (Amber) -->
           <div class="flex flex-col items-center flex-1 group relative">
-            <span class="text-xs font-bold text-slate-600 mb-1 transition-transform group-hover:-translate-y-1">96</span>
+            <span class="text-xs font-bold text-slate-600 mb-1 transition-transform group-hover:-translate-y-1">{{ chartData[2]?.count || '' }}</span>
             <div class="w-full bg-slate-50 rounded-t-md relative h-32 overflow-hidden">
-              <div class="absolute bottom-0 w-full bg-amber-500 rounded-t-md bar-grow" style="height: 50%; animation-delay: 0.2s"></div>
+              <div 
+                v-if="chartData[2]" 
+                class="absolute bottom-0 w-full bg-amber-500 rounded-t-md bar-grow" 
+                style="animation-delay: 0.2s"
+                :style="{ height: getBarHeight(chartData[2].count) + '%' }"
+              ></div>
             </div>
-            <span class="text-xs text-slate-500 mt-2 font-medium">FFP2</span>
+            <span class="text-xs text-slate-500 mt-2 font-medium truncate w-full text-center" :title="chartData[2]?.modelName">{{ chartData[2]?.modelName || '--' }}</span>
           </div>
           <!-- Bar 4 (Rose) -->
           <div class="flex flex-col items-center flex-1 group relative">
-            <span class="text-xs font-bold text-slate-600 mb-1 transition-transform group-hover:-translate-y-1">64</span>
+            <span class="text-xs font-bold text-slate-600 mb-1 transition-transform group-hover:-translate-y-1">{{ chartData[3]?.count || '' }}</span>
             <div class="w-full bg-slate-50 rounded-t-md relative h-32 overflow-hidden">
-              <div class="absolute bottom-0 w-full bg-rose-500 rounded-t-md bar-grow" style="height: 35%; animation-delay: 0.3s"></div>
+              <div 
+                v-if="chartData[3]" 
+                class="absolute bottom-0 w-full bg-rose-500 rounded-t-md bar-grow" 
+                style="animation-delay: 0.3s"
+                :style="{ height: getBarHeight(chartData[3].count) + '%' }"
+              ></div>
             </div>
-            <span class="text-xs text-slate-500 mt-2 font-medium">FFP3</span>
+            <span class="text-xs text-slate-500 mt-2 font-medium truncate w-full text-center" :title="chartData[3]?.modelName">{{ chartData[3]?.modelName || '--' }}</span>
           </div>
           <!-- Bar 5 (Purple) -->
           <div class="flex flex-col items-center flex-1 group relative">
-            <span class="text-xs font-bold text-slate-600 mb-1 transition-transform group-hover:-translate-y-1">42</span>
+            <span class="text-xs font-bold text-slate-600 mb-1 transition-transform group-hover:-translate-y-1">{{ chartData[4]?.count || '' }}</span>
             <div class="w-full bg-slate-50 rounded-t-md relative h-32 overflow-hidden">
-              <div class="absolute bottom-0 w-full bg-purple-500 rounded-t-md bar-grow" style="height: 25%; animation-delay: 0.4s"></div>
+              <div 
+                v-if="chartData[4]" 
+                class="absolute bottom-0 w-full bg-purple-500 rounded-t-md bar-grow" 
+                style="animation-delay: 0.4s"
+                :style="{ height: getBarHeight(chartData[4].count) + '%' }"
+              ></div>
             </div>
-            <span class="text-xs text-slate-500 mt-2 font-medium">Flat</span>
+            <span class="text-xs text-slate-500 mt-2 font-medium truncate w-full text-center" :title="chartData[4]?.modelName">{{ chartData[4]?.modelName || '--' }}</span>
           </div>
         </div>
       </div>
@@ -289,11 +344,14 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessageBox } from 'element-plus'
 import { useAuthStore } from '../store/auth'
 import { getTimeGreeting } from '../utils/greeting'
 import request from '../utils/request'
 import QuickNavButton from '../components/dashboard/QuickNavButton.vue'
 
+const router = useRouter()
 const authStore = useAuthStore()
 
 // 问候语
@@ -306,23 +364,121 @@ const greeting = computed(() => {
 const stats = ref({
   monthlyQuotations: 0,
   activeMaterials: 0,
-  growthRate: null
+  activeModels: 0,
+  growthRate: null,
+  materialsLastUpdated: null
 })
 
 // 型号排行
 const topModels = ref([])
 
+// 周报价数据
+const weeklyQuotations = ref({
+  thisMonth: [0, 0, 0, 0],
+  lastMonth: [0, 0, 0, 0]
+})
+
+// 柱状图数据（固定5条，不足的用空填充）
+const chartData = computed(() => {
+  const data = [...topModels.value]
+  // 确保返回最多5条数据
+  return data.slice(0, 5)
+})
+
+// 计算柱状图高度百分比
+const getBarHeight = (count) => {
+  if (topModels.value.length === 0) return 0
+  const maxCount = Math.max(...topModels.value.map(m => m.count))
+  if (maxCount === 0) return 0
+  return Math.max(10, Math.round((count / maxCount) * 100))
+}
+
 // 法规总览
 const regulations = ref([])
 
-// 法规总数
+// 法规总数（法规类别数量）
 const totalRegulations = computed(() => {
-  return regulations.value.reduce((sum, reg) => sum + reg.count, 0)
+  return regulations.value.length
 })
 
 // 法规名称列表
 const regulationNames = computed(() => {
   return regulations.value.map(r => r.name).slice(0, 3).join('/') || '--'
+})
+
+// 原料最近更新时间格式化
+const materialsLastUpdatedText = computed(() => {
+  if (!stats.value.materialsLastUpdated) return '--'
+  const updated = new Date(stats.value.materialsLastUpdated)
+  const now = new Date()
+  const diffMs = now - updated
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+  
+  if (diffMins < 1) return '刚刚'
+  if (diffMins < 60) return `${diffMins}分钟前`
+  if (diffHours < 24) return `${diffHours}小时前`
+  if (diffDays < 7) return `${diffDays}天前`
+  return updated.toLocaleDateString('zh-CN')
+})
+
+// 折线图坐标计算
+const chartMaxValue = computed(() => {
+  const allValues = [...weeklyQuotations.value.thisMonth, ...weeklyQuotations.value.lastMonth]
+  return Math.max(...allValues, 1)
+})
+
+const getChartY = (value) => {
+  // SVG高度120，留10px上边距，所以有效高度110
+  if (chartMaxValue.value === 0) return 110
+  return 110 - (value / chartMaxValue.value) * 100
+}
+
+// 本月折线图路径
+const thisMonthPath = computed(() => {
+  const data = weeklyQuotations.value.thisMonth
+  const points = [
+    `20,${getChartY(data[0])}`,
+    `106,${getChartY(data[1])}`,
+    `192,${getChartY(data[2])}`,
+    `280,${getChartY(data[3])}`
+  ]
+  return `M${points.join(' L')}`
+})
+
+// 上月折线图路径
+const lastMonthPoints = computed(() => {
+  const data = weeklyQuotations.value.lastMonth
+  return [
+    `20,${getChartY(data[0])}`,
+    `106,${getChartY(data[1])}`,
+    `192,${getChartY(data[2])}`,
+    `280,${getChartY(data[3])}`
+  ].join(' ')
+})
+
+// Y轴刻度值
+const yAxisLabels = computed(() => {
+  const max = chartMaxValue.value
+  if (max <= 1) return [0, 1]
+  // 生成3个刻度：0, 中间值, 最大值
+  const mid = Math.round(max / 2)
+  return [max, mid, 0]
+})
+
+// X轴日期标签（本月每周的日期范围）
+const xAxisDateLabels = computed(() => {
+  const now = new Date()
+  const month = now.getMonth() + 1
+  // 每周日期范围：1-7、8-14、15-21、22-月末
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  return [
+    `${month}/1-7`,
+    `${month}/8-14`,
+    `${month}/15-21`,
+    `${month}/22-${lastDay}`
+  ]
 })
 
 // 日期相关
@@ -338,14 +494,95 @@ const systemStatus = ref({
   version: 'Version 1.0'
 })
 
+// 快捷导航配置
+const STORAGE_KEY = 'dashboard_quick_nav'
+
+// 所有可选的导航选项
+const allNavOptions = [
+  { key: 'cost-add', label: '新增报价', icon: 'ri-add-line', iconBgColor: 'bg-blue-100', iconColor: 'text-primary-600', route: '/cost/add' },
+  { key: 'cost-standard', label: '标准成本', icon: 'ri-file-list-3-line', iconBgColor: 'bg-purple-100', iconColor: 'text-purple-600', route: '/cost/standard' },
+  { key: 'cost-records', label: '成本记录', icon: 'ri-history-line', iconBgColor: 'bg-green-100', iconColor: 'text-green-600', route: '/cost/records' },
+  { key: 'review-pending', label: '待审核', icon: 'ri-time-line', iconBgColor: 'bg-orange-100', iconColor: 'text-orange-600', route: '/review/pending' },
+  { key: 'review-approved', label: '已审核', icon: 'ri-checkbox-circle-line', iconBgColor: 'bg-teal-100', iconColor: 'text-teal-600', route: '/review/approved' },
+  { key: 'materials', label: '原料管理', icon: 'ri-database-2-line', iconBgColor: 'bg-indigo-100', iconColor: 'text-indigo-600', route: '/materials' },
+  { key: 'models', label: '型号管理', icon: 'ri-layout-grid-line', iconBgColor: 'bg-pink-100', iconColor: 'text-pink-600', route: '/models' },
+  { key: 'regulations', label: '法规管理', icon: 'ri-government-line', iconBgColor: 'bg-amber-100', iconColor: 'text-amber-600', route: '/regulations' }
+]
+
+// 当前快捷导航列表
+const quickNavList = ref([])
+
+// 弹窗显示状态
+const showNavSelector = ref(false)
+
+// 可添加的导航选项（排除已添加的）
+const availableNavOptions = computed(() => {
+  const addedKeys = quickNavList.value.map(n => n.key)
+  return allNavOptions.filter(opt => !addedKeys.includes(opt.key))
+})
+
+// 从 localStorage 加载快捷导航
+const loadQuickNav = () => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      const keys = JSON.parse(saved)
+      quickNavList.value = keys.map(key => allNavOptions.find(opt => opt.key === key)).filter(Boolean)
+    } else {
+      // 默认显示两个
+      quickNavList.value = [
+        allNavOptions.find(opt => opt.key === 'cost-add'),
+        allNavOptions.find(opt => opt.key === 'cost-standard')
+      ].filter(Boolean)
+    }
+  } catch {
+    quickNavList.value = []
+  }
+}
+
+// 保存快捷导航到 localStorage
+const saveQuickNav = () => {
+  const keys = quickNavList.value.map(n => n.key)
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(keys))
+}
+
+// 添加快捷导航
+const addQuickNav = (option) => {
+  if (quickNavList.value.length < 4) {
+    quickNavList.value.push(option)
+    saveQuickNav()
+  }
+  showNavSelector.value = false
+}
+
+// 删除快捷导航
+const removeQuickNav = (index) => {
+  quickNavList.value.splice(index, 1)
+  saveQuickNav()
+}
+
+// 确认删除快捷导航
+const confirmRemoveQuickNav = async (index, label) => {
+  try {
+    await ElMessageBox.confirm(`确定要删除快捷方式「${label}」吗？`, '删除确认', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消'
+    })
+    removeQuickNav(index)
+  } catch {
+    // 用户取消
+  }
+}
+
 // 加载仪表盘数据
 const loadDashboardData = async () => {
   try {
     // 并行请求所有数据
-    const [statsRes, regulationsRes, topModelsRes] = await Promise.all([
+    const [statsRes, regulationsRes, topModelsRes, weeklyRes] = await Promise.all([
       request.get('/dashboard/stats'),
       request.get('/dashboard/regulations'),
-      request.get('/dashboard/top-models')
+      request.get('/dashboard/top-models'),
+      request.get('/dashboard/weekly-quotations')
     ])
 
     // 统计数据
@@ -353,7 +590,9 @@ const loadDashboardData = async () => {
       stats.value = {
         monthlyQuotations: statsRes.data.monthlyQuotations || 0,
         activeMaterials: statsRes.data.activeMaterials || 0,
-        growthRate: statsRes.data.growthRate
+        activeModels: statsRes.data.activeModels || 0,
+        growthRate: statsRes.data.growthRate,
+        materialsLastUpdated: statsRes.data.materialsLastUpdated
       }
     }
 
@@ -366,6 +605,14 @@ const loadDashboardData = async () => {
     if (topModelsRes.success) {
       topModels.value = topModelsRes.data || []
     }
+
+    // 周报价数据
+    if (weeklyRes.success) {
+      weeklyQuotations.value = {
+        thisMonth: weeklyRes.data.thisMonth || [0, 0, 0, 0],
+        lastMonth: weeklyRes.data.lastMonth || [0, 0, 0, 0]
+      }
+    }
   } catch (err) {
     console.error('加载仪表盘数据失败:', err)
   }
@@ -373,6 +620,7 @@ const loadDashboardData = async () => {
 
 onMounted(() => {
   loadDashboardData()
+  loadQuickNav()
 })
 </script>
 

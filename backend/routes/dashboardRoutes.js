@@ -19,4 +19,7 @@ router.get('/regulations', dashboardController.getRegulations);
 // GET /api/dashboard/top-models - 获取型号排行
 router.get('/top-models', dashboardController.getTopModels);
 
+// GET /api/dashboard/weekly-quotations - 获取周报价统计
+router.get('/weekly-quotations', dashboardController.getWeeklyQuotations);
+
 module.exports = router;
