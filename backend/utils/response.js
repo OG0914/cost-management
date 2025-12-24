@@ -25,12 +25,10 @@ const paginated = (data, total, page, pageSize) => {
   return {
     success: true,
     data,
-    pagination: {
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize)
-    }
+    total,
+    page,
+    pageSize,
+    totalPages: Math.ceil(total / pageSize)
   };
 };
 

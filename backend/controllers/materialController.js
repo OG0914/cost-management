@@ -5,15 +5,50 @@
 const Material = require('../models/Material');
 const ExcelParser = require('../utils/excelParser');
 const ExcelGenerator = require('../utils/excelGenerator');
-const { success, error } = require('../utils/response');
+const { success, error, paginated } = require('../utils/response');
+const QueryBuilder = require('../utils/queryBuilder');
+const dbManager = require('../db/database');
 const path = require('path');
 const fs = require('fs');
 
-// 获取所有原料
+/**
+ * 获取原料列表（支持分页和搜索）
+ * GET /api/materials
+ * @query {number} page - 页码，默认 1
+ * @query {number} pageSize - 每页条数，默认 20，最大 100
+ * @query {string} keyword - 搜索关键词（匹配品号或原料名称）
+ */
 const getAllMaterials = async (req, res, next) => {
   try {
-    const materials = await Material.findAll();
-    res.json(success(materials));
+    const { page = 1, pageSize = 20, keyword } = req.query;
+    
+    // 参数校验和规范化
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const pageSizeNum = Math.min(100, Math.max(1, parseInt(pageSize) || 20));
+    const offset = (pageNum - 1) * pageSizeNum;
+
+    // 构建查询
+    const query = new QueryBuilder('materials');
+    
+    // 关键词搜索（品号或原料名称）
+    if (keyword && keyword.trim()) {
+      query.whereLikeOr(['item_no', 'name'], keyword);
+    }
+    
+    // 排序
+    query.orderByDesc('updated_at');
+    
+    // 获取总数
+    const countResult = query.clone().buildCount();
+    const countData = await dbManager.query(countResult.sql, countResult.params);
+    const total = parseInt(countData.rows[0].total);
+    
+    // 分页查询
+    query.limit(pageSizeNum).offset(offset);
+    const selectResult = query.buildSelect();
+    const data = await dbManager.query(selectResult.sql, selectResult.params);
+
+    res.json(paginated(data.rows, total, pageNum, pageSizeNum));
   } catch (err) {
     next(err);
   }

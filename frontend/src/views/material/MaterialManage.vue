@@ -44,6 +44,7 @@
           placeholder="搜索品号、原料名称"
           clearable
           @input="handleSearch"
+          @clear="handleClearSearch"
           style="width: 300px"
         >
           <template #prefix>
@@ -53,7 +54,7 @@
       </div>
 
       <!-- 数据表格 -->
-      <el-table :data="paginatedMaterials" border stripe @selection-change="handleSelectionChange">
+      <el-table :data="tableData" border stripe v-loading="loading" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="item_no" label="品号" width="140" />
         <el-table-column prop="name" label="原料名称" width="300" />
@@ -80,14 +81,14 @@
 
       <!-- 分页 -->
       <div class="pagination-wrapper">
-        <div class="pagination-total">共 {{ filteredMaterials.length }} 条记录</div>
+        <div class="pagination-total">共 {{ total }} 条记录</div>
         <div class="pagination-right">
           <span class="pagination-info">{{ currentPage }} / {{ totalPages }} 页</span>
           <el-pagination
             v-model:current-page="currentPage"
             v-model:page-size="pageSize"
             :page-sizes="[10, 20, 50, 100]"
-            :total="filteredMaterials.length"
+            :total="total"
             layout="sizes, prev, pager, next, jumper"
           />
         </div>
@@ -134,21 +135,17 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Upload, Download, ArrowLeft, Delete, Search, EditPen } from '@element-plus/icons-vue'
+import { Plus, Upload, Download, Delete, Search, EditPen } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { formatNumber, formatDateTime } from '../../utils/format'
 
-const router = useRouter()
 const authStore = useAuthStore()
 
-
-
-const materials = ref([])
-const filteredMaterials = ref([])
+// 表格数据（从后端获取的当前页数据）
+const tableData = ref([])
 const selectedMaterials = ref([])
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增原料')
@@ -158,18 +155,15 @@ const searchKeyword = ref('')
 
 // 分页状态
 const currentPage = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(20)
+const total = ref(0)
+
+// 防抖定时器
+let searchTimer = null
 
 // 总页数
 const totalPages = computed(() => {
-  return Math.ceil(filteredMaterials.value.length / pageSize.value) || 1
-})
-
-// 分页后的数据
-const paginatedMaterials = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredMaterials.value.slice(start, end)
+  return Math.ceil(total.value / pageSize.value) || 1
 })
 
 const form = reactive({
@@ -186,34 +180,55 @@ const form = reactive({
 // 是否可编辑（管理员或采购）
 const canEdit = computed(() => authStore.isAdmin || authStore.isPurchaser)
 
-// 获取原料列表
+// 获取原料列表（后端分页）
 const fetchMaterials = async () => {
+  loading.value = true
   try {
-    const response = await request.get('/materials')
+    const response = await request.get('/materials', {
+      params: {
+        page: currentPage.value,
+        pageSize: pageSize.value,
+        keyword: searchKeyword.value || undefined
+      }
+    })
     if (response.success) {
-      materials.value = response.data
-      handleSearch() // 初始化过滤
+      tableData.value = response.data
+      total.value = response.total
     }
   } catch (error) {
     ElMessage.error('获取原料列表失败')
+  } finally {
+    loading.value = false
   }
 }
 
-// 搜索过滤
+// 防抖搜索（300ms）
 const handleSearch = () => {
-  let result = materials.value
-
-  // 关键词搜索（品号或原料名称）
-  if (searchKeyword.value) {
-    const keyword = searchKeyword.value.toLowerCase()
-    result = result.filter(item => 
-      item.item_no.toLowerCase().includes(keyword) || 
-      item.name.toLowerCase().includes(keyword)
-    )
+  // 清除之前的定时器
+  if (searchTimer) {
+    clearTimeout(searchTimer)
   }
-
-  filteredMaterials.value = result
+  
+  // 设置新的定时器
+  searchTimer = setTimeout(() => {
+    currentPage.value = 1  // 搜索时重置到第一页
+    fetchMaterials()
+  }, 300)
 }
+
+// 清空搜索框时立即触发查询
+const handleClearSearch = () => {
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+  }
+  currentPage.value = 1
+  fetchMaterials()
+}
+
+// 监听分页参数变化
+watch([currentPage, pageSize], () => {
+  fetchMaterials()
+})
 
 // 新增
 const handleAdd = () => {

@@ -57,9 +57,8 @@ export const useReviewStore = defineStore('review', {
       try {
         const queryParams = {
           page: params.page || this.pendingPagination.page,
-          page_size: params.pageSize || this.pendingPagination.pageSize,
-          customer_name: params.customer_name ?? this.pendingSearchParams.customer_name,
-          model_name: params.model_name ?? this.pendingSearchParams.model_name
+          page_size: params.page_size || params.pageSize || this.pendingPagination.pageSize,
+          keyword: params.keyword // 新增：关键词搜索
         }
 
         // 添加日期范围
@@ -74,9 +73,9 @@ export const useReviewStore = defineStore('review', {
         if (response.success) {
           this.pendingList = response.data
           this.pendingPagination = {
-            page: response.pagination.page,
-            pageSize: response.pagination.pageSize,
-            total: response.pagination.total
+            page: response.page,
+            pageSize: response.pageSize,
+            total: response.total
           }
         }
         
@@ -97,10 +96,9 @@ export const useReviewStore = defineStore('review', {
       try {
         const queryParams = {
           page: params.page || this.approvedPagination.page,
-          page_size: params.pageSize || this.approvedPagination.pageSize,
+          page_size: params.page_size || params.pageSize || this.approvedPagination.pageSize,
           status: params.status ?? this.approvedSearchParams.status,
-          customer_name: params.customer_name ?? this.approvedSearchParams.customer_name,
-          model_name: params.model_name ?? this.approvedSearchParams.model_name
+          keyword: params.keyword // 新增：关键词搜索
         }
 
         // 添加日期范围
@@ -115,9 +113,9 @@ export const useReviewStore = defineStore('review', {
         if (response.success) {
           this.approvedList = response.data
           this.approvedPagination = {
-            page: response.pagination.page,
-            pageSize: response.pagination.pageSize,
-            total: response.pagination.total
+            page: response.page,
+            pageSize: response.pageSize,
+            total: response.total
           }
         }
         
@@ -287,9 +285,9 @@ export const useReviewStore = defineStore('review', {
       try {
         const response = await request.get('/review/pending', { params: { page: 1, page_size: 1 } })
         if (response.success) {
-          this.pendingPagination.total = response.pagination.total
+          this.pendingPagination.total = response.total
         }
-        return response.pagination?.total || 0
+        return response.total || 0
       } catch (error) {
         console.error('获取待审核数量失败:', error)
         return 0

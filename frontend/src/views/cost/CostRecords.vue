@@ -33,6 +33,7 @@
           placeholder="搜索报价单编号、客户名称、型号"
           clearable
           @input="handleSearch"
+          @clear="handleClearSearch"
           style="width: 350px"
         >
           <template #prefix>
@@ -42,9 +43,20 @@
       </div>
 
       <!-- 数据表格 -->
-      <el-table :data="paginatedQuotations" border v-loading="loading" @selection-change="handleSelectionChange">
+      <el-table :data="tableData" border v-loading="loading" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" :selectable="checkSelectable" />
-        <el-table-column prop="quotation_no" label="报价单编号" width="180" />
+        <el-table-column prop="quotation_no" label="报价单编号" width="180">
+          <template #default="{ row }">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span>{{ row.quotation_no }}</span>
+              <svg v-if="row.is_standard_cost" class="standard-stamp-icon" viewBox="0 0 24 24" width="20" height="20" title="标准成本">
+                <circle cx="12" cy="12" r="10" fill="none" stroke="#E6A23C" stroke-width="2"/>
+                <circle cx="12" cy="12" r="7" fill="none" stroke="#E6A23C" stroke-width="1.5"/>
+                <text x="12" y="15" text-anchor="middle" fill="#E6A23C" font-size="7" font-weight="bold">标准</text>
+              </svg>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)">
@@ -102,14 +114,14 @@
 
       <!-- 分页 -->
       <div class="pagination-wrapper">
-        <div class="pagination-total">共 {{ filteredQuotations.length }} 条记录</div>
+        <div class="pagination-total">共 {{ total }} 条记录</div>
         <div class="pagination-right">
           <span class="pagination-info">{{ currentPage }} / {{ totalPages }} 页</span>
           <el-pagination
             v-model:current-page="currentPage"
             v-model:page-size="pageSize"
             :page-sizes="[10, 20, 50, 100]"
-            :total="filteredQuotations.length"
+            :total="total"
             layout="sizes, prev, pager, next, jumper"
           />
         </div>
@@ -120,10 +132,10 @@
 
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, Plus, DataAnalysis, Search, View, EditPen, CopyDocument, Delete } from '@element-plus/icons-vue'
+import { Search, View, EditPen, CopyDocument, Delete } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { formatNumber, formatDateTime } from '@/utils/format'
 import { getUser } from '@/utils/auth'
@@ -140,24 +152,20 @@ const user = getUser()
 // 搜索关键词
 const searchKeyword = ref('')
 
-// 全量数据和过滤后数据
-const allQuotations = ref([])
-const filteredQuotations = ref([])
+// 表格数据（从后端获取的当前页数据）
+const tableData = ref([])
 
 // 分页状态
 const currentPage = ref(1)
 const pageSize = ref(20)
+const total = ref(0)
+
+// 防抖定时器
+let searchTimer = null
 
 // 总页数
 const totalPages = computed(() => {
-  return Math.ceil(filteredQuotations.value.length / pageSize.value) || 1
-})
-
-// 分页后的数据
-const paginatedQuotations = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredQuotations.value.slice(start, end)
+  return Math.ceil(total.value / pageSize.value) || 1
 })
 
 // 格式化包装规格显示（根据二层或三层）
@@ -178,34 +186,20 @@ const formatPackagingSpec = (row) => {
 const loading = ref(false)
 const selectedQuotations = ref([])
 
-// 搜索过滤
-const handleSearch = () => {
-  let result = allQuotations.value
-
-  if (searchKeyword.value) {
-    const keyword = searchKeyword.value.toLowerCase()
-    result = result.filter(item =>
-      (item.quotation_no && item.quotation_no.toLowerCase().includes(keyword)) ||
-      (item.customer_name && item.customer_name.toLowerCase().includes(keyword)) ||
-      (item.model_name && item.model_name.toLowerCase().includes(keyword))
-    )
-  }
-
-  filteredQuotations.value = result
-  currentPage.value = 1
-}
-
-// 加载报价单列表（一次性加载全部）
-const loadQuotations = async () => {
+// 获取报价单列表（后端分页）
+const fetchQuotations = async () => {
   loading.value = true
   try {
-    const res = await request.get('/cost/quotations', { 
-      params: { page: 1, pageSize: 9999 } 
+    const res = await request.get('/cost/quotations', {
+      params: {
+        page: currentPage.value,
+        pageSize: pageSize.value,
+        keyword: searchKeyword.value || undefined
+      }
     })
-    
     if (res.success) {
-      allQuotations.value = res.data
-      handleSearch() // 初始化过滤
+      tableData.value = res.data
+      total.value = res.total
     }
   } catch (error) {
     console.error('加载报价单列表失败:', error)
@@ -214,6 +208,31 @@ const loadQuotations = async () => {
     loading.value = false
   }
 }
+
+// 防抖搜索（300ms）
+const handleSearch = () => {
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+  }
+  searchTimer = setTimeout(() => {
+    currentPage.value = 1 // 搜索时重置到第一页
+    fetchQuotations()
+  }, 300)
+}
+
+// 清空搜索框时立即触发查询
+const handleClearSearch = () => {
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+  }
+  currentPage.value = 1
+  fetchQuotations()
+}
+
+// 监听分页参数变化
+watch([currentPage, pageSize], () => {
+  fetchQuotations()
+})
 
 // 获取状态类型
 const getStatusType = (status) => {
@@ -315,7 +334,7 @@ const deleteQuotation = async (id) => {
     
     if (res.success) {
       ElMessage.success('删除成功')
-      loadQuotations()
+      fetchQuotations()
     }
   } catch (error) {
     if (error !== 'cancel') {
@@ -355,7 +374,7 @@ const goToCompare = () => {
 }
 
 onMounted(() => {
-  loadQuotations()
+  fetchQuotations()
 })
 </script>
 
@@ -440,5 +459,17 @@ onMounted(() => {
 .delete-btn:hover:not(:disabled) {
   color: #f78989;
   border-color: #f78989;
+}
+
+/* 标准成本盖章图标 */
+.standard-stamp-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.standard-stamp-icon:hover {
+  opacity: 1;
+  transform: scale(1.1);
+  transition: all 0.2s;
 }
 </style>

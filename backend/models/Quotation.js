@@ -99,6 +99,7 @@ class Quotation {
   static async findAll(options = {}) {
     const {
       status,
+      keyword, // 新增：多字段搜索
       customer_name,
       model_name,
       model_id,
@@ -115,11 +116,17 @@ class Quotation {
       .leftJoin('models m', 'q.model_id = m.id')
       .leftJoin('packaging_configs pc', 'q.packaging_config_id = pc.id')
       .leftJoin('users u1', 'q.created_by = u1.id')
-      .leftJoin('users u2', 'q.reviewed_by = u2.id');
+      .leftJoin('users u2', 'q.reviewed_by = u2.id')
+      .leftJoin('standard_costs sc', 'q.id = sc.quotation_id AND sc.is_current = true');
 
     // 动态添加查询条件
     if (status) {
       builder.where('q.status', '=', status);
+    }
+
+    // 关键词搜索（报价单编号、客户名称、型号）
+    if (keyword && keyword.trim()) {
+      builder.whereLikeOr(['q.quotation_no', 'q.customer_name', 'm.model_name'], keyword);
     }
 
     if (customer_name) {
@@ -171,7 +178,8 @@ class Quotation {
         pc.bags_per_box,
         pc.boxes_per_carton,
         u1.real_name as creator_name,
-        u2.real_name as reviewer_name
+        u2.real_name as reviewer_name,
+        CASE WHEN sc.id IS NOT NULL THEN true ELSE false END as is_standard_cost
       `);
 
     const dataResult = await dbManager.query(dataQuery.sql, dataQuery.params);

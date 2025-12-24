@@ -15,7 +15,8 @@
           v-model="searchKeyword"
           placeholder="搜索报价单编号、客户名称、型号"
           clearable
-          @input="handleLocalSearch"
+          @input="handleSearch"
+          @clear="handleClearSearch"
           style="width: 350px"
         >
           <template #prefix>
@@ -25,7 +26,7 @@
       </div>
 
       <!-- 数据表格 -->
-      <el-table :data="paginatedList" border v-loading="loading" style="width: 100%">
+      <el-table :data="tableData" border v-loading="loading" style="width: 100%">
         <el-table-column prop="quotation_no" label="报价单编号" width="160" />
         <el-table-column prop="status" label="状态" width="90">
           <template #default="{ row }">
@@ -86,7 +87,7 @@
       <!-- 分页 -->
       <div class="pagination-wrapper">
         <div class="pagination-info-left">
-          <span class="pagination-total">共 {{ filteredList.length }} 条记录</span>
+          <span class="pagination-total">共 {{ total }} 条记录</span>
           <span class="hint-text">💡 此列表显示已通过和已退回的报价单</span>
         </div>
         <div class="pagination-right">
@@ -95,7 +96,7 @@
             v-model:current-page="currentPage"
             v-model:page-size="pageSize"
             :page-sizes="[10, 20, 50, 100]"
-            :total="filteredList.length"
+            :total="total"
             layout="sizes, prev, pager, next, jumper"
           />
         </div>
@@ -111,7 +112,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { useReviewStore } from '@/store/review'
@@ -132,24 +133,20 @@ const authStore = useAuthStore()
 // 搜索关键词
 const searchKeyword = ref('')
 
-// 全量数据和过滤后数据
-const allList = ref([])
-const filteredList = ref([])
+// 表格数据（从后端获取的当前页数据）
+const tableData = ref([])
 
 // 分页状态
 const currentPage = ref(1)
 const pageSize = ref(20)
+const total = ref(0)
+
+// 防抖定时器
+let searchTimer = null
 
 // 总页数
 const totalPages = computed(() => {
-  return Math.ceil(filteredList.value.length / pageSize.value) || 1
-})
-
-// 分页后的数据
-const paginatedList = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredList.value.slice(start, end)
+  return Math.ceil(total.value / pageSize.value) || 1
 })
 
 // 弹窗状态
@@ -173,33 +170,41 @@ const formatPackagingSpec = (row) => {
   return `${row.layer1_qty}片/袋, ${row.layer2_qty}袋/盒, ${row.layer3_qty}盒/箱`
 }
 
-// 本地搜索过滤
-const handleLocalSearch = () => {
-  let result = allList.value
-
-  if (searchKeyword.value) {
-    const keyword = searchKeyword.value.toLowerCase()
-    result = result.filter(item =>
-      (item.quotation_no && item.quotation_no.toLowerCase().includes(keyword)) ||
-      (item.customer_name && item.customer_name.toLowerCase().includes(keyword)) ||
-      (item.model_name && item.model_name.toLowerCase().includes(keyword))
-    )
-  }
-
-  filteredList.value = result
-  currentPage.value = 1
-}
-
-// 加载数据（一次性加载全部）
-const loadData = async () => {
+// 获取已审核列表（后端分页）
+const fetchApprovedList = async () => {
   try {
-    await reviewStore.fetchApprovedList({ page: 1, pageSize: 9999 })
-    allList.value = reviewStore.approvedList
-    handleLocalSearch()
+    await reviewStore.fetchApprovedList({
+      page: currentPage.value,
+      page_size: pageSize.value,
+      keyword: searchKeyword.value || undefined
+    })
+    tableData.value = reviewStore.approvedList
+    total.value = reviewStore.approvedPagination.total
   } catch (error) {
     ElMessage.error('加载数据失败')
   }
 }
+
+// 防抖搜索（300ms）
+const handleSearch = () => {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    currentPage.value = 1
+    fetchApprovedList()
+  }, 300)
+}
+
+// 清空搜索框时立即触发查询
+const handleClearSearch = () => {
+  if (searchTimer) clearTimeout(searchTimer)
+  currentPage.value = 1
+  fetchApprovedList()
+}
+
+// 监听分页参数变化
+watch([currentPage, pageSize], () => {
+  fetchApprovedList()
+})
 
 // 查看详情
 const handleView = (row) => {
@@ -217,7 +222,7 @@ const handleDelete = async (row) => {
     )
     await reviewStore.deleteQuotation(row.id)
     ElMessage.success('删除成功')
-    loadData()
+    fetchApprovedList()
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('删除失败')
@@ -226,7 +231,7 @@ const handleDelete = async (row) => {
 }
 
 onMounted(() => {
-  loadData()
+  fetchApprovedList()
 })
 </script>
 

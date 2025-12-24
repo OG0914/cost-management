@@ -583,41 +583,36 @@ const submitQuotation = async (req, res) => {
 };
 
 /**
- * 获取报价单列表
+ * 获取报价单列表（支持分页和搜索）
  * GET /api/cost/quotations
+ * @query {number} page - 页码，默认 1
+ * @query {number} pageSize - 每页条数，默认 20，最大 100
+ * @query {string} keyword - 搜索关键词（匹配报价单编号、客户名称、型号）
+ * @query {string} status - 状态过滤
  */
 const getQuotationList = async (req, res) => {
     try {
-        const {
-            status,
-            customer_name,
-            model_name,
-            start_date,
-            end_date,
-            page = 1,
-            pageSize = 20
-        } = req.query;
+        const { status, keyword, start_date, end_date, page = 1, pageSize = 20 } = req.query;
 
-        // 根据角色过滤数据
+        const pageNum = Math.max(1, parseInt(page) || 1); // 参数校验
+        const pageSizeNum = Math.min(100, Math.max(1, parseInt(pageSize) || 20));
+
         const options = {
             status,
-            customer_name,
-            model_name,
+            keyword, // 新增：多字段搜索
             date_from: start_date,
             date_to: end_date,
-            page: parseInt(page),
-            pageSize: parseInt(pageSize)
+            page: pageNum,
+            pageSize: pageSizeNum
         };
 
-        // 如果不是管理员、审核人或只读用户，只能查看自己创建的报价单
+        // 非管理员/审核人/只读用户只能查看自己创建的报价单
         if (!['admin', 'reviewer', 'readonly'].includes(req.user.role)) {
             options.created_by = req.user.id;
         }
 
         const result = await Quotation.findAll(options);
-
         res.json(paginated(result.data, result.total, result.page, result.pageSize));
-
     } catch (err) {
         console.error('获取报价单列表失败:', err);
         res.status(500).json(error('获取报价单列表失败: ' + err.message, 500));

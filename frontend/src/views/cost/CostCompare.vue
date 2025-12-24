@@ -3,7 +3,7 @@
     <el-card class="header-card">
       <div class="header-content">
         <div class="header-left">
-          <h2>报价单对比分析</h2>
+          <h2>成本对比分析</h2>
         </div>
       </div>
     </el-card>
