@@ -10,20 +10,53 @@
     </PageHeader>
 
     <el-card>
-      <!-- 数据表格 -->
-      <el-table :data="paginatedRegulations" border stripe>
+      <!-- 筛选区域 -->
+      <div class="filter-section">
+        <el-input v-model="searchKeyword" placeholder="搜索法规名称..." :prefix-icon="Search" clearable @input="handleSearch" style="width: 200px" />
+        <el-button-group class="view-toggle">
+          <el-button :type="viewMode === 'card' ? 'primary' : 'default'" :icon="Grid" @click="viewMode = 'card'" />
+          <el-button :type="viewMode === 'list' ? 'primary' : 'default'" :icon="List" @click="viewMode = 'list'" />
+        </el-button-group>
+      </div>
+
+      <!-- 卡片视图 -->
+      <div v-if="viewMode === 'card'" class="item-cards">
+        <div v-if="paginatedRegulations.length === 0" class="empty-tip">暂无匹配数据</div>
+        <div v-for="item in paginatedRegulations" :key="item.id" class="item-card">
+          <div class="card-body">
+            <div class="item-header">
+              <div class="avatar" :style="{ backgroundColor: getRegulationColor(item.name) }">
+                {{ getInitial(item.name) }}
+              </div>
+              <div class="item-info">
+                <div class="item-name">{{ item.name }}</div>
+                <div class="description">{{ item.description || '暂无描述' }}</div>
+              </div>
+            </div>
+            <div class="item-details">
+              <div class="status">
+                <span :class="item.is_active ? 'status-active' : 'status-inactive'"></span>
+                {{ item.is_active ? '已启用' : '已禁用' }}
+              </div>
+            </div>
+          </div>
+          <div class="card-actions" v-if="authStore.isAdmin">
+            <el-button :icon="EditPen" circle @click="handleEdit(item)" title="编辑" />
+            <el-button :icon="Delete" circle class="delete-btn" @click="handleDelete(item)" title="删除" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 列表视图 -->
+      <el-table v-if="viewMode === 'list'" :data="paginatedRegulations" border stripe>
         <el-table-column prop="name" label="法规名称" />
         <el-table-column prop="description" label="描述" />
-        <el-table-column prop="is_active" label="状态" width="100" align="center">
+        <el-table-column prop="is_active" label="状态" width="120" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.is_active ? 'success' : 'danger'" class="status-tag">
-              {{ row.is_active ? '激活' : '禁用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="创建时间" width="180">
-          <template #default="{ row }">
-            {{ formatDateTime(row.created_at) }}
+            <div class="status">
+              <span :class="row.is_active ? 'status-active' : 'status-inactive'"></span>
+              {{ row.is_active ? '已启用' : '已禁用' }}
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="120" v-if="authStore.isAdmin">
@@ -36,47 +69,25 @@
 
       <!-- 分页 -->
       <div class="pagination-wrapper">
-        <div class="pagination-total">共 {{ regulations.length }} 条记录</div>
+        <div class="pagination-total">共 {{ filteredRegulations.length }} 条记录</div>
         <div class="pagination-right">
           <span class="pagination-info">{{ currentPage }} / {{ totalPages }} 页</span>
-          <el-pagination
-            v-model:current-page="currentPage"
-            v-model:page-size="pageSize"
-            :page-sizes="[10, 20, 50, 100]"
-            :total="regulations.length"
-            layout="sizes, prev, pager, next, jumper"
-          />
+          <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]" :total="filteredRegulations.length" layout="sizes, prev, pager, next, jumper" />
         </div>
       </div>
     </el-card>
 
     <!-- 新增/编辑对话框 -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogTitle"
-      width="500px"
-      append-to-body
-    >
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px" append-to-body>
       <el-form :model="form" label-width="100px">
         <el-form-item label="法规名称" required>
           <el-input v-model="form.name" placeholder="请输入法规名称" />
         </el-form-item>
         <el-form-item label="描述">
-          <el-input
-            v-model="form.description"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入描述"
-          />
+          <el-input v-model="form.description" type="textarea" :rows="3" placeholder="请输入描述" />
         </el-form-item>
         <el-form-item label="状态" v-if="isEdit">
-          <el-switch
-            v-model="form.is_active"
-            :active-value="1"
-            :inactive-value="0"
-            active-text="激活"
-            inactive-text="禁用"
-          />
+          <el-switch v-model="form.is_active" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="禁用" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -89,197 +100,121 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, ArrowLeft } from '@element-plus/icons-vue'
-import { EditPen, Delete } from '@element-plus/icons-vue'
+import { Plus, Search, Grid, List, EditPen, Delete } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { formatDateTime } from '@/utils/format'
 import PageHeader from '@/components/common/PageHeader.vue'
 
-const router = useRouter()
 const authStore = useAuthStore()
-
 const regulations = ref([])
+const filteredRegulations = ref([])
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增法规')
 const isEdit = ref(false)
 const loading = ref(false)
-
-// 分页状态
+const searchKeyword = ref('')
+const viewMode = ref('card')
 const currentPage = ref(1)
 const pageSize = ref(10)
 
-// 总页数
-const totalPages = computed(() => {
-  return Math.ceil(regulations.value.length / pageSize.value) || 1
-})
-
-// 分页后的数据
+const totalPages = computed(() => Math.ceil(filteredRegulations.value.length / pageSize.value) || 1)
 const paginatedRegulations = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return regulations.value.slice(start, end)
+  return filteredRegulations.value.slice(start, start + pageSize.value)
 })
 
-const form = reactive({
-  id: null,
-  name: '',
-  description: '',
-  is_active: 1
-})
+const form = reactive({ id: null, name: '', description: '', is_active: 1 })
 
-// 获取法规列表
+// 法规颜色映射
+const REGULATION_COLORS = { 'NIOSH': '#409EFF', 'GB': '#67C23A', 'CE': '#E6A23C', 'ASNZS': '#F56C6C', 'KN': '#9B59B6' }
+const getRegulationColor = (name) => REGULATION_COLORS[name] || '#909399'
+const getInitial = (name) => name ? name.charAt(0).toUpperCase() : '?'
+
 const fetchRegulations = async () => {
   try {
     const response = await request.get('/regulations')
-    if (response.success) {
-      regulations.value = response.data
-    }
-  } catch (error) {
-    ElMessage.error('获取法规列表失败')
-  }
+    if (response.success) { regulations.value = response.data; handleSearch() }
+  } catch (error) { ElMessage.error('获取法规列表失败') }
 }
 
-// 新增
+const handleSearch = () => {
+  if (!searchKeyword.value) { filteredRegulations.value = regulations.value; return }
+  const keyword = searchKeyword.value.toLowerCase()
+  filteredRegulations.value = regulations.value.filter(item => item.name.toLowerCase().includes(keyword))
+}
+
 const handleAdd = () => {
-  isEdit.value = false
-  dialogTitle.value = '新增法规'
-  form.id = null
-  form.name = ''
-  form.description = ''
-  form.is_active = 1
+  isEdit.value = false; dialogTitle.value = '新增法规'
+  form.id = null; form.name = ''; form.description = ''; form.is_active = 1
   dialogVisible.value = true
 }
 
-// 编辑
 const handleEdit = (row) => {
-  isEdit.value = true
-  dialogTitle.value = '编辑法规'
-  form.id = row.id
-  form.name = row.name
-  form.description = row.description
-  form.is_active = row.is_active
+  isEdit.value = true; dialogTitle.value = '编辑法规'
+  form.id = row.id; form.name = row.name; form.description = row.description; form.is_active = row.is_active
   dialogVisible.value = true
 }
 
-// 提交
 const handleSubmit = async () => {
-  if (!form.name) {
-    ElMessage.warning('请输入法规名称')
-    return
-  }
-
+  if (!form.name) { ElMessage.warning('请输入法规名称'); return }
   loading.value = true
   try {
-    if (isEdit.value) {
-      await request.put(`/regulations/${form.id}`, form)
-      ElMessage.success('更新成功')
-    } else {
-      await request.post('/regulations', form)
-      ElMessage.success('创建成功')
-    }
-    dialogVisible.value = false
-    fetchRegulations()
-  } catch (error) {
-    // 错误已在拦截器处理
-  } finally {
-    loading.value = false
-  }
+    if (isEdit.value) { await request.put(`/regulations/${form.id}`, form); ElMessage.success('更新成功') }
+    else { await request.post('/regulations', form); ElMessage.success('创建成功') }
+    dialogVisible.value = false; fetchRegulations()
+  } catch (error) { /* 错误已在拦截器处理 */ }
+  finally { loading.value = false }
 }
 
-// 删除
 const handleDelete = async (row) => {
   try {
-    await ElMessageBox.confirm(`确定要删除法规"${row.name}"吗？`, '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-
+    await ElMessageBox.confirm(`确定要删除法规"${row.name}"吗？`, '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
     await request.delete(`/regulations/${row.id}`)
-    ElMessage.success('删除成功')
-    fetchRegulations()
-  } catch (error) {
-    if (error !== 'cancel') {
-      // 错误已在拦截器处理
-    }
-  }
+    ElMessage.success('删除成功'); fetchRegulations()
+  } catch (error) { if (error !== 'cancel') { /* 错误已在拦截器处理 */ } }
 }
 
-onMounted(() => {
-  fetchRegulations()
-})
+onMounted(() => { fetchRegulations() })
 </script>
 
 <style scoped>
-.regulation-manage {
-  /* padding 由 MainLayout 提供 */
-}
+.filter-section { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.filter-section .view-toggle { margin-left: auto; }
 
-.page-header {
-  margin-bottom: 16px;
-}
+/* 卡片视图样式 */
+.item-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+@media (max-width: 1199px) { .item-cards { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 991px) { .item-cards { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 767px) { .item-cards { grid-template-columns: 1fr; } }
 
-.back-button {
-  font-size: 14px;
-}
+.empty-tip { grid-column: 1 / -1; text-align: center; color: #909399; padding: 40px 0; }
+.item-card { border: 1px solid #ebeef5; border-radius: 8px; background: #fff; transition: box-shadow 0.3s, border-color 0.3s; }
+.item-card:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+.item-card .card-body { padding: 16px; }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+.item-header { display: flex; gap: 12px; margin-bottom: 16px; }
+.avatar { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; font-weight: 600; flex-shrink: 0; transition: transform 0.2s; }
+.item-card:hover .avatar { transform: scale(1.05); }
 
-.status-tag {
-  min-width: 48px;
-  text-align: center;
-}
+.item-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; justify-content: center; }
+.item-name { font-size: 16px; font-weight: 600; color: #303133; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.description { font-size: 13px; color: #909399; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #606266; }
+.status-active { width: 8px; height: 8px; border-radius: 50%; background-color: #67c23a; }
+.status-inactive { width: 8px; height: 8px; border-radius: 50%; background-color: #909399; }
+
+.card-actions { display: flex; justify-content: center; gap: 8px; padding: 12px; border-top: 1px solid #ebeef5; background: #fafafa; border-radius: 0 0 8px 8px; }
+.card-actions .el-button { transition: transform 0.2s, box-shadow 0.2s; }
+.card-actions .el-button:hover:not(:disabled) { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
+
+.delete-btn { color: #F56C6C; }
+.delete-btn:hover:not(:disabled) { color: #f78989; border-color: #f78989; }
 
 /* 分页样式 */
-.pagination-wrapper {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #ebeef5;
-}
-
-.pagination-total {
-  font-size: 14px;
-  color: #606266;
-}
-
-.pagination-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.pagination-info {
-  font-size: 14px;
-  color: #606266;
-}
-
-/* 操作按钮悬停效果 */
-.el-table .el-button.is-circle {
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.el-table .el-button.is-circle:hover:not(:disabled) {
-  transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-/* 删除按钮样式 */
-.delete-btn {
-  color: #F56C6C;
-}
-
-.delete-btn:hover:not(:disabled) {
-  color: #f78989;
-  border-color: #f78989;
-}
+.pagination-wrapper { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid #ebeef5; }
+.pagination-total { font-size: 14px; color: #606266; }
+.pagination-right { display: flex; align-items: center; gap: 16px; }
+.pagination-info { font-size: 14px; color: #606266; }
 </style>

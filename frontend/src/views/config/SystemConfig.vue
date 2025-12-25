@@ -3,7 +3,6 @@
     <!-- 页面表头 -->
     <PageHeader title="参数配置管理">
       <template #actions>
-        <el-button @click="$router.back()" :icon="ArrowLeft">返回</el-button>
         <el-button type="primary" @click="handleSave" :loading="saving" v-if="authStore.isAdmin">
           <el-icon><Check /></el-icon>
           保存配置
@@ -40,7 +39,7 @@
                 <el-icon><Plus /></el-icon>添加税率选项
               </el-button>
             </div>
-            <div class="config-description">报价单中可选择的增值税率列表，输入小数（如 0.13 表示 13%）</div>
+            <div class="config-description"> </div>
           </el-form-item>
           <el-form-item label="保险率">
             <el-input v-model.number="configForm.insurance_rate" style="width: 200px" />
@@ -95,7 +94,7 @@
                 <el-icon><Plus /></el-icon>添加利润档位
               </el-button>
             </div>
-            <div class="config-description">用于生成利润区间报价：报价 = 基础价 × (1 + 利润%)</div>
+            <div class="config-description"> </div>
           </el-form-item>
           <el-form-item label="最后更新时间">
             <span class="update-time">{{ lastUpdateTime || '未更新' }}</span>

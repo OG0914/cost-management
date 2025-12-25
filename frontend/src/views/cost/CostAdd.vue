@@ -3,7 +3,6 @@
     <el-card class="header-card">
       <div class="header-content">
         <div class="header-left">
-          <el-button icon="ArrowLeft" @click="goBack">返回</el-button>
           <h2>{{ pageTitle }}</h2>
         </div>
       </div>
