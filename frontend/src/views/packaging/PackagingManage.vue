@@ -3,7 +3,10 @@
     <!-- 页面表头 -->
     <PageHeader title="包材管理">
       <template #actions>
-        <el-space v-if="canEdit">
+        <div class="toolbar-wrapper">
+          <el-button class="toolbar-toggle" :icon="showToolbar ? CaretRight : CaretLeft" circle @click="showToolbar = !showToolbar" :title="showToolbar ? '收起工具栏' : '展开工具栏'" />
+          <transition name="toolbar-fade">
+            <el-space v-if="showToolbar && canEdit">
           <el-button type="success" @click="handleDownloadTemplate">
             <el-icon><Download /></el-icon>
             下载模板
@@ -33,6 +36,8 @@
             新增包装配置
           </el-button>
         </el-space>
+          </transition>
+        </div>
       </template>
     </PageHeader>
 
@@ -407,7 +412,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, ArrowLeft, Download, Delete, Upload, Grid, List, View, EditPen, CopyDocument } from '@element-plus/icons-vue';
+import { Plus, ArrowLeft, Download, Delete, Upload, Grid, List, View, EditPen, CopyDocument, CaretLeft, CaretRight } from '@element-plus/icons-vue';
 import request from '../../utils/request';
 import { useAuthStore } from '../../store/auth';
 import { formatNumber, formatDateTime } from '../../utils/format';
@@ -422,6 +427,7 @@ import PageHeader from '../../components/common/PageHeader.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const showToolbar = ref(false);
 
 
 
@@ -1218,4 +1224,10 @@ onMounted(() => {
   max-height: 60vh;
   overflow-y: auto;
 }
+
+/* 工具栏折叠 */
+.toolbar-wrapper { display: flex; align-items: center; gap: 12px; }
+.toolbar-toggle { flex-shrink: 0; }
+.toolbar-fade-enter-active, .toolbar-fade-leave-active { transition: opacity 0.3s, transform 0.3s; }
+.toolbar-fade-enter-from, .toolbar-fade-leave-to { opacity: 0; transform: translateX(10px); }
 </style>

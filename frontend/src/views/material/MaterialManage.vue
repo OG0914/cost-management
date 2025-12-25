@@ -2,7 +2,10 @@
   <div class="material-manage">
     <PageHeader title="原料管理">
       <template #actions>
-        <el-space v-if="canEdit">
+        <div class="toolbar-wrapper">
+          <el-button class="toolbar-toggle" :icon="showToolbar ? CaretRight : CaretLeft" circle @click="showToolbar = !showToolbar" :title="showToolbar ? '收起工具栏' : '展开工具栏'" />
+          <transition name="toolbar-fade">
+            <el-space v-if="showToolbar && canEdit">
           <el-button type="success" @click="handleDownloadTemplate">
             <el-icon><Download /></el-icon>
             下载模板
@@ -32,6 +35,8 @@
             新增原料
           </el-button>
         </el-space>
+          </transition>
+        </div>
       </template>
     </PageHeader>
 
@@ -57,7 +62,7 @@
       <el-table :data="tableData" border stripe v-loading="loading" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="item_no" label="品号" width="140" />
-        <el-table-column prop="name" label="原料名称" width="300" />
+        <el-table-column prop="name" label="原料名称" width="370" />
         <el-table-column prop="unit" label="单位" width="80" />
         <el-table-column prop="price" label="单价" width="100">
           <template #default="{ row }">
@@ -137,13 +142,14 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Upload, Download, Delete, Search, EditPen } from '@element-plus/icons-vue'
+import { Plus, Upload, Download, Delete, Search, EditPen, CaretLeft, CaretRight } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { formatNumber, formatDateTime } from '../../utils/format'
 import PageHeader from '@/components/common/PageHeader.vue'
 
 const authStore = useAuthStore()
+const showToolbar = ref(false)
 
 // 表格数据（从后端获取的当前页数据）
 const tableData = ref([])
@@ -499,4 +505,15 @@ onMounted(() => {
   color: #f78989;
   border-color: #f78989;
 }
+
+/* 表头浅色底色 */
+:deep(.el-table th.el-table__cell) {
+  background-color: #f5f7fa;
+}
+
+/* 工具栏折叠 */
+.toolbar-wrapper { display: flex; align-items: center; gap: 12px; }
+.toolbar-toggle { flex-shrink: 0; }
+.toolbar-fade-enter-active, .toolbar-fade-leave-active { transition: opacity 0.3s, transform 0.3s; }
+.toolbar-fade-enter-from, .toolbar-fade-leave-to { opacity: 0; transform: translateX(10px); }
 </style>

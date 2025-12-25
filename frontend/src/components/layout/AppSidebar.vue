@@ -13,7 +13,7 @@
         @click="toggleCollapse"
         class="flex-shrink-0 p-1.5 rounded-lg cursor-pointer text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors"
       >
-        <i :class="collapsed ? 'ri-menu-unfold-line' : 'ri-menu-fold-line'" class="text-lg"></i>
+        <i :class="collapsed ? 'ri-layout-right-line' : 'ri-layout-left-line'" class="text-lg"></i>
       </div>
     </div>
 

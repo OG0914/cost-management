@@ -2,7 +2,10 @@
   <div class="model-manage">
     <PageHeader title="型号管理">
       <template #actions>
-        <el-space v-if="authStore.isAdmin">
+        <div class="toolbar-wrapper">
+          <el-button class="toolbar-toggle" :icon="showToolbar ? CaretRight : CaretLeft" circle @click="showToolbar = !showToolbar" :title="showToolbar ? '收起工具栏' : '展开工具栏'" />
+          <transition name="toolbar-fade">
+            <el-space v-if="showToolbar && authStore.isAdmin">
           <el-button type="success" @click="handleDownloadTemplate">
             <el-icon><Download /></el-icon>
             下载模板
@@ -26,6 +29,8 @@
             新增型号
           </el-button>
         </el-space>
+          </transition>
+        </div>
       </template>
     </PageHeader>
 
@@ -132,13 +137,14 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Upload, Download, Delete, EditPen, Grid, List } from '@element-plus/icons-vue'
+import { Plus, Search, Upload, Download, Delete, EditPen, Grid, List, CaretLeft, CaretRight } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { formatDateTime } from '@/utils/format'
 import PageHeader from '@/components/common/PageHeader.vue'
 
 const authStore = useAuthStore()
+const showToolbar = ref(false)
 const models = ref([])
 const filteredModels = ref([])
 const selectedModels = ref([])
@@ -315,4 +321,10 @@ onMounted(() => { fetchRegulations(); fetchModels() })
 .pagination-total { font-size: 14px; color: #606266; }
 .pagination-right { display: flex; align-items: center; gap: 16px; }
 .pagination-info { font-size: 14px; color: #606266; }
+
+/* 工具栏折叠 */
+.toolbar-wrapper { display: flex; align-items: center; gap: 12px; }
+.toolbar-toggle { flex-shrink: 0; }
+.toolbar-fade-enter-active, .toolbar-fade-leave-active { transition: opacity 0.3s, transform 0.3s; }
+.toolbar-fade-enter-from, .toolbar-fade-leave-to { opacity: 0; transform: translateX(10px); }
 </style>

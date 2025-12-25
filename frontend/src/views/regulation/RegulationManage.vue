@@ -2,10 +2,15 @@
   <div class="regulation-manage">
     <PageHeader title="法规类别管理">
       <template #actions>
-        <el-button type="primary" @click="handleAdd" v-if="authStore.isAdmin">
-          <el-icon><Plus /></el-icon>
-          新增法规
-        </el-button>
+        <div class="toolbar-wrapper">
+          <el-button class="toolbar-toggle" :icon="showToolbar ? CaretRight : CaretLeft" circle @click="showToolbar = !showToolbar" :title="showToolbar ? '收起工具栏' : '展开工具栏'" />
+          <transition name="toolbar-fade">
+            <el-button v-if="showToolbar && authStore.isAdmin" type="primary" @click="handleAdd">
+              <el-icon><Plus /></el-icon>
+              新增法规
+            </el-button>
+          </transition>
+        </div>
       </template>
     </PageHeader>
 
@@ -101,13 +106,14 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Grid, List, EditPen, Delete } from '@element-plus/icons-vue'
+import { Plus, Search, Grid, List, EditPen, Delete, CaretLeft, CaretRight } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { formatDateTime } from '@/utils/format'
 import PageHeader from '@/components/common/PageHeader.vue'
 
 const authStore = useAuthStore()
+const showToolbar = ref(false)
 const regulations = ref([])
 const filteredRegulations = ref([])
 const dialogVisible = ref(false)
@@ -217,4 +223,10 @@ onMounted(() => { fetchRegulations() })
 .pagination-total { font-size: 14px; color: #606266; }
 .pagination-right { display: flex; align-items: center; gap: 16px; }
 .pagination-info { font-size: 14px; color: #606266; }
+
+/* 工具栏折叠 */
+.toolbar-wrapper { display: flex; align-items: center; gap: 12px; }
+.toolbar-toggle { flex-shrink: 0; }
+.toolbar-fade-enter-active, .toolbar-fade-leave-active { transition: opacity 0.3s, transform 0.3s; }
+.toolbar-fade-enter-from, .toolbar-fade-leave-to { opacity: 0; transform: translateX(10px); }
 </style>
