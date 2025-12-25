@@ -1,41 +1,41 @@
 <template>
   <div class="material-manage">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>原料管理</span>
-          <el-space v-if="canEdit">
-            <el-button type="success" @click="handleDownloadTemplate">
-              <el-icon><Download /></el-icon>
-              下载模板
+    <PageHeader title="原料管理">
+      <template #actions>
+        <el-space v-if="canEdit">
+          <el-button type="success" @click="handleDownloadTemplate">
+            <el-icon><Download /></el-icon>
+            下载模板
+          </el-button>
+          <el-upload
+            action="#"
+            :auto-upload="false"
+            :on-change="handleFileChange"
+            :show-file-list="false"
+            accept=".xlsx,.xls"
+          >
+            <el-button type="warning">
+              <el-icon><Upload /></el-icon>
+              导入Excel
             </el-button>
-            <el-upload
-              action="#"
-              :auto-upload="false"
-              :on-change="handleFileChange"
-              :show-file-list="false"
-              accept=".xlsx,.xls"
-            >
-              <el-button type="warning">
-                <el-icon><Upload /></el-icon>
-                导入Excel
-              </el-button>
-            </el-upload>
-            <el-button type="info" @click="handleExport">
-              <el-icon><Download /></el-icon>
-              导出Excel
-            </el-button>
-            <el-button type="danger" @click="handleBatchDelete" :disabled="selectedMaterials.length === 0">
-              <el-icon><Delete /></el-icon>
-              批量删除
-            </el-button>
-            <el-button type="primary" @click="handleAdd">
-              <el-icon><Plus /></el-icon>
-              新增原料
-            </el-button>
-          </el-space>
-        </div>
+          </el-upload>
+          <el-button type="info" @click="handleExport">
+            <el-icon><Download /></el-icon>
+            导出Excel
+          </el-button>
+          <el-button type="danger" @click="handleBatchDelete" :disabled="selectedMaterials.length === 0">
+            <el-icon><Delete /></el-icon>
+            批量删除
+          </el-button>
+          <el-button type="primary" @click="handleAdd">
+            <el-icon><Plus /></el-icon>
+            新增原料
+          </el-button>
+        </el-space>
       </template>
+    </PageHeader>
+
+    <el-card>
 
       <!-- 搜索栏 -->
       <div class="filter-bar">
@@ -141,6 +141,7 @@ import { Plus, Upload, Download, Delete, Search, EditPen } from '@element-plus/i
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { formatNumber, formatDateTime } from '../../utils/format'
+import PageHeader from '@/components/common/PageHeader.vue'
 
 const authStore = useAuthStore()
 

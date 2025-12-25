@@ -1,16 +1,17 @@
 <template>
   <div class="system-config-container">
-    <div class="card">
-      <div class="card-header">
-        <div class="header-left">
-          <el-button @click="$router.back()" :icon="ArrowLeft">返回</el-button>
-          <span class="header-title">参数配置管理</span>
-        </div>
+    <!-- 页面表头 -->
+    <PageHeader title="参数配置管理">
+      <template #actions>
+        <el-button @click="$router.back()" :icon="ArrowLeft">返回</el-button>
         <el-button type="primary" @click="handleSave" :loading="saving" v-if="authStore.isAdmin">
           <el-icon><Check /></el-icon>
           保存配置
         </el-button>
-      </div>
+      </template>
+    </PageHeader>
+
+    <div class="card">
 
       <div class="card-body">
         <el-form :model="configForm" label-width="230px" :disabled="!authStore.isAdmin">
@@ -129,6 +130,7 @@ import { useAuthStore } from '../../store/auth';
 import { useConfigStore } from '../../store/config';
 import request from '../../utils/request';
 import { formatDateTime } from '@/utils/format';
+import PageHeader from '../../components/common/PageHeader.vue';
 
 const authStore = useAuthStore();
 const configStore = useConfigStore();
@@ -209,8 +211,6 @@ onMounted(() => { loadConfig(); });
 .system-config-container { /* padding 由 MainLayout 提供 */ }
 .card { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
 .card-header { padding: 16px 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 16px; }
-.header-left { display: flex; align-items: center; gap: 16px; }
-.header-title { font-weight: 600; font-size: 16px; }
 .card-body { padding: 24px 20px; }
 .config-description { margin-top: 8px; color: #9ca3af; font-size: 13px; line-height: 1.5; }
 .profit-tiers-container { display: flex; flex-direction: column; gap: 12px; }

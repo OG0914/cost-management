@@ -1,12 +1,6 @@
 <template>
   <div class="approved-review-container">
-    <el-card class="header-card">
-      <div class="header-content">
-        <div class="header-left">
-          <h2>📋 已审核记录</h2>
-        </div>
-      </div>
-    </el-card>
+    <PageHeader title="已审核记录" />
 
     <el-card>
       <!-- 搜索框 -->
@@ -117,6 +111,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { useReviewStore } from '@/store/review'
 import { useAuthStore } from '@/store/auth'
+import PageHeader from '@/components/common/PageHeader.vue'
 import { 
   getStatusType, 
   getStatusName, 

@@ -1,31 +1,30 @@
 <template>
   <div class="user-manage">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span class="title">用户管理</span>
-          <div class="header-actions">
-            <!-- 视图切换 -->
-            <el-button-group class="view-toggle">
-              <el-button
-                :type="viewMode === 'card' ? 'primary' : 'default'"
-                :icon="Grid"
-                @click="viewMode = 'card'"
-              />
-              <el-button
-                :type="viewMode === 'list' ? 'primary' : 'default'"
-                :icon="List"
-                @click="viewMode = 'list'"
-              />
-            </el-button-group>
-            <!-- 新增用户 -->
-            <el-button type="primary" @click="showCreateDialog">
-              <el-icon><Plus /></el-icon>
-              新增用户
-            </el-button>
-          </div>
-        </div>
+    <!-- 页面表头 -->
+    <PageHeader title="用户管理">
+      <template #actions>
+        <!-- 视图切换 -->
+        <el-button-group class="view-toggle">
+          <el-button
+            :type="viewMode === 'card' ? 'primary' : 'default'"
+            :icon="Grid"
+            @click="viewMode = 'card'"
+          />
+          <el-button
+            :type="viewMode === 'list' ? 'primary' : 'default'"
+            :icon="List"
+            @click="viewMode = 'list'"
+          />
+        </el-button-group>
+        <!-- 新增用户 -->
+        <el-button type="primary" @click="showCreateDialog">
+          <el-icon><Plus /></el-icon>
+          新增用户
+        </el-button>
       </template>
+    </PageHeader>
+
+    <el-card>
 
       <!-- 筛选区域 -->
       <div class="filter-section">
@@ -230,6 +229,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Search, Grid, List, Key, EditPen, Delete } from '@element-plus/icons-vue';
 import request from '../../utils/request';
 import { formatDateTime } from '@/utils/format';
+import PageHeader from '../../components/common/PageHeader.vue';
 
 // 数据
 const users = ref([]);
@@ -521,25 +521,6 @@ onMounted(() => {
 <style scoped>
 .user-manage {
   /* padding 由 MainLayout 提供 */
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.card-header .title {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
 }
 
 .view-toggle {

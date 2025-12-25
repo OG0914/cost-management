@@ -1,42 +1,41 @@
 <template>
   <div class="process-management">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>工序管理</span>
-          <el-space v-if="canEdit">
-            <el-button type="success" @click="handleDownloadTemplate">
-              <el-icon><Download /></el-icon>
-              下载模板
+    <PageHeader title="工序管理">
+      <template #actions>
+        <el-space v-if="canEdit">
+          <el-button type="success" @click="handleDownloadTemplate">
+            <el-icon><Download /></el-icon>
+            下载模板
+          </el-button>
+          <el-upload
+            action="#"
+            :auto-upload="false"
+            :on-change="handleFileChange"
+            :show-file-list="false"
+            accept=".xlsx,.xls"
+          >
+            <el-button type="warning">
+              <el-icon><Upload /></el-icon>
+              导入Excel
             </el-button>
-            <el-upload
-              action="#"
-              :auto-upload="false"
-              :on-change="handleFileChange"
-              :show-file-list="false"
-              accept=".xlsx,.xls"
-            >
-              <el-button type="warning">
-                <el-icon><Upload /></el-icon>
-                导入Excel
-              </el-button>
-            </el-upload>
-            <el-button type="info" @click="handleExport">
-              <el-icon><Download /></el-icon>
-              导出Excel
-            </el-button>
-            <el-button type="danger" @click="handleBatchDelete" :disabled="selectedConfigs.length === 0">
-              <el-icon><Delete /></el-icon>
-              批量删除
-            </el-button>
-            <el-button type="primary" @click="showCreateDialog">
-              <el-icon><Plus /></el-icon>
-              新增工序配置
-            </el-button>
-          </el-space>
-        </div>
+          </el-upload>
+          <el-button type="info" @click="handleExport">
+            <el-icon><Download /></el-icon>
+            导出Excel
+          </el-button>
+          <el-button type="danger" @click="handleBatchDelete" :disabled="selectedConfigs.length === 0">
+            <el-icon><Delete /></el-icon>
+            批量删除
+          </el-button>
+          <el-button type="primary" @click="showCreateDialog">
+            <el-icon><Plus /></el-icon>
+            新增工序配置
+          </el-button>
+        </el-space>
       </template>
+    </PageHeader>
 
+    <el-card>
       <!-- 筛选栏 -->
       <div class="filter-bar">
         <el-select 
@@ -376,6 +375,7 @@ import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { useConfigStore } from '../../store/config'
 import { formatNumber, formatDateTime } from '../../utils/format'
+import PageHeader from '@/components/common/PageHeader.vue'
 import { 
   getPackagingTypeOptions, 
   getPackagingTypeName, 

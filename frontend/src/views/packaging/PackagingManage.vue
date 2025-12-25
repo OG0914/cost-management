@@ -1,41 +1,42 @@
 <template>
   <div class="packaging-management">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>包材管理</span>
-          <el-space v-if="canEdit">
-            <el-button type="success" @click="handleDownloadTemplate">
-              <el-icon><Download /></el-icon>
-              下载模板
+    <!-- 页面表头 -->
+    <PageHeader title="包材管理">
+      <template #actions>
+        <el-space v-if="canEdit">
+          <el-button type="success" @click="handleDownloadTemplate">
+            <el-icon><Download /></el-icon>
+            下载模板
+          </el-button>
+          <el-upload
+            action="#"
+            :auto-upload="false"
+            :on-change="handleFileChange"
+            :show-file-list="false"
+            accept=".xlsx,.xls"
+          >
+            <el-button type="warning">
+              <el-icon><Upload /></el-icon>
+              导入Excel
             </el-button>
-            <el-upload
-              action="#"
-              :auto-upload="false"
-              :on-change="handleFileChange"
-              :show-file-list="false"
-              accept=".xlsx,.xls"
-            >
-              <el-button type="warning">
-                <el-icon><Upload /></el-icon>
-                导入Excel
-              </el-button>
-            </el-upload>
-            <el-button type="info" @click="handleExport">
-              <el-icon><Download /></el-icon>
-              导出Excel
-            </el-button>
-            <el-button type="danger" @click="handleBatchDelete" :disabled="selectedConfigs.length === 0">
-              <el-icon><Delete /></el-icon>
-              批量删除
-            </el-button>
-            <el-button type="primary" @click="showCreateDialog">
-              <el-icon><Plus /></el-icon>
-              新增包装配置
-            </el-button>
-          </el-space>
-        </div>
+          </el-upload>
+          <el-button type="info" @click="handleExport">
+            <el-icon><Download /></el-icon>
+            导出Excel
+          </el-button>
+          <el-button type="danger" @click="handleBatchDelete" :disabled="selectedConfigs.length === 0">
+            <el-icon><Delete /></el-icon>
+            批量删除
+          </el-button>
+          <el-button type="primary" @click="showCreateDialog">
+            <el-icon><Plus /></el-icon>
+            新增包装配置
+          </el-button>
+        </el-space>
       </template>
+    </PageHeader>
+
+    <el-card>
 
       <!-- 筛选栏 -->
       <div class="filter-bar">
@@ -417,6 +418,7 @@ import {
   formatPackagingMethodFromConfig,
   calculateTotalFromConfig
 } from '../../config/packagingTypes';
+import PageHeader from '../../components/common/PageHeader.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -1002,22 +1004,14 @@ onMounted(() => {
   /* padding 由 MainLayout 提供 */
 }
 
-.page-header {
-  margin-bottom: 16px;
-}
-
-.back-button {
-  font-size: 14px;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .filter-bar {
+  display: flex;
+  align-items: center;
   margin-bottom: 16px;
+}
+
+.view-toggle {
+  margin-left: auto;
 }
 
 /* 分页样式 */
@@ -1030,114 +1024,26 @@ onMounted(() => {
   border-top: 1px solid #ebeef5;
 }
 
-.pagination-total {
-  font-size: 14px;
-  color: #606266;
-}
-
-.pagination-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.pagination-info {
-  font-size: 14px;
-  color: #606266;
-}
-
-.packaging-info {
-  color: #409EFF;
-  font-weight: 500;
-}
-
-.price-info {
-  color: #E6A23C;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.subtotal-text {
-  color: #67C23A;
-  font-weight: 500;
-}
-
-.status-tag {
-  min-width: 48px;
-  text-align: center;
-}
-
-.mb-4 {
-  margin-bottom: 16px;
-}
-
-.mt-4 {
-  margin-top: 16px;
-}
-
-.text-lg {
-  font-size: 18px;
-}
-
-.text-sm {
-  font-size: 14px;
-}
-
-.font-bold {
-  font-weight: 600;
-}
-
-.text-gray-600 {
-  color: #606266;
-}
-
-.text-blue-600 {
-  color: #409EFF;
-}
-
-.text-right {
-  text-align: right;
-}
-
-.material-option {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 0;
-}
-
-.material-name {
-  flex: 1;
-  font-weight: 500;
-}
-
-.material-price {
-  color: #909399;
-  font-size: 12px;
-  margin-left: 12px;
-}
-
-.readonly-packaging-info {
-  color: #409EFF;
-  font-weight: 500;
-  font-size: 14px;
-}
-
-.total-per-carton {
-  font-size: 18px;
-  font-weight: bold;
-  color: #409EFF;
-}
-
-.filter-bar {
-  display: flex;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.view-toggle {
-  margin-left: auto;
-}
+.pagination-total { font-size: 14px; color: #606266; }
+.pagination-right { display: flex; align-items: center; gap: 16px; }
+.pagination-info { font-size: 14px; color: #606266; }
+.packaging-info { color: #409EFF; font-weight: 500; }
+.price-info { color: #E6A23C; font-weight: 600; font-size: 14px; }
+.subtotal-text { color: #67C23A; font-weight: 500; }
+.status-tag { min-width: 48px; text-align: center; }
+.mb-4 { margin-bottom: 16px; }
+.mt-4 { margin-top: 16px; }
+.text-lg { font-size: 18px; }
+.text-sm { font-size: 14px; }
+.font-bold { font-weight: 600; }
+.text-gray-600 { color: #606266; }
+.text-blue-600 { color: #409EFF; }
+.text-right { text-align: right; }
+.material-option { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; }
+.material-name { flex: 1; font-weight: 500; }
+.material-price { color: #909399; font-size: 12px; margin-left: 12px; }
+.readonly-packaging-info { color: #409EFF; font-weight: 500; font-size: 14px; }
+.total-per-carton { font-size: 18px; font-weight: bold; color: #409EFF; }
 
 /* 卡片视图样式 */
 .config-cards {

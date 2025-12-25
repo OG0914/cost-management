@@ -1,42 +1,41 @@
 <template>
   <div class="model-manage">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>型号管理</span>
-          <el-space v-if="authStore.isAdmin">
-            <el-button type="success" @click="handleDownloadTemplate">
-              <el-icon><Download /></el-icon>
-              下载模板
+    <PageHeader title="型号管理">
+      <template #actions>
+        <el-space v-if="authStore.isAdmin">
+          <el-button type="success" @click="handleDownloadTemplate">
+            <el-icon><Download /></el-icon>
+            下载模板
+          </el-button>
+          <el-upload
+            action="#"
+            :auto-upload="false"
+            :on-change="handleFileChange"
+            :show-file-list="false"
+            accept=".xlsx,.xls"
+          >
+            <el-button type="warning">
+              <el-icon><Upload /></el-icon>
+              导入Excel
             </el-button>
-            <el-upload
-              action="#"
-              :auto-upload="false"
-              :on-change="handleFileChange"
-              :show-file-list="false"
-              accept=".xlsx,.xls"
-            >
-              <el-button type="warning">
-                <el-icon><Upload /></el-icon>
-                导入Excel
-              </el-button>
-            </el-upload>
-            <el-button type="info" @click="handleExport">
-              <el-icon><Download /></el-icon>
-              导出Excel
-            </el-button>
-            <el-button type="danger" @click="handleBatchDelete" :disabled="selectedModels.length === 0">
-              <el-icon><Delete /></el-icon>
-              批量删除
-            </el-button>
-            <el-button type="primary" @click="handleAdd">
-              <el-icon><Plus /></el-icon>
-              新增型号
-            </el-button>
-          </el-space>
-        </div>
+          </el-upload>
+          <el-button type="info" @click="handleExport">
+            <el-icon><Download /></el-icon>
+            导出Excel
+          </el-button>
+          <el-button type="danger" @click="handleBatchDelete" :disabled="selectedModels.length === 0">
+            <el-icon><Delete /></el-icon>
+            批量删除
+          </el-button>
+          <el-button type="primary" @click="handleAdd">
+            <el-icon><Plus /></el-icon>
+            新增型号
+          </el-button>
+        </el-space>
       </template>
+    </PageHeader>
 
+    <el-card>
       <!-- 搜索栏 -->
       <div class="filter-bar">
         <el-input
@@ -152,6 +151,7 @@ import { Plus, ArrowLeft, Search, Upload, Download, Delete, EditPen } from '@ele
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { formatDateTime } from '@/utils/format'
+import PageHeader from '@/components/common/PageHeader.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()

@@ -1,16 +1,15 @@
 <template>
   <div class="regulation-manage">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>法规类别管理</span>
-          <el-button type="primary" @click="handleAdd" v-if="authStore.isAdmin">
-            <el-icon><Plus /></el-icon>
-            新增法规
-          </el-button>
-        </div>
+    <PageHeader title="法规类别管理">
+      <template #actions>
+        <el-button type="primary" @click="handleAdd" v-if="authStore.isAdmin">
+          <el-icon><Plus /></el-icon>
+          新增法规
+        </el-button>
       </template>
+    </PageHeader>
 
+    <el-card>
       <!-- 数据表格 -->
       <el-table :data="paginatedRegulations" border stripe>
         <el-table-column prop="name" label="法规名称" />
@@ -97,6 +96,7 @@ import { EditPen, Delete } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { formatDateTime } from '@/utils/format'
+import PageHeader from '@/components/common/PageHeader.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
