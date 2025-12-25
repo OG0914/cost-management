@@ -10,7 +10,7 @@ async function checkQuotation() {
     const pool = db.getPool();
     
     // 查询报价单
-    const quotationNo = 'MK20251207-002';
+    const quotationNo = 'MK20251225-003';
     const result = await pool.query(
       'SELECT * FROM quotations WHERE quotation_no = $1',
       [quotationNo]

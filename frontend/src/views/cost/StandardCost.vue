@@ -66,21 +66,24 @@
     </el-dialog>
 
     <el-card>
-      <!-- 标准成本筛选 -->
-      <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item label="产品类别">
-          <el-select v-model="searchForm.model_category" placeholder="请选择产品类别" clearable style="width: 150px">
-            <el-option v-for="cat in modelCategories" :key="cat" :label="cat" :value="cat" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="型号">
-          <el-input v-model="searchForm.model_name" placeholder="请输入型号" clearable style="width: 150px" />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="loadStandardCosts">查询</el-button>
-          <el-button @click="resetSearch">重置</el-button>
-        </el-form-item>
-      </el-form>
+      <!-- 搜索框 -->
+      <div class="filter-bar">
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索型号、包装配置、报价单号"
+          clearable
+          @input="handleSearch"
+          @clear="handleClearSearch"
+          style="width: 350px"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+        <el-select v-model="searchForm.model_category" placeholder="产品类别" clearable style="width: 150px; margin-left: 10px" @change="handleFilterChange">
+          <el-option v-for="cat in modelCategories" :key="cat" :label="cat" :value="cat" />
+        </el-select>
+      </div>
 
       <!-- 标准成本表格 -->
       <el-table :data="standardCosts" border v-loading="loading" @selection-change="handleSelectionChange">
@@ -141,15 +144,30 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 分页 -->
+      <div class="pagination-wrapper">
+        <div class="pagination-total">共 {{ total }} 条记录</div>
+        <div class="pagination-right">
+          <span class="pagination-info">{{ currentPage }} / {{ totalPages }} 页</span>
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="total"
+            layout="sizes, prev, pager, next, jumper"
+          />
+        </div>
+      </div>
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, DataAnalysis, View, CopyDocument, Clock, Delete } from '@element-plus/icons-vue'
+import { Search, View, CopyDocument, Clock, Delete } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { formatNumber, formatDateTime } from '@/utils/format'
 import { getUser } from '@/utils/auth'
@@ -183,10 +201,17 @@ const modelCategories = ref([])
 // 标准成本数据
 const standardCosts = ref([])
 const loading = ref(false)
-const searchForm = reactive({
-  model_category: '',
-  model_name: ''
-})
+const searchForm = reactive({ model_category: '' })
+const searchKeyword = ref('')
+
+// 分页状态
+const currentPage = ref(1)
+const pageSize = ref(20)
+const total = ref(0)
+const totalPages = computed(() => Math.ceil(total.value / pageSize.value) || 1)
+
+// 防抖定时器
+let searchTimer = null
 
 // 历史弹窗
 const historyDialogVisible = ref(false)
@@ -209,21 +234,21 @@ const loadModelCategories = async () => {
   }
 }
 
-// 加载标准成本列表
+// 加载标准成本列表（后端分页）
 const loadStandardCosts = async () => {
   loading.value = true
   try {
-    const params = {}
-    if (searchForm.model_category) {
-      params.model_category = searchForm.model_category
-    }
-    if (searchForm.model_name) {
-      params.model_name = searchForm.model_name
-    }
-    
-    const res = await request.get('/standard-costs', { params })
+    const res = await request.get('/standard-costs', {
+      params: {
+        page: currentPage.value,
+        pageSize: pageSize.value,
+        keyword: searchKeyword.value || undefined,
+        model_category: searchForm.model_category || undefined
+      }
+    })
     if (res.success) {
       standardCosts.value = res.data
+      total.value = res.total
     }
   } catch (error) {
     console.error('加载标准成本列表失败:', error)
@@ -233,12 +258,32 @@ const loadStandardCosts = async () => {
   }
 }
 
-// 重置搜索
-const resetSearch = () => {
-  searchForm.model_category = ''
-  searchForm.model_name = ''
+// 防抖搜索
+const handleSearch = () => {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    currentPage.value = 1
+    loadStandardCosts()
+  }, 300)
+}
+
+// 清空搜索
+const handleClearSearch = () => {
+  if (searchTimer) clearTimeout(searchTimer)
+  currentPage.value = 1
   loadStandardCosts()
 }
+
+// 筛选条件变化
+const handleFilterChange = () => {
+  currentPage.value = 1
+  loadStandardCosts()
+}
+
+// 监听分页参数变化
+watch([currentPage, pageSize], () => {
+  loadStandardCosts()
+})
 
 // 查看关联的报价单
 const viewQuotation = (row) => {
@@ -399,8 +444,36 @@ onMounted(() => {
   color: #303133;
 }
 
-.search-form {
-  margin-bottom: 20px;
+.filter-bar {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+}
+
+/* 分页样式 */
+.pagination-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #ebeef5;
+}
+
+.pagination-total {
+  font-size: 14px;
+  color: #606266;
+}
+
+.pagination-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: #606266;
 }
 
 /* 操作按钮悬停效果 */

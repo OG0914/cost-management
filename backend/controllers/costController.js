@@ -663,7 +663,7 @@ const getQuotationDetail = async (req, res) => {
         
         // 如果报价单保存了自定义增值税率，使用该值
         if (quotation.vat_rate !== null && quotation.vat_rate !== undefined) {
-            calculatorConfig.vatRate = quotation.vat_rate;
+            calculatorConfig.vatRate = parseFloat(quotation.vat_rate); // PostgreSQL DECIMAL返回字符串
         }
         
         const calculator = new CostCalculator(calculatorConfig);

@@ -1137,27 +1137,34 @@ const onPackagingConfigChange = async () => {
       console.log('外箱材积:', shippingInfo.cartonVolume)
 
       // 加载工序
-      form.processes = (processes || []).map(p => ({
-        category: 'process',
-        item_name: p.process_name,
-        usage_amount: 1,
-        unit_price: p.unit_price || 0,
-        subtotal: p.unit_price || 0,
-        is_changed: 0,
-        from_standard: true // 标记为标准数据
-      }))
+      form.processes = (processes || []).map(p => {
+        const unitPrice = parseFloat(p.unit_price) || 0
+        return {
+          category: 'process',
+          item_name: p.process_name,
+          usage_amount: 1,
+          unit_price: unitPrice,
+          subtotal: unitPrice,
+          is_changed: 0,
+          from_standard: true // 标记为标准数据
+        }
+      })
 
       // 加载包材
-      form.packaging = (materials || []).map(m => ({
-        category: 'packaging',
-        item_name: m.material_name,
-        usage_amount: m.basic_usage || 0,
-        unit_price: m.unit_price || 0,
-        carton_volume: m.carton_volume || null, // 保存外箱材积
-        subtotal: (m.basic_usage && m.basic_usage !== 0) ? (m.unit_price || 0) / m.basic_usage : 0,
-        is_changed: 0,
-        from_standard: true // 标记为标准数据
-      }))
+      form.packaging = (materials || []).map(m => {
+        const unitPrice = parseFloat(m.unit_price) || 0
+        const basicUsage = parseFloat(m.basic_usage) || 0
+        return {
+          category: 'packaging',
+          item_name: m.material_name,
+          usage_amount: basicUsage,
+          unit_price: unitPrice,
+          carton_volume: m.carton_volume ? parseFloat(m.carton_volume) : null,
+          subtotal: basicUsage !== 0 ? unitPrice / basicUsage : 0,
+          is_changed: 0,
+          from_standard: true // 标记为标准数据
+        }
+      })
 
       console.log('加载后的工序:', form.processes)
       console.log('加载后的包材:', form.packaging)
@@ -1814,40 +1821,40 @@ const loadQuotationData = async (id, isCopy = false) => {
         ? quotation.vat_rate 
         : (configStore.config.vat_rate || 0.13)
       
-      // 填充明细数据 - 保留完整的数据结构
+      // 填充明细数据 - 保留完整的数据结构，PostgreSQL DECIMAL返回字符串需转换
       form.materials = items.material.items.map(item => ({
         category: 'material',
         material_id: item.material_id || null,
         item_name: item.item_name,
-        usage_amount: item.usage_amount,
-        unit_price: item.unit_price,
-        subtotal: item.subtotal,
+        usage_amount: parseFloat(item.usage_amount) || 0,
+        unit_price: parseFloat(item.unit_price) || 0,
+        subtotal: parseFloat(item.subtotal) || 0,
         is_changed: item.is_changed || 0,
-        from_standard: true, // 标记为标准数据，这样会显示为文本而不是下拉框
+        from_standard: true,
         after_overhead: item.after_overhead || false,
-        coefficient_applied: true // 数据库中的subtotal已应用原料系数，避免后端重复计算
+        coefficient_applied: true // 数据库中的subtotal已应用原料系数
       }))
       
       form.processes = items.process.items.map(item => ({
         category: 'process',
         item_name: item.item_name,
-        usage_amount: item.usage_amount,
-        unit_price: item.unit_price,
-        subtotal: item.subtotal,
+        usage_amount: parseFloat(item.usage_amount) || 0,
+        unit_price: parseFloat(item.unit_price) || 0,
+        subtotal: parseFloat(item.subtotal) || 0,
         is_changed: item.is_changed || 0,
-        from_standard: true // 标记为标准数据，这样会显示为文本而不是下拉框
+        from_standard: true
       }))
       
       form.packaging = items.packaging.items.map(item => ({
         category: 'packaging',
         material_id: item.material_id || null,
         item_name: item.item_name,
-        usage_amount: item.usage_amount,
-        unit_price: item.unit_price,
-        carton_volume: item.carton_volume || null, // 保存外箱材积
-        subtotal: item.subtotal,
+        usage_amount: parseFloat(item.usage_amount) || 0,
+        unit_price: parseFloat(item.unit_price) || 0,
+        carton_volume: item.carton_volume ? parseFloat(item.carton_volume) : null,
+        subtotal: parseFloat(item.subtotal) || 0,
         is_changed: item.is_changed || 0,
-        from_standard: true // 标记为标准数据，这样会显示为文本而不是下拉框
+        from_standard: true
       }))
       
       // 尝试从原料库匹配原料ID（如果没有的话）
