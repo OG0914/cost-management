@@ -98,18 +98,19 @@
           
           <!-- 子菜单项 -->
           <Transition name="submenu">
-            <div v-if="!collapsed" v-show="expandedMenus.includes(item.id)" class="pl-11 pr-2 space-y-1 mb-2">
+            <div v-if="!collapsed" v-show="expandedMenus.includes(item.id)" class="pl-6 pr-2 space-y-1 mb-2">
               <div 
                 v-for="sub in item.children" 
                 :key="sub.id"
                 @click="handleMenuClick(sub)"
                 :class="[
-                  'text-sm py-2 px-3 rounded-md cursor-pointer transition-colors block relative',
+                  'flex items-center text-sm py-2 px-3 rounded-md cursor-pointer transition-colors relative',
                   isActive(sub.id) 
                     ? 'text-primary-600 bg-primary-50 font-medium' 
                     : 'text-slate-800 hover:text-slate-900 hover:bg-slate-50'
                 ]"
               >
+                <i v-if="sub.icon" :class="[sub.icon, 'text-base mr-2', isActive(sub.id) ? 'text-primary-500' : 'text-slate-400']"></i>
                 {{ sub.label }}
                 <!-- 待审核数量红色气泡 -->
                 <span 

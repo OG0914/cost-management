@@ -56,10 +56,10 @@
           <el-descriptions-item label="港口" v-if="quotation.sales_type === 'export' && quotation.port">
             {{ quotation.port }}
           </el-descriptions-item>
-          <el-descriptions-item label="购买数量">{{ formatNumber(quotation.quantity, 0) }}</el-descriptions-item>
-          <el-descriptions-item label="箱数" v-if="shippingInfo.cartons">{{ shippingInfo.cartons }}</el-descriptions-item>
-          <el-descriptions-item label="CBM" v-if="shippingInfo.cbm">{{ shippingInfo.cbm }}</el-descriptions-item>
-          <el-descriptions-item label="运费总价">{{ formatNumber(quotation.freight_total) }}</el-descriptions-item>
+          <el-descriptions-item label="购买数量">{{ formatQuantity(quotation.quantity) }}</el-descriptions-item>
+          <el-descriptions-item label="箱数" v-if="quotation.quantity !== 1 && shippingInfo.cartons">{{ shippingInfo.cartons }}</el-descriptions-item>
+          <el-descriptions-item label="CBM" v-if="quotation.quantity !== 1 && shippingInfo.cbm">{{ shippingInfo.cbm }}</el-descriptions-item>
+          <el-descriptions-item label="运费总价" v-if="quotation.quantity !== 1">{{ formatNumber(quotation.freight_total) }}</el-descriptions-item>
         </el-descriptions>
       </el-card>
 
@@ -203,34 +203,53 @@
         
         <div class="simple-view-hint">
           <el-icon><InfoFilled /></el-icon>
-          <span>如需查看详细成本明细，请联系管理员或审核人员</span>
+          <span>如需提交审核或查看成本明细，请前往编辑界面。</span>
         </div>
       </el-card>
 
       <!-- 成本计算 -->
       <el-card class="info-section">
         <template #header>
-          <span class="section-title">成本计算</span>
+          <div class="section-header">
+            <span class="section-title">成本计算</span>
+            <el-icon class="formula-toggle" @click="showFormula = !showFormula" :title="showFormula ? '隐藏公式' : '显示公式'">
+              <View v-if="!showFormula" /><Hide v-else />
+            </el-icon>
+          </div>
         </template>
         
         <el-descriptions :column="1" border direction="vertical">
           <el-descriptions-item label="运费成本（每片）">
             {{ formatNumber(quotation.freight_per_unit) }}
           </el-descriptions-item>
+          <el-descriptions-item label="运费计入成本">
+            {{ quotation.include_freight_in_base ? '是' : '否' }}
+          </el-descriptions-item>
           <el-descriptions-item label="基础成本价">
             {{ formatNumber(quotation.base_cost) }}
+            <span v-if="showFormula" class="formula-text">
+              = 原料{{ formatNumber(items.material.total) }} + 工序{{ formatNumber(items.process.total) }}×{{ configStore.config.process_coefficient || 1.56 }} + 包材{{ formatNumber(items.packaging.total) }}{{ quotation.include_freight_in_base ? ' + 运费' + formatNumber(quotation.freight_per_unit) : '' }}
+            </span>
           </el-descriptions-item>
           <el-descriptions-item label="管销价">
             {{ formatNumber(quotation.overhead_price) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="运费计入成本">
-            {{ quotation.include_freight_in_base ? '是' : '否' }}
+            <span v-if="showFormula" class="formula-text">
+              = {{ formatNumber(quotation.base_cost) }} ÷ (1 - {{ ((configStore.config.overhead_rate || 0.2) * 100).toFixed(0) }}%)
+            </span>
           </el-descriptions-item>
           <el-descriptions-item label="汇率（CNY/USD）" v-if="quotation.sales_type === 'export' && calculation">
             {{ formatNumber(calculation.exchangeRate) }}
           </el-descriptions-item>
           <el-descriptions-item :label="quotation.sales_type === 'domestic' ? `最终成本价（含${((quotation.vat_rate !== null && quotation.vat_rate !== undefined ? quotation.vat_rate : configStore.config.vat_rate || 0.13) * 100).toFixed(0)}%增值税）` : '最终成本价（不含增值税）'">
             {{ formatNumber(quotation.final_price) }} {{ quotation.currency }}
+            <span v-if="showFormula" class="formula-text">
+              <template v-if="quotation.sales_type === 'domestic'">
+                = {{ formatNumber(quotation.overhead_price) }} × (1 + {{ ((quotation.vat_rate !== null && quotation.vat_rate !== undefined ? quotation.vat_rate : configStore.config.vat_rate || 0.13) * 100).toFixed(0) }}%)
+              </template>
+              <template v-else>
+                = {{ formatNumber(quotation.overhead_price) }} ÷ {{ formatNumber(calculation?.exchangeRate || 7.2) }} × 1.003
+              </template>
+            </span>
           </el-descriptions-item>
         </el-descriptions>
 
@@ -261,9 +280,10 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { InfoFilled } from '@element-plus/icons-vue'
+import { InfoFilled, View, Hide } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { formatNumber } from '@/utils/format'
+import { formatQuantity } from '@/utils/review'
 import { useConfigStore } from '@/store/config'
 import { getUser } from '@/utils/auth'
 
@@ -280,6 +300,7 @@ const items = ref({
 const calculation = ref(null)
 const loading = ref(false)
 const settingStandardCost = ref(false)
+const showFormula = ref(false)
 
 // 用户权限
 const user = getUser()
@@ -660,5 +681,30 @@ onMounted(async () => {
   border-radius: 4px;
   color: #e6a23c;
   font-size: 13px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.formula-toggle {
+  cursor: pointer;
+  font-size: 18px;
+  color: #909399;
+  transition: color 0.2s;
+}
+
+.formula-toggle:hover {
+  color: #409eff;
+}
+
+.formula-text {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #909399;
+  font-style: italic;
 }
 </style>

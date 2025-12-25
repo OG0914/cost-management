@@ -21,9 +21,9 @@ export const menuConfig = [
     // 采购和生产人员不能访问
     roles: ['admin', 'reviewer', 'salesperson', 'readonly'],
     children: [
-      { id: 'cost_add', label: '新增报价', route: '/cost/add' },
-      { id: 'cost_standard', label: '标准成本', route: '/cost/standard' },
-      { id: 'cost_records', label: '成本记录', route: '/cost/records' }
+      { id: 'cost_add', label: '新增报价', route: '/cost/add', icon: 'ri-add-circle-line' },
+      { id: 'cost_standard', label: '标准成本', route: '/cost/standard', icon: 'ri-bookmark-line' },
+      { id: 'cost_records', label: '成本记录', route: '/cost/records', icon: 'ri-file-list-3-line' }
     ]
   },
   {
@@ -33,8 +33,8 @@ export const menuConfig = [
     // 管理员、审核人员和业务员可见（业务员只能看自己的）
     roles: ['admin', 'reviewer', 'salesperson'],
     children: [
-      { id: 'review_pending', label: '待审核记录', route: '/review/pending' },
-      { id: 'review_approved', label: '已审核记录', route: '/review/approved' }
+      { id: 'review_pending', label: '待审核记录', route: '/review/pending', icon: 'ri-time-line' },
+      { id: 'review_approved', label: '已审核记录', route: '/review/approved', icon: 'ri-check-double-line' }
     ]
   },
 
@@ -46,14 +46,14 @@ export const menuConfig = [
     label: '法规管理',
     icon: 'ri-government-line',
     route: '/regulations',
-    roles: ['admin']
+    roles: ['admin', 'salesperson', 'reviewer', 'readonly']
   },
   {
     id: 'model',
     label: '型号管理',
     icon: 'ri-price-tag-3-line',
     route: '/models',
-    roles: ['admin']
+    roles: ['admin', 'salesperson', 'reviewer', 'readonly']
   },
   {
     id: 'material',

@@ -88,7 +88,7 @@
         </el-table-column>
         <el-table-column prop="quantity" label="数量" width="100">
           <template #default="{ row }">
-            {{ formatNumber(row.quantity, 0) }}
+            {{ formatQuantity(row.quantity) }}
           </template>
         </el-table-column>
         <el-table-column prop="final_price" label="最终价格" width="120">
@@ -138,6 +138,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, View, EditPen, CopyDocument, Delete } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { formatNumber, formatDateTime } from '@/utils/format'
+import { formatQuantity } from '@/utils/review'
 import { getUser } from '@/utils/auth'
 import ProductCategoryModal from '@/components/ProductCategoryModal.vue'
 

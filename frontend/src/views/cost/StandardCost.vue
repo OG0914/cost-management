@@ -29,7 +29,7 @@
         <el-table-column prop="version" label="版本" width="80" />
         <el-table-column prop="quantity" label="数量" width="100">
           <template #default="{ row }">
-            {{ formatNumber(row.quantity, 0) }}
+            {{ formatQuantity(row.quantity) }}
           </template>
         </el-table-column>
         <el-table-column label="最终价格" width="150">
@@ -109,7 +109,7 @@
         </el-table-column>
         <el-table-column prop="quantity" label="数量" width="100">
           <template #default="{ row }">
-            {{ formatNumber(row.quantity, 0) }}
+            {{ formatQuantity(row.quantity) }}
           </template>
         </el-table-column>
         <el-table-column prop="sales_type" label="销售类型" width="90">
@@ -170,6 +170,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, View, CopyDocument, Clock, Delete } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { formatNumber, formatDateTime } from '@/utils/format'
+import { formatQuantity } from '@/utils/review'
 import { getUser } from '@/utils/auth'
 
 const router = useRouter()

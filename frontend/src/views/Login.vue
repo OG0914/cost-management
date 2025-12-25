@@ -164,8 +164,5 @@ const handleLogin = async () => {
   background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
 }
 
-/* 确保使用Inter字体或系统默认字体 */
-* {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
-}
+/* 继承全局字体设置 */
 </style>

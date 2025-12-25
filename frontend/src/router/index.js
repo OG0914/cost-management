@@ -32,14 +32,12 @@ const routes = [
       {
         path: 'regulations',
         name: 'RegulationManage',
-        component: () => import('../views/regulation/RegulationManage.vue'),
-        meta: { requiresAdmin: true }
+        component: () => import('../views/regulation/RegulationManage.vue')
       },
       {
         path: 'models',
         name: 'ModelManage',
-        component: () => import('../views/model/ModelManage.vue'),
-        meta: { requiresAdmin: true }
+        component: () => import('../views/model/ModelManage.vue')
       },
       {
         path: 'materials',

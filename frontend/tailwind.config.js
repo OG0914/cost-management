@@ -8,7 +8,7 @@ export default {
     extend: {
       // 字体配置
       fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: ['Inter', 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', 'sans-serif'],
       },
       // 颜色配置
       colors: {

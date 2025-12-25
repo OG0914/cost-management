@@ -454,7 +454,7 @@ const handlePrint = () => {
         }
         
         body {
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+          font-family: 'Inter', 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', sans-serif;
           padding: 20px;
           font-size: 14px;
           line-height: 1.6;
