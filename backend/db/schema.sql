@@ -220,6 +220,21 @@ CREATE TABLE IF NOT EXISTS system_config (
 );
 
 -- ============================================
+-- 产品BOM表（型号级别的原料清单）
+-- ============================================
+CREATE TABLE IF NOT EXISTS model_bom_materials (
+  id SERIAL PRIMARY KEY,
+  model_id INTEGER NOT NULL REFERENCES models(id) ON DELETE CASCADE,
+  material_id INTEGER NOT NULL REFERENCES materials(id),
+  usage_amount DECIMAL(12,6) NOT NULL CHECK(usage_amount > 0),
+  sort_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(model_id, material_id)
+);
+
+-- ============================================
 -- 价格历史表
 -- ============================================
 CREATE TABLE IF NOT EXISTS price_history (
@@ -292,6 +307,11 @@ CREATE INDEX IF NOT EXISTS idx_process_configs_packaging_config_id ON process_co
 
 -- 包材配置表索引
 CREATE INDEX IF NOT EXISTS idx_packaging_materials_config_id ON packaging_materials(packaging_config_id);
+
+-- 产品BOM表索引
+CREATE INDEX IF NOT EXISTS idx_bom_model_id ON model_bom_materials(model_id);
+CREATE INDEX IF NOT EXISTS idx_bom_material_id ON model_bom_materials(material_id);
+CREATE INDEX IF NOT EXISTS idx_bom_is_active ON model_bom_materials(is_active) WHERE is_active = true;
 
 -- 报价单表索引
 CREATE INDEX IF NOT EXISTS idx_quotations_status ON quotations(status);

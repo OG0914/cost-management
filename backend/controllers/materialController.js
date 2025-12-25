@@ -3,6 +3,7 @@
  */
 
 const Material = require('../models/Material');
+const ModelBom = require('../models/ModelBom');
 const ExcelParser = require('../utils/excelParser');
 const ExcelGenerator = require('../utils/excelGenerator');
 const { success, error, paginated } = require('../utils/response');
@@ -127,6 +128,14 @@ const deleteMaterial = async (req, res, next) => {
     const material = await Material.findById(id);
     if (!material) {
       return res.status(404).json(error('原料不存在', 404));
+    }
+    
+    // 检查是否被BOM引用
+    const isUsed = await ModelBom.isMaterialUsed(id);
+    if (isUsed) {
+      const models = await ModelBom.getModelsByMaterial(id);
+      const modelNames = models.map(m => m.model_name).join('、');
+      return res.status(400).json(error(`该原料已被以下型号BOM引用：${modelNames}，无法删除`, 400));
     }
     
     await Material.delete(id);

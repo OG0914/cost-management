@@ -1083,6 +1083,32 @@ const onRegulationChange = () => {
   calculation.value = null
 }
 
+// 加载型号BOM原料
+const loadBomMaterials = async (modelId) => {
+  if (!modelId) return
+  try {
+    const res = await request.get(`/bom/${modelId}`)
+    if (res.success && res.data && res.data.length > 0) {
+      form.materials = res.data.map(b => ({
+        category: 'material',
+        material_id: b.material_id,
+        item_name: b.material_name,
+        usage_amount: parseFloat(b.usage_amount) || 0,
+        unit_price: parseFloat(b.unit_price) || 0,
+        subtotal: (parseFloat(b.usage_amount) || 0) * (parseFloat(b.unit_price) || 0),
+        is_changed: 0,
+        from_bom: true, // 标记来自BOM
+        from_standard: true, // 标记为标准数据（锁定编辑）
+        after_overhead: false
+      }))
+      editMode.materials = false // 重置编辑状态
+      console.log('已加载BOM原料:', form.materials.length, '条')
+    } else {
+      form.materials = [] // 无BOM数据时清空
+    }
+  } catch (e) { console.error('加载BOM原料失败:', e) }
+}
+
 // 包装配置变化 - 加载该配置的工序和包材
 const onPackagingConfigChange = async () => {
   if (!form.packaging_config_id) return
@@ -1134,6 +1160,9 @@ const onPackagingConfigChange = async () => {
       
       console.log('每箱只数:', pcsPerCarton)
       console.log('外箱材积:', shippingInfo.cartonVolume)
+
+      // 加载BOM原料
+      await loadBomMaterials(config.model_id)
 
       // 加载工序
       form.processes = (processes || []).map(p => {

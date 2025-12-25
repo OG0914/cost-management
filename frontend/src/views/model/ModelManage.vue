@@ -51,7 +51,7 @@
           <div class="card-body">
             <div class="item-header">
               <div class="avatar" :style="{ backgroundColor: getRegulationColor(item.regulation_name) }">
-                {{ item.regulation_name || '?' }}
+                {{ item.model_category || '?' }}
               </div>
               <div class="item-info">
                 <div class="item-name">{{ item.model_name }}</div>
@@ -59,10 +59,6 @@
               </div>
             </div>
             <div class="item-details">
-              <div class="category">
-                <el-tag v-if="item.model_category" size="default" effect="plain">📦 {{ item.model_category }}</el-tag>
-                <span v-else class="no-category">未分类</span>
-              </div>
               <div class="status">
                 <span :class="item.is_active ? 'status-active' : 'status-inactive'"></span>
                 {{ item.is_active ? '已启用' : '已禁用' }}
@@ -70,6 +66,7 @@
             </div>
           </div>
           <div class="card-actions" v-if="authStore.isAdmin">
+            <el-button :icon="Setting" circle @click="handleConfigBom(item)" title="配置BOM" />
             <el-button :icon="EditPen" circle @click="handleEdit(item)" title="编辑" />
             <el-button :icon="Delete" circle class="delete-btn" @click="handleDelete(item)" title="删除" />
           </div>
@@ -90,8 +87,9 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" v-if="authStore.isAdmin">
+        <el-table-column label="操作" width="160" v-if="authStore.isAdmin">
           <template #default="{ row }">
+            <el-button :icon="Setting" circle size="small" @click="handleConfigBom(row)" title="配置BOM" />
             <el-button :icon="EditPen" circle size="small" @click="handleEdit(row)" title="编辑" />
             <el-button :icon="Delete" circle size="small" class="delete-btn" @click="handleDelete(row)" title="删除" />
           </template>
@@ -131,21 +129,28 @@
         <el-button type="primary" @click="handleSubmit" :loading="loading">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- BOM配置弹窗 -->
+    <BomConfigDialog v-model="bomDialogVisible" :model-id="currentBomModelId" :model-name="currentBomModelName" />
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Upload, Download, Delete, EditPen, Grid, List, CaretLeft, CaretRight } from '@element-plus/icons-vue'
+import { Plus, Search, Upload, Download, Delete, EditPen, Grid, List, CaretLeft, CaretRight, Setting } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { formatDateTime } from '@/utils/format'
 import PageHeader from '@/components/common/PageHeader.vue'
+import BomConfigDialog from '@/components/BomConfigDialog.vue'
 
 const authStore = useAuthStore()
 const showToolbar = ref(false)
 const models = ref([])
+const bomDialogVisible = ref(false)
+const currentBomModelId = ref(null)
+const currentBomModelName = ref('')
 const filteredModels = ref([])
 const selectedModels = ref([])
 const regulations = ref([])
@@ -168,7 +173,7 @@ watch(viewMode, (newMode) => { if (newMode === 'card') selectedModels.value = []
 
 const form = reactive({ id: null, regulation_id: null, model_name: '', model_category: '', is_active: 1 })
 
-// 法规颜色映射（与法规管理一致）
+// 法规颜色映射（底色关联法规类别）
 const REGULATION_COLORS = { 'NIOSH': '#409EFF', 'GB': '#67C23A', 'CE': '#E6A23C', 'ASNZS': '#F56C6C', 'KN': '#9B59B6' }
 const getRegulationColor = (name) => REGULATION_COLORS[name] || '#909399'
 
@@ -204,6 +209,13 @@ const handleEdit = (row) => {
   isEdit.value = true; dialogTitle.value = '编辑型号'
   form.id = row.id; form.regulation_id = row.regulation_id; form.model_name = row.model_name; form.model_category = row.model_category; form.is_active = row.is_active
   dialogVisible.value = true
+}
+
+// 配置BOM
+const handleConfigBom = (row) => {
+  currentBomModelId.value = row.id
+  currentBomModelName.value = row.model_name
+  bomDialogVisible.value = true
 }
 
 const handleSubmit = async () => {

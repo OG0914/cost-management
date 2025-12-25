@@ -1,0 +1,108 @@
+/** 产品BOM数据模型 - PostgreSQL异步版本 */
+
+const dbManager = require('../db/database');
+
+class ModelBom {
+  /** 根据型号ID获取BOM清单（JOIN原料表获取最新单价） */
+  static async findByModelId(modelId) {
+    const result = await dbManager.query(`
+      SELECT b.id, b.model_id, b.material_id, b.usage_amount, b.sort_order, b.is_active,
+             m.item_no, m.name as material_name, m.unit, m.price as unit_price, m.currency, m.manufacturer
+      FROM model_bom_materials b
+      JOIN materials m ON b.material_id = m.id
+      WHERE b.model_id = $1 AND b.is_active = true
+      ORDER BY b.sort_order, b.id
+    `, [modelId]);
+    return result.rows;
+  }
+
+  /** 根据ID查找BOM记录 */
+  static async findById(id) {
+    const result = await dbManager.query(
+      'SELECT * FROM model_bom_materials WHERE id = $1',
+      [id]
+    );
+    return result.rows[0] || null;
+  }
+
+  /** 检查原料是否已存在于型号BOM中 */
+  static async existsInModel(modelId, materialId) {
+    const result = await dbManager.query(
+      'SELECT id FROM model_bom_materials WHERE model_id = $1 AND material_id = $2',
+      [modelId, materialId]
+    );
+    return result.rows.length > 0;
+  }
+
+  /** 创建BOM原料项 */
+  static async create(data) {
+    const { model_id, material_id, usage_amount, sort_order } = data;
+    const result = await dbManager.query(
+      `INSERT INTO model_bom_materials (model_id, material_id, usage_amount, sort_order)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [model_id, material_id, usage_amount, sort_order || 0]
+    );
+    return result.rows[0].id;
+  }
+
+  /** 更新BOM原料项 */
+  static async update(id, data) {
+    const { usage_amount, sort_order, is_active } = data;
+    const result = await dbManager.query(
+      `UPDATE model_bom_materials 
+       SET usage_amount = COALESCE($1, usage_amount),
+           sort_order = COALESCE($2, sort_order),
+           is_active = COALESCE($3, is_active),
+           updated_at = NOW()
+       WHERE id = $4`,
+      [usage_amount, sort_order, is_active, id]
+    );
+    return { rowCount: result.rowCount };
+  }
+
+  /** 删除BOM原料项 */
+  static async delete(id) {
+    const result = await dbManager.query(
+      'DELETE FROM model_bom_materials WHERE id = $1',
+      [id]
+    );
+    return { rowCount: result.rowCount };
+  }
+
+  /** 批量更新BOM（用于排序调整） */
+  static async batchUpdate(modelId, items) {
+    return await dbManager.transaction(async (client) => {
+      for (const item of items) {
+        await client.query(
+          `UPDATE model_bom_materials SET usage_amount = $1, sort_order = $2, updated_at = NOW()
+           WHERE id = $3 AND model_id = $4`,
+          [item.usage_amount, item.sort_order, item.id, modelId]
+        );
+      }
+      return items.length;
+    });
+  }
+
+  /** 检查原料是否被BOM引用 */
+  static async isMaterialUsed(materialId) {
+    const result = await dbManager.query(
+      'SELECT COUNT(*) as count FROM model_bom_materials WHERE material_id = $1',
+      [materialId]
+    );
+    return parseInt(result.rows[0].count) > 0;
+  }
+
+  /** 获取引用某原料的型号列表 */
+  static async getModelsByMaterial(materialId) {
+    const result = await dbManager.query(`
+      SELECT DISTINCT m.id, m.model_name, r.name as regulation_name
+      FROM model_bom_materials b
+      JOIN models m ON b.model_id = m.id
+      JOIN regulations r ON m.regulation_id = r.id
+      WHERE b.material_id = $1
+    `, [materialId]);
+    return result.rows;
+  }
+}
+
+module.exports = ModelBom;

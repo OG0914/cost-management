@@ -39,6 +39,7 @@ app.use('/api/cost', require('./routes/costRoutes'));
 app.use('/api/standard-costs', require('./routes/standardCostRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/review', require('./routes/reviewRoutes'));
+app.use('/api/bom', require('./routes/bomRoutes'));
 
 // 404 处理
 app.use((req, res) => {
