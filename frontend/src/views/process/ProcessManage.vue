@@ -198,19 +198,7 @@
       </el-table>
 
       <!-- 分页 -->
-      <div class="pagination-wrapper">
-        <div class="pagination-total">共 {{ packagingConfigs.length }} 条记录</div>
-        <div class="pagination-right">
-          <span class="pagination-info">{{ currentPage }} / {{ totalPages }} 页</span>
-          <el-pagination
-            v-model:current-page="currentPage"
-            v-model:page-size="pageSize"
-            :page-sizes="[10, 20, 50, 100]"
-            :total="packagingConfigs.length"
-            layout="sizes, prev, pager, next, jumper"
-          />
-        </div>
-      </div>
+      <CommonPagination v-model:current-page="currentPage" v-model:page-size="pageSize" :total="packagingConfigs.length" />
     </el-card>
 
     <!-- 创建/编辑包装配置对话框 -->
@@ -381,6 +369,7 @@ import { useAuthStore } from '../../store/auth'
 import { useConfigStore } from '../../store/config'
 import { formatNumber, formatDateTime } from '../../utils/format'
 import PageHeader from '@/components/common/PageHeader.vue'
+import CommonPagination from '@/components/common/CommonPagination.vue'
 import { 
   getPackagingTypeOptions, 
   getPackagingTypeName, 
@@ -423,12 +412,7 @@ watch(viewMode, (newMode) => {
 
 // 分页状态
 const currentPage = ref(1)
-const pageSize = ref(10)
-
-// 总页数
-const totalPages = computed(() => {
-  return Math.ceil(packagingConfigs.value.length / pageSize.value) || 1
-})
+const pageSize = ref(12)
 
 // 分页后的数据
 const paginatedConfigs = computed(() => {

@@ -73,13 +73,7 @@
       </el-table>
 
       <!-- 分页 -->
-      <div class="pagination-wrapper">
-        <div class="pagination-total">共 {{ filteredRegulations.length }} 条记录</div>
-        <div class="pagination-right">
-          <span class="pagination-info">{{ currentPage }} / {{ totalPages }} 页</span>
-          <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]" :total="filteredRegulations.length" layout="sizes, prev, pager, next, jumper" />
-        </div>
-      </div>
+      <CommonPagination v-model:current-page="currentPage" v-model:page-size="pageSize" :total="filteredRegulations.length" />
     </el-card>
 
     <!-- 新增/编辑对话框 -->
@@ -111,6 +105,7 @@ import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { formatDateTime } from '@/utils/format'
 import PageHeader from '@/components/common/PageHeader.vue'
+import CommonPagination from '@/components/common/CommonPagination.vue'
 
 const authStore = useAuthStore()
 const showToolbar = ref(false)
@@ -123,9 +118,8 @@ const loading = ref(false)
 const searchKeyword = ref('')
 const viewMode = ref('card')
 const currentPage = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(12)
 
-const totalPages = computed(() => Math.ceil(filteredRegulations.value.length / pageSize.value) || 1)
 const paginatedRegulations = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   return filteredRegulations.value.slice(start, start + pageSize.value)
@@ -217,12 +211,6 @@ onMounted(() => { fetchRegulations() })
 
 .delete-btn { color: #F56C6C; }
 .delete-btn:hover:not(:disabled) { color: #f78989; border-color: #f78989; }
-
-/* 分页样式 */
-.pagination-wrapper { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid #ebeef5; }
-.pagination-total { font-size: 14px; color: #606266; }
-.pagination-right { display: flex; align-items: center; gap: 16px; }
-.pagination-info { font-size: 14px; color: #606266; }
 
 /* 工具栏折叠 */
 .toolbar-wrapper { display: flex; align-items: center; gap: 12px; }

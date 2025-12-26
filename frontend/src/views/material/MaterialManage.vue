@@ -85,19 +85,7 @@
       </el-table>
 
       <!-- 分页 -->
-      <div class="pagination-wrapper">
-        <div class="pagination-total">共 {{ total }} 条记录</div>
-        <div class="pagination-right">
-          <span class="pagination-info">{{ currentPage }} / {{ totalPages }} 页</span>
-          <el-pagination
-            v-model:current-page="currentPage"
-            v-model:page-size="pageSize"
-            :page-sizes="[10, 20, 50, 100]"
-            :total="total"
-            layout="sizes, prev, pager, next, jumper"
-          />
-        </div>
-      </div>
+      <CommonPagination v-model:current-page="currentPage" v-model:page-size="pageSize" :total="total" />
     </el-card>
 
     <!-- 新增/编辑对话框 -->
@@ -147,6 +135,7 @@ import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { formatNumber, formatDateTime } from '../../utils/format'
 import PageHeader from '@/components/common/PageHeader.vue'
+import CommonPagination from '@/components/common/CommonPagination.vue'
 
 const authStore = useAuthStore()
 const showToolbar = ref(false)
@@ -162,16 +151,11 @@ const searchKeyword = ref('')
 
 // 分页状态
 const currentPage = ref(1)
-const pageSize = ref(20)
+const pageSize = ref(12)
 const total = ref(0)
 
 // 防抖定时器
 let searchTimer = null
-
-// 总页数
-const totalPages = computed(() => {
-  return Math.ceil(total.value / pageSize.value) || 1
-})
 
 const form = reactive({
   id: null,

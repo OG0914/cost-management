@@ -137,20 +137,7 @@
       </el-table>
 
       <!-- 分页 -->
-      <div class="pagination-wrapper">
-        <div class="pagination-total">共 {{ filteredUsers.length }} 条记录</div>
-        <div class="pagination-right">
-          <span class="pagination-info">{{ currentPage }} / {{ totalPages }} 页</span>
-          <el-pagination
-            v-model:current-page="currentPage"
-            v-model:page-size="pageSize"
-            :page-sizes="[10, 20, 50, 100]"
-            :total="filteredUsers.length"
-            layout="sizes, prev, pager, next, jumper"
-            :pager-count="5"
-          />
-        </div>
-      </div>
+      <CommonPagination v-model:current-page="currentPage" v-model:page-size="pageSize" :total="filteredUsers.length" />
     </el-card>
 
     <!-- 新增/编辑用户对话框 -->
@@ -229,7 +216,8 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Search, Grid, List, Key, EditPen, Delete } from '@element-plus/icons-vue';
 import request from '../../utils/request';
 import { formatDateTime } from '@/utils/format';
-import PageHeader from '../../components/common/PageHeader.vue';
+import PageHeader from '../../components/common/PageHeader.vue'
+import CommonPagination from '@/components/common/CommonPagination.vue';
 
 // 数据
 const users = ref([]);
@@ -242,36 +230,27 @@ const viewMode = ref('card');
 const searchText = ref('');
 
 // 分页状态
-const currentPage = ref(1);
-const pageSize = ref(10);
+const currentPage = ref(1)
+const pageSize = ref(12);
 
 // 筛选后的用户列表
 const filteredUsers = computed(() => {
-  let result = users.value;
-  
-  // 搜索筛选：按用户代号或真实姓名
+  let result = users.value
   if (searchText.value) {
-    const search = searchText.value.toLowerCase();
+    const search = searchText.value.toLowerCase()
     result = result.filter(user => 
       user.username.toLowerCase().includes(search) ||
       (user.real_name && user.real_name.toLowerCase().includes(search))
-    );
+    )
   }
-  
-  return result;
-});
-
-// 总页数
-const totalPages = computed(() => {
-  return Math.ceil(filteredUsers.value.length / pageSize.value) || 1;
-});
+  return result
+})
 
 // 分页后的用户列表
 const paginatedUsers = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  const end = start + pageSize.value;
-  return filteredUsers.value.slice(start, end);
-});
+  const start = (currentPage.value - 1) * pageSize.value
+  return filteredUsers.value.slice(start, start + pageSize.value)
+})
 
 // 对话框
 const dialogVisible = ref(false);
@@ -696,31 +675,5 @@ onMounted(() => {
 .delete-btn:hover:not(:disabled) {
   color: #f78989;
   border-color: #f78989;
-}
-
-/* 分页样式 */
-.pagination-wrapper {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #ebeef5;
-}
-
-.pagination-total {
-  font-size: 14px;
-  color: #606266;
-}
-
-.pagination-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.pagination-info {
-  font-size: 14px;
-  color: #606266;
 }
 </style>

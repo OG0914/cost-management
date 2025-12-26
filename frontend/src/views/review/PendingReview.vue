@@ -82,19 +82,7 @@
       </el-table>
 
       <!-- 分页 -->
-      <div class="pagination-wrapper">
-        <div class="pagination-total">共 {{ total }} 条记录</div>
-        <div class="pagination-right">
-          <span class="pagination-info">{{ currentPage }} / {{ totalPages }} 页</span>
-          <el-pagination
-            v-model:current-page="currentPage"
-            v-model:page-size="pageSize"
-            :page-sizes="[10, 20, 50, 100]"
-            :total="total"
-            layout="sizes, prev, pager, next, jumper"
-          />
-        </div>
-      </div>
+      <CommonPagination v-model:current-page="currentPage" v-model:page-size="pageSize" :total="total" />
     </el-card>
 
     <!-- 审核详情弹窗（管理员/审核人） -->
@@ -120,6 +108,7 @@ import { Search } from '@element-plus/icons-vue'
 import { useReviewStore } from '@/store/review'
 import { useAuthStore } from '@/store/auth'
 import PageHeader from '@/components/common/PageHeader.vue'
+import CommonPagination from '@/components/common/CommonPagination.vue'
 import { 
   getStatusType, 
   getStatusName, 
@@ -142,16 +131,11 @@ const tableData = ref([])
 
 // 分页状态
 const currentPage = ref(1)
-const pageSize = ref(20)
+const pageSize = ref(12)
 const total = ref(0)
 
 // 防抖定时器
 let searchTimer = null
-
-// 总页数
-const totalPages = computed(() => {
-  return Math.ceil(total.value / pageSize.value) || 1
-})
 
 // 弹窗状态
 const reviewDialogVisible = ref(false)
@@ -285,31 +269,5 @@ onMounted(() => {
 
 .filter-bar {
   margin-bottom: 16px;
-}
-
-/* 分页样式 */
-.pagination-wrapper {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #ebeef5;
-}
-
-.pagination-total {
-  font-size: 14px;
-  color: #606266;
-}
-
-.pagination-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.pagination-info {
-  font-size: 14px;
-  color: #606266;
 }
 </style>

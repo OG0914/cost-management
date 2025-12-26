@@ -113,19 +113,7 @@
       </el-table>
 
       <!-- 分页 -->
-      <div class="pagination-wrapper">
-        <div class="pagination-total">共 {{ total }} 条记录</div>
-        <div class="pagination-right">
-          <span class="pagination-info">{{ currentPage }} / {{ totalPages }} 页</span>
-          <el-pagination
-            v-model:current-page="currentPage"
-            v-model:page-size="pageSize"
-            :page-sizes="[10, 20, 50, 100]"
-            :total="total"
-            layout="sizes, prev, pager, next, jumper"
-          />
-        </div>
-      </div>
+      <CommonPagination v-model:current-page="currentPage" v-model:page-size="pageSize" :total="total" />
     </el-card>
   </div>
 </template>
@@ -141,6 +129,7 @@ import { formatNumber, formatDateTime } from '@/utils/format'
 import { formatQuantity } from '@/utils/review'
 import { getUser } from '@/utils/auth'
 import ProductCategoryModal from '@/components/ProductCategoryModal.vue'
+import CommonPagination from '@/components/common/CommonPagination.vue'
 
 const router = useRouter()
 
@@ -158,16 +147,11 @@ const tableData = ref([])
 
 // 分页状态
 const currentPage = ref(1)
-const pageSize = ref(20)
+const pageSize = ref(12)
 const total = ref(0)
 
 // 防抖定时器
 let searchTimer = null
-
-// 总页数
-const totalPages = computed(() => {
-  return Math.ceil(total.value / pageSize.value) || 1
-})
 
 // 格式化包装规格显示（根据二层或三层）
 const formatPackagingSpec = (row) => {
