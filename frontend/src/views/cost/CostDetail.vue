@@ -6,6 +6,9 @@
           <h2>报价单详情</h2>
         </div>
         <div class="header-right">
+          <el-button type="warning" icon="TrendCharts" @click="profitDialogVisible = true">
+            利润落点
+          </el-button>
           <el-button 
             v-if="isAdminOrReviewer && quotation.packaging_config_id && quotation.status === 'approved'" 
             type="success" 
@@ -273,6 +276,13 @@
         </div>
       </el-card>
     </div>
+
+    <!-- 利润计算器弹窗 -->
+    <ProfitCalculatorDialog 
+      v-model="profitDialogVisible" 
+      :initial-cost-price="parseFloat(quotation.final_price) || 0"
+      :initial-quantity="quotation.quantity || 0"
+    />
   </div>
 </template>
 
@@ -280,12 +290,13 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { InfoFilled, View, Hide } from '@element-plus/icons-vue'
+import { InfoFilled, View, Hide, TrendCharts } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { formatNumber } from '@/utils/format'
 import { formatQuantity } from '@/utils/review'
 import { useConfigStore } from '@/store/config'
 import { getUser } from '@/utils/auth'
+import ProfitCalculatorDialog from '@/components/ProfitCalculatorDialog.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -301,6 +312,7 @@ const calculation = ref(null)
 const loading = ref(false)
 const settingStandardCost = ref(false)
 const showFormula = ref(false)
+const profitDialogVisible = ref(false)
 
 // 用户权限
 const user = getUser()
