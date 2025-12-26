@@ -3,24 +3,31 @@
     <!-- 页面表头 -->
     <PageHeader title="用户管理">
       <template #actions>
-        <!-- 视图切换 -->
-        <el-button-group class="view-toggle">
-          <el-button
-            :type="viewMode === 'card' ? 'primary' : 'default'"
-            :icon="Grid"
-            @click="viewMode = 'card'"
-          />
-          <el-button
-            :type="viewMode === 'list' ? 'primary' : 'default'"
-            :icon="List"
-            @click="viewMode = 'list'"
-          />
-        </el-button-group>
-        <!-- 新增用户 -->
-        <el-button type="primary" @click="showCreateDialog">
-          <el-icon><Plus /></el-icon>
-          新增用户
-        </el-button>
+        <div class="toolbar-wrapper">
+          <el-button class="toolbar-toggle" :icon="showToolbar ? CaretRight : CaretLeft" circle @click="showToolbar = !showToolbar" :title="showToolbar ? '收起工具栏' : '展开工具栏'" />
+          <transition name="toolbar-fade">
+            <el-space v-if="showToolbar">
+              <el-button type="success" @click="handleDownloadTemplate">
+                <el-icon><Download /></el-icon>
+                下载模板
+              </el-button>
+              <el-upload action="#" :auto-upload="false" :on-change="handleFileChange" :show-file-list="false" accept=".xlsx,.xls">
+                <el-button type="warning">
+                  <el-icon><Upload /></el-icon>
+                  导入Excel
+                </el-button>
+              </el-upload>
+              <el-button type="info" @click="handleExport" :disabled="selectedUsers.length === 0">
+                <el-icon><Download /></el-icon>
+                导出Excel
+              </el-button>
+              <el-button type="primary" @click="showCreateDialog">
+                <el-icon><Plus /></el-icon>
+                新增用户
+              </el-button>
+            </el-space>
+          </transition>
+        </div>
       </template>
     </PageHeader>
 
@@ -35,6 +42,12 @@
           clearable
           style="width: 200px"
         />
+        <div class="filter-spacer"></div>
+        <!-- 视图切换 -->
+        <el-button-group class="view-toggle">
+          <el-button :type="viewMode === 'card' ? 'primary' : 'default'" :icon="Grid" @click="viewMode = 'card'" />
+          <el-button :type="viewMode === 'list' ? 'primary' : 'default'" :icon="List" @click="viewMode = 'list'" />
+        </el-button-group>
       </div>
 
       <!-- 卡片视图 -->
@@ -95,7 +108,8 @@
       </div>
 
       <!-- 用户列表 -->
-      <el-table v-if="viewMode === 'list'" :data="paginatedUsers" border stripe v-loading="loading">
+      <el-table v-if="viewMode === 'list'" :data="paginatedUsers" border stripe v-loading="loading" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" />
         <el-table-column prop="username" label="用户代号" min-width="120" />
         <el-table-column prop="real_name" label="真实姓名" min-width="120" />
         <el-table-column prop="role" label="角色" width="110">
@@ -213,7 +227,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, Search, Grid, List, Key, EditPen, Delete } from '@element-plus/icons-vue';
+import { Plus, Search, Grid, List, Key, EditPen, Delete, Download, Upload, CaretLeft, CaretRight } from '@element-plus/icons-vue';
 import request from '../../utils/request';
 import { formatDateTime } from '@/utils/format';
 import PageHeader from '../../components/common/PageHeader.vue'
@@ -221,10 +235,14 @@ import CommonPagination from '@/components/common/CommonPagination.vue';
 
 // 数据
 const users = ref([]);
+const selectedUsers = ref([]);
 const loading = ref(false);
 
 // 视图切换状态: 'card' | 'list'
 const viewMode = ref('card');
+
+// 工具栏折叠状态
+const showToolbar = ref(true);
 
 // 筛选状态
 const searchText = ref('');
@@ -492,6 +510,59 @@ const resetForm = () => {
   }
 };
 
+// 选择变化
+const handleSelectionChange = (selection) => {
+  selectedUsers.value = selection;
+};
+
+// 导入Excel
+const handleFileChange = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file.raw);
+  try {
+    const response = await request.post('/auth/users/import', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+    if (response.success) {
+      const { created, updated, errors } = response.data;
+      let message = `导入成功！创建 ${created} 条，更新 ${updated} 条`;
+      if (errors?.length > 0) message += `\n${errors.slice(0, 3).join('\n')}`;
+      ElMessage.success(message);
+      loadUsers();
+    }
+  } catch (error) { /* 错误已在拦截器处理 */ }
+};
+
+// 导出Excel
+const handleExport = async () => {
+  if (selectedUsers.value.length === 0) { ElMessage.warning('请先选择要导出的用户'); return; }
+  try {
+    const ids = selectedUsers.value.map(item => item.id);
+    const response = await request.post('/auth/users/export/excel', { ids }, { responseType: 'blob' });
+    const url = window.URL.createObjectURL(new Blob([response]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `用户清单_${Date.now()}.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    ElMessage.success('导出成功');
+  } catch (error) { ElMessage.error('导出失败'); }
+};
+
+// 下载模板
+const handleDownloadTemplate = async () => {
+  try {
+    const response = await request.get('/auth/users/template/download', { responseType: 'blob' });
+    const url = window.URL.createObjectURL(new Blob([response]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', '用户导入模板.xlsx');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    ElMessage.success('下载成功');
+  } catch (error) { ElMessage.error('下载失败'); }
+};
+
 onMounted(() => {
   loadUsers();
 });
@@ -508,9 +579,18 @@ onMounted(() => {
 
 .filter-section {
   display: flex;
+  align-items: center;
   gap: 12px;
   margin-bottom: 16px;
 }
+
+.filter-spacer { flex: 1; }
+
+/* 工具栏折叠 */
+.toolbar-fade-enter-active, .toolbar-fade-leave-active { transition: opacity 0.3s, transform 0.3s; }
+.toolbar-fade-enter-from, .toolbar-fade-leave-to { opacity: 0; transform: translateX(-10px); }
+.toolbar-wrapper { display: flex; align-items: center; gap: 12px; }
+.toolbar-toggle { flex-shrink: 0; }
 
 /* 卡片视图样式 */
 .user-cards {

@@ -463,6 +463,53 @@ class ExcelParser {
       };
     }
   }
+
+  /** 解析用户 Excel，期望列：用户代号、真实姓名、角色、邮箱、密码 */
+  static async parseUserExcel(filePath) {
+    try {
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.readFile(filePath);
+      const worksheet = workbook.worksheets[0];
+      
+      const data = [], headers = [];
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) {
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => { headers[colNumber] = cell.value; });
+        } else {
+          const rowData = {};
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => { if (headers[colNumber]) rowData[headers[colNumber]] = cell.value; });
+          if (Object.keys(rowData).length > 0) data.push(rowData);
+        }
+      });
+      
+      const users = [], errors = [];
+      const validRoles = ['admin', 'purchaser', 'producer', 'reviewer', 'salesperson', 'readonly'];
+      const roleMap = { '管理员': 'admin', '采购': 'purchaser', '生产': 'producer', '审核': 'reviewer', '业务': 'salesperson', '只读': 'readonly' };
+      const getValue = (value) => (value && typeof value === 'object' && value.richText) ? value.richText.map(t => t.text).join('') : value;
+      
+      data.forEach((row, index) => {
+        const rowNum = index + 2;
+        if (!row['用户代号'] && !row['username']) { errors.push(`第 ${rowNum} 行：缺少用户代号`); return; }
+        if (!row['角色'] && !row['role']) { errors.push(`第 ${rowNum} 行：缺少角色`); return; }
+        
+        let role = String(getValue(row['角色']) || getValue(row['role']) || '').trim();
+        if (roleMap[role]) role = roleMap[role];
+        if (!validRoles.includes(role)) { errors.push(`第 ${rowNum} 行：无效角色 "${role}"`); return; }
+        
+        users.push({
+          username: String(getValue(row['用户代号']) || getValue(row['username']) || '').trim(),
+          real_name: String(getValue(row['真实姓名']) || getValue(row['real_name']) || '').trim() || null,
+          role,
+          email: String(getValue(row['邮箱']) || getValue(row['email']) || '').trim() || null,
+          password: String(getValue(row['密码']) || getValue(row['password']) || '123456').trim()
+        });
+      });
+      
+      return { success: errors.length === 0, data: users, errors, total: data.length, valid: users.length };
+    } catch (error) {
+      return { success: false, data: [], errors: [error.message], total: 0, valid: 0 };
+    }
+  }
 }
 
 module.exports = ExcelParser;

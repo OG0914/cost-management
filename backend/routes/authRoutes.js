@@ -23,4 +23,12 @@ router.delete('/users/:id', verifyToken, checkRole('admin'), authController.dele
 router.post('/users/:id/reset-password', verifyToken, checkRole('admin'), authController.resetUserPassword);
 router.patch('/users/:id/toggle-status', verifyToken, checkRole('admin'), authController.toggleUserStatus);
 
+// 用户导入导出
+const multer = require('multer');
+const path = require('path');
+const upload = multer({ dest: path.join(__dirname, '../uploads/temp') });
+router.post('/users/import', verifyToken, checkRole('admin'), upload.single('file'), authController.importUsers);
+router.post('/users/export/excel', verifyToken, checkRole('admin'), authController.exportUsers);
+router.get('/users/template/download', verifyToken, checkRole('admin'), authController.downloadUserTemplate);
+
 module.exports = router;
