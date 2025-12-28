@@ -149,8 +149,8 @@
         </div>
       </div>
 
-      <!-- 系统概况 -->
-      <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+      <!-- 系统概况（仅管理员可见） -->
+      <div v-if="isAdmin" class="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
         <h2 class="text-lg font-semibold text-slate-800 mb-4">系统概况</h2>
         <div class="space-y-4">
           <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
@@ -172,6 +172,33 @@
           </div>
           <div class="mt-4 pt-4 border-t border-slate-100">
             <p class="text-xs text-slate-400 text-center">{{ systemStatus.version }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 系统通知（非管理员可见） -->
+      <div v-else class="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center">
+          <i class="ri-notification-3-line mr-2 text-blue-500"></i>
+          系统通知
+        </h2>
+        <div class="space-y-3">
+          <div v-if="recentActivities.length === 0" class="text-center text-slate-400 py-6">
+            <i class="ri-inbox-line text-3xl mb-2"></i>
+            <p class="text-sm">暂无通知</p>
+          </div>
+          <div 
+            v-for="(activity, index) in recentActivities" 
+            :key="index"
+            class="flex items-start p-3 bg-slate-50 rounded-lg"
+          >
+            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
+              <i :class="[activity.icon, 'text-blue-600 text-sm']"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm text-slate-700">{{ activity.content }}</p>
+              <p class="text-xs text-slate-400 mt-1">{{ activity.time }}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -383,6 +410,12 @@ const reviewStore = useReviewStore()
 // 待审核数量
 const pendingCount = ref(0)
 
+// 是否管理员
+const isAdmin = computed(() => authStore.user?.role === 'admin')
+
+// 最近操作记录（非管理员显示）
+const recentActivities = ref([])
+
 // 问候语
 const greeting = computed(() => {
   const userName = authStore.realName || authStore.username || '用户'
@@ -540,14 +573,17 @@ const getStorageKey = () => {
 
 // 所有可选的导航选项
 const allNavOptions = [
-  { key: 'cost-add', label: '新增报价', icon: 'ri-add-line', iconBgColor: 'bg-blue-100', iconColor: 'text-primary-600', route: '/cost/add' },
-  { key: 'cost-standard', label: '标准成本', icon: 'ri-file-list-3-line', iconBgColor: 'bg-purple-100', iconColor: 'text-purple-600', route: '/cost/standard' },
-  { key: 'cost-records', label: '成本记录', icon: 'ri-history-line', iconBgColor: 'bg-green-100', iconColor: 'text-green-600', route: '/cost/records' },
-  { key: 'review-pending', label: '待审核', icon: 'ri-time-line', iconBgColor: 'bg-orange-100', iconColor: 'text-orange-600', route: '/review/pending' },
-  { key: 'review-approved', label: '已审核', icon: 'ri-checkbox-circle-line', iconBgColor: 'bg-teal-100', iconColor: 'text-teal-600', route: '/review/approved' },
+  { key: 'cost-add', label: '新增报价', icon: 'ri-add-line', iconBgColor: 'bg-blue-100', iconColor: 'text-primary-600', route: '/cost/add', roles: ['admin', 'reviewer', 'salesperson', 'readonly'] },
+  { key: 'cost-standard', label: '标准成本', icon: 'ri-file-list-3-line', iconBgColor: 'bg-purple-100', iconColor: 'text-purple-600', route: '/cost/standard', roles: ['admin', 'reviewer', 'salesperson', 'readonly'] },
+  { key: 'cost-records', label: '成本记录', icon: 'ri-history-line', iconBgColor: 'bg-green-100', iconColor: 'text-green-600', route: '/cost/records', roles: ['admin', 'reviewer', 'salesperson', 'readonly'] },
+  { key: 'review-pending', label: '待审核', icon: 'ri-time-line', iconBgColor: 'bg-orange-100', iconColor: 'text-orange-600', route: '/review/pending', roles: ['admin', 'reviewer', 'salesperson'] },
+  { key: 'review-approved', label: '已审核', icon: 'ri-checkbox-circle-line', iconBgColor: 'bg-teal-100', iconColor: 'text-teal-600', route: '/review/approved', roles: ['admin', 'reviewer', 'salesperson'] },
   { key: 'materials', label: '原料管理', icon: 'ri-database-2-line', iconBgColor: 'bg-indigo-100', iconColor: 'text-indigo-600', route: '/materials' },
+  { key: 'packaging', label: '包材管理', icon: 'ri-box-3-line', iconBgColor: 'bg-cyan-100', iconColor: 'text-cyan-600', route: '/packaging' },
+  { key: 'processes', label: '工序管理', icon: 'ri-settings-4-line', iconBgColor: 'bg-rose-100', iconColor: 'text-rose-600', route: '/processes' },
   { key: 'models', label: '型号管理', icon: 'ri-layout-grid-line', iconBgColor: 'bg-pink-100', iconColor: 'text-pink-600', route: '/models' },
-  { key: 'regulations', label: '法规管理', icon: 'ri-government-line', iconBgColor: 'bg-amber-100', iconColor: 'text-amber-600', route: '/regulations' }
+  { key: 'regulations', label: '法规管理', icon: 'ri-government-line', iconBgColor: 'bg-amber-100', iconColor: 'text-amber-600', route: '/regulations' },
+  { key: 'customers', label: '客户管理', icon: 'ri-user-3-line', iconBgColor: 'bg-lime-100', iconColor: 'text-lime-600', route: '/customers' }
 ]
 
 // 当前快捷导航列表
@@ -556,10 +592,15 @@ const quickNavList = ref([])
 // 弹窗显示状态
 const showNavSelector = ref(false)
 
-// 可添加的导航选项（排除已添加的）
+// 可添加的导航选项（排除已添加的，并根据角色过滤）
 const availableNavOptions = computed(() => {
   const addedKeys = quickNavList.value.map(n => n.key)
-  return allNavOptions.filter(opt => !addedKeys.includes(opt.key))
+  const userRole = authStore.user?.role
+  return allNavOptions.filter(opt => {
+    if (addedKeys.includes(opt.key)) return false
+    if (opt.roles && !opt.roles.includes(userRole)) return false
+    return true
+  })
 })
 
 // 从 localStorage 加载快捷导航
@@ -661,8 +702,25 @@ const loadDashboardData = async () => {
     if (!excludedRoles.includes(userRole)) {
       pendingCount.value = await reviewStore.fetchPendingCount()
     }
+
+    // 非管理员加载最近操作记录
+    if (userRole !== 'admin') {
+      await loadRecentActivities()
+    }
   } catch (err) {
     console.error('加载仪表盘数据失败:', err)
+  }
+}
+
+// 加载最近操作记录
+const loadRecentActivities = async () => {
+  try {
+    const res = await request.get('/dashboard/recent-activities')
+    if (res.success) {
+      recentActivities.value = res.data || []
+    }
+  } catch (err) {
+    console.error('加载最近操作失败:', err)
   }
 }
 

@@ -118,6 +118,11 @@ const routes = [
         path: 'profile',
         name: 'ProfileSettings',
         component: () => import('../views/user/ProfileSettings.vue')
+      },
+      {
+        path: 'customers',
+        name: 'CustomerManage',
+        component: () => import('../views/customer/CustomerManage.vue')
       }
     ]
   }

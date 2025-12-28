@@ -214,10 +214,11 @@
       <el-card class="info-section">
         <template #header>
           <div class="section-header">
-            <span class="section-title">成本计算</span>
-            <el-icon class="formula-toggle" @click="showFormula = !showFormula" :title="showFormula ? '隐藏公式' : '显示公式'">
-              <View v-if="!showFormula" /><Hide v-else />
-            </el-icon>
+            <span class="section-title">成本计算
+              <el-icon class="formula-toggle" @click="showFormula = !showFormula" :title="showFormula ? '隐藏公式' : '显示公式'">
+                <View v-if="!showFormula" /><Hide v-else />
+              </el-icon>
+            </span>
           </div>
         </template>
         
@@ -282,6 +283,7 @@
       v-model="profitDialogVisible" 
       :initial-cost-price="parseFloat(quotation.final_price) || 0"
       :initial-quantity="quotation.quantity || 0"
+      :currency="quotation.currency || 'CNY'"
     />
   </div>
 </template>
@@ -706,6 +708,8 @@ onMounted(async () => {
   font-size: 18px;
   color: #909399;
   transition: color 0.2s;
+  margin-left: 8px;
+  vertical-align: middle;
 }
 
 .formula-toggle:hover {

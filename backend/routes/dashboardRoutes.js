@@ -22,4 +22,7 @@ router.get('/top-models', dashboardController.getTopModels);
 // GET /api/dashboard/weekly-quotations - 获取周报价统计
 router.get('/weekly-quotations', dashboardController.getWeeklyQuotations);
 
+// GET /api/dashboard/recent-activities - 获取最近操作记录
+router.get('/recent-activities', dashboardController.getRecentActivities);
+
 module.exports = router;

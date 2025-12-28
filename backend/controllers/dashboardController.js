@@ -192,9 +192,87 @@ const getWeeklyData = async (monthStart, monthEnd) => {
   return weeks;
 };
 
+/**
+ * 获取最近操作记录
+ * GET /api/dashboard/recent-activities
+ * 返回当前用户最近的操作记录
+ */
+const getRecentActivities = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    
+    const activities = [];
+    
+    // 根据角色获取不同的操作记录
+    if (['salesperson', 'admin', 'reviewer'].includes(userRole)) {
+      // 业务员/审核员：获取最近的报价单操作
+      const quotationsResult = await dbManager.query(`
+        SELECT q.quotation_no, q.status, q.updated_at, q.customer_name
+        FROM quotations q
+        WHERE q.created_by = $1
+        ORDER BY q.updated_at DESC
+        LIMIT 3
+      `, [userId]);
+      
+      quotationsResult.rows.forEach(row => {
+        const statusMap = { draft: '创建草稿', submitted: '提交审核', approved: '审核通过', rejected: '被退回' };
+        activities.push({
+          icon: 'ri-file-list-3-line',
+          content: `报价单 ${row.quotation_no}（${row.customer_name}）${statusMap[row.status] || row.status}`,
+          time: formatTimeAgo(row.updated_at)
+        });
+      });
+    }
+    
+    if (['purchaser', 'producer', 'admin'].includes(userRole)) {
+      // 采购/生产：获取最近的原料更新
+      const materialsResult = await dbManager.query(`
+        SELECT name, updated_at FROM materials
+        ORDER BY updated_at DESC
+        LIMIT 3
+      `);
+      
+      materialsResult.rows.forEach(row => {
+        activities.push({
+          icon: 'ri-stack-line',
+          content: `原料「${row.name}」已更新`,
+          time: formatTimeAgo(row.updated_at)
+        });
+      });
+    }
+    
+    // 按时间排序，取最近5条
+    activities.sort((a, b) => new Date(b.rawTime || 0) - new Date(a.rawTime || 0));
+    
+    res.json(success(activities.slice(0, 5), '获取最近操作成功'));
+  } catch (err) {
+    console.error('获取最近操作失败:', err);
+    res.status(500).json(error('获取最近操作失败: ' + err.message, 500));
+  }
+};
+
+// 格式化时间为"多久前"
+const formatTimeAgo = (dateStr) => {
+  if (!dateStr) return '--';
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 1) return '刚刚';
+  if (diffMins < 60) return `${diffMins}分钟前`;
+  if (diffHours < 24) return `${diffHours}小时前`;
+  if (diffDays < 7) return `${diffDays}天前`;
+  return date.toLocaleDateString('zh-CN');
+};
+
 module.exports = {
   getStats,
   getRegulations,
   getTopModels,
-  getWeeklyQuotations
+  getWeeklyQuotations,
+  getRecentActivities
 };

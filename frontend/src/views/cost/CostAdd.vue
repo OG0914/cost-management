@@ -71,15 +71,49 @@
         </el-row>
 
         <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="客户名称" prop="customer_name">
-              <el-input v-model="form.customer_name" placeholder="请输入客户名称" />
+          <el-col :span="6">
+            <el-form-item label="是否新客户">
+              <el-radio-group v-model="isNewCustomer" @change="onCustomerTypeChange">
+                <el-radio :label="true">是</el-radio>
+                <el-radio :label="false">否</el-radio>
+              </el-radio-group>
             </el-form-item>
           </el-col>
 
-          <el-col :span="12">
+          <el-col :span="9">
+            <el-form-item label="客户名称" prop="customer_name">
+              <el-input v-if="isNewCustomer" v-model="form.customer_name" placeholder="请输入客户名称" />
+              <el-select
+                v-else
+                v-model="selectedCustomerId"
+                filterable
+                remote
+                reserve-keyword
+                clearable
+                :remote-method="searchCustomers"
+                :loading="customerSearchLoading"
+                placeholder="输入关键词搜索客户"
+                style="width: 100%"
+                @change="onCustomerSelect"
+                @focus="customerSelectFocused = true"
+                @blur="customerSelectFocused = false"
+              >
+                <el-option
+                  v-for="c in customerOptions"
+                  :key="c.id"
+                  :label="customerSelectFocused ? `${c.vc_code} - ${c.name}` : c.name"
+                  :value="c.id"
+                >
+                  <span>{{ c.vc_code }} - {{ c.name }}</span>
+                  <span v-if="c.region" style="float: right; color: #8492a6; font-size: 12px;">{{ c.region }}</span>
+                </el-option>
+              </el-select>
+            </el-form-item>
+          </el-col>
+
+          <el-col :span="9">
             <el-form-item label="客户地区" prop="customer_region">
-              <el-input v-model="form.customer_region" placeholder="请输入客户地区" />
+              <el-input v-model="form.customer_region" placeholder="请输入客户地区" :disabled="!isNewCustomer && selectedCustomerId" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -696,8 +730,7 @@
                 <span v-if="!row.isCustom">{{ row.profitPercentage }}</span>
                 <el-input
                   v-else
-                  v-model.number="row.originalTier.profitRate"
-                  type="number"
+                  v-model="row.originalTier.profitRate"
                   placeholder="如：0.35"
                   size="small"
                   @input="updateCustomTierPrice(row.originalTier)"
@@ -705,7 +738,7 @@
                 >
                   <template #append>
                     <span v-if="row.originalTier.profitRate !== null && row.originalTier.profitRate !== ''">
-                      {{ (row.originalTier.profitRate * 100).toFixed(0) }}%
+                      {{ (parseFloat(row.originalTier.profitRate) * 100).toFixed(0) }}%
                     </span>
                   </template>
                 </el-input>
@@ -718,7 +751,7 @@
             </el-table-column>
             <el-table-column label="说明">
               <template #default="{ row }">
-                <span v-if="!row.isCustom">在基础价格上增加 {{ row.profitPercentage }} 利润</span>
+                <span v-if="!row.isCustom">在单片成本价的基础上增加 {{ row.profitPercentage }} 利润</span>
                 <span v-else style="color: #E6A23C;">自定义利润档位</span>
               </template>
             </el-table-column>
@@ -749,7 +782,7 @@
     </el-form>
 
     <!-- 添加自定义费用对话框 -->
-    <el-dialog v-model="addFeeDialogVisible" title="添加自定义费用" width="400px" :close-on-click-modal="false">
+    <el-dialog v-model="addFeeDialogVisible" title="添加自定义费用" width="400px" :close-on-click-modal="false" append-to-body>
       <el-form :model="newFee" :rules="feeRules" ref="feeFormRef" label-width="80px">
         <el-form-item label="费用项" prop="name">
           <el-input v-model="newFee.name" placeholder="" />
@@ -853,6 +886,13 @@ const editMode = reactive({
 
 // 原料库数据（用于搜索选择）
 const allMaterials = ref([])
+
+// 客户相关
+const isNewCustomer = ref(true)
+const selectedCustomerId = ref(null)
+const customerOptions = ref([])
+const customerSearchLoading = ref(false)
+const customerSelectFocused = ref(false)
 
 // 表单验证规则
 const rules = {
@@ -1492,6 +1532,37 @@ const calculateItemSubtotal = (row) => {
     row.subtotal = (row.usage_amount || 0) * (row.unit_price || 0)
   }
   calculateCost()
+}
+
+// 客户类型切换
+const onCustomerTypeChange = (val) => {
+  if (val) { // 新客户
+    selectedCustomerId.value = null
+    customerOptions.value = []
+    form.customer_name = ''
+    form.customer_region = ''
+  }
+}
+
+// 搜索客户
+const searchCustomers = async (keyword) => {
+  if (!keyword) { customerOptions.value = []; return }
+  customerSearchLoading.value = true
+  try {
+    const res = await request.get('/customers/search', { params: { keyword } })
+    customerOptions.value = res.success ? res.data : []
+  } catch { customerOptions.value = [] }
+  finally { customerSearchLoading.value = false }
+}
+
+// 选择客户
+const onCustomerSelect = (customerId) => {
+  if (!customerId) { form.customer_name = ''; form.customer_region = ''; return }
+  const customer = customerOptions.value.find(c => c.id === customerId)
+  if (customer) {
+    form.customer_name = customer.name
+    form.customer_region = customer.region || ''
+  }
 }
 
 // 原料选择处理

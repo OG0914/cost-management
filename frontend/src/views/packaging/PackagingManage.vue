@@ -200,19 +200,11 @@
       </el-table>
 
       <!-- 分页 -->
-      <div class="pagination-wrapper">
-        <div class="pagination-total">共 {{ packagingConfigs.length }} 条记录</div>
-        <div class="pagination-right">
-          <span class="pagination-info">{{ currentPage }} / {{ totalPages }} 页</span>
-          <el-pagination
-            v-model:current-page="currentPage"
-            v-model:page-size="pageSize"
-            :page-sizes="[10, 20, 50, 100]"
-            :total="packagingConfigs.length"
-            layout="sizes, prev, pager, next, jumper"
-          />
-        </div>
-      </div>
+      <CommonPagination 
+        v-model:current-page="currentPage" 
+        v-model:page-size="pageSize" 
+        :total="packagingConfigs.length" 
+      />
     </el-card>
 
     <!-- 创建/编辑包装配置对话框 -->
@@ -424,6 +416,7 @@ import {
   calculateTotalFromConfig
 } from '../../config/packagingTypes';
 import PageHeader from '../../components/common/PageHeader.vue';
+import CommonPagination from '../../components/common/CommonPagination.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -460,11 +453,6 @@ watch(viewMode, (newMode) => {
 const currentPage = ref(1);
 const pageSize = ref(10);
 
-// 总页数
-const totalPages = computed(() => {
-  return Math.ceil(packagingConfigs.value.length / pageSize.value) || 1;
-});
-
 // 分页后的数据
 const paginatedConfigs = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value;
@@ -483,18 +471,8 @@ const getPackagingTypeTagType = (type) => {
   return typeMap[type] || '';
 };
 
-// 产品类别颜色映射
-const CATEGORY_COLORS = {
-  '半面罩': '#409EFF',
-  '全面罩': '#67C23A',
-  '滤盒': '#E6A23C',
-  '滤棉': '#F56C6C',
-  '配件': '#909399'
-};
-
-const getCategoryColor = (category) => {
-  return CATEGORY_COLORS[category] || '#909399';
-};
+// 产品类别颜色 - 引用统一配置
+import { getCategoryColor } from '@/config/categoryColors'
 
 // 对话框
 const dialogVisible = ref(false);
@@ -1020,19 +998,6 @@ onMounted(() => {
   margin-left: auto;
 }
 
-/* 分页样式 */
-.pagination-wrapper {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #ebeef5;
-}
-
-.pagination-total { font-size: 14px; color: #606266; }
-.pagination-right { display: flex; align-items: center; gap: 16px; }
-.pagination-info { font-size: 14px; color: #606266; }
 .packaging-info { color: #409EFF; font-weight: 500; }
 .price-info { color: #E6A23C; font-weight: 600; font-size: 14px; }
 .subtotal-text { color: #67C23A; font-weight: 500; }

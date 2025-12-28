@@ -11,7 +11,7 @@
     <div class="calculator-content">
       <!-- 成本价输入 -->
       <div class="input-section">
-        <div class="input-label">最终成本价 (CNY)</div>
+        <div class="input-label">最终成本价 ({{ currency }})</div>
         <el-input v-model.number="costPrice" placeholder="请输入成本价" style="width: 100%" />
       </div>
 
@@ -53,15 +53,15 @@
         <div class="result-grid">
           <div class="result-item">
             <span class="label">单片卖价</span>
-            <span class="value">{{ formatNumber(result.unitPrice) }} CNY</span>
+            <span class="value">{{ formatNumber(result.unitPrice) }} {{ currency }}</span>
           </div>
           <div class="result-item">
             <span class="label">单片利润</span>
-            <span class="value">{{ formatNumber(result.unitProfit) }} CNY</span>
+            <span class="value">{{ formatNumber(result.unitProfit) }} {{ currency }}</span>
           </div>
           <div class="result-item highlight">
             <span class="label">总利润</span>
-            <span class="value">{{ formatNumber(result.totalProfit) }} CNY</span>
+            <span class="value">{{ formatNumber(result.totalProfit) }} {{ currency }}</span>
           </div>
         </div>
       </div>
@@ -82,8 +82,9 @@ defineOptions({ name: 'ProfitCalculatorDialog' })
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
-  initialCostPrice: { type: Number, default: 0 }, // 可从外部传入成本价
-  initialQuantity: { type: Number, default: 0 }   // 可从外部传入数量
+  initialCostPrice: { type: Number, default: 0 },
+  initialQuantity: { type: Number, default: 0 },
+  currency: { type: String, default: 'CNY' } // 币别
 })
 
 defineEmits(['update:modelValue'])

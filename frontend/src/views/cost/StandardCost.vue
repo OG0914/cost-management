@@ -24,6 +24,7 @@
       title="标准成本历史版本"
       width="800px"
       destroy-on-close
+      append-to-body
     >
       <el-table :data="historyList" border v-loading="historyLoading">
         <el-table-column prop="version" label="版本" width="80" />
