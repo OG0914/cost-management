@@ -8,7 +8,7 @@ const multer = require('multer');
 const path = require('path');
 const modelController = require('../controllers/modelController');
 const { verifyToken } = require('../middleware/auth');
-const { isAdmin } = require('../middleware/roleCheck');
+const { checkRole } = require('../middleware/roleCheck');
 
 // 配置文件上传
 const storage = multer.diskStorage({
@@ -40,14 +40,14 @@ router.get('/regulation/:regulationId', modelController.getModelsByRegulation);
 // 获取单个型号
 router.get('/:id', modelController.getModelById);
 
-// 以下路由仅管理员可访问
-router.post('/', isAdmin, modelController.createModel);
-router.put('/:id', isAdmin, modelController.updateModel);
-router.delete('/:id', isAdmin, modelController.deleteModel);
+// 以下路由管理员、采购、生产可访问
+router.post('/', checkRole('admin', 'purchaser', 'producer'), modelController.createModel);
+router.put('/:id', checkRole('admin', 'purchaser', 'producer'), modelController.updateModel);
+router.delete('/:id', checkRole('admin', 'purchaser', 'producer'), modelController.deleteModel);
 
-// 导入导出功能（仅管理员）
-router.post('/import', isAdmin, upload.single('file'), modelController.importModels);
-router.post('/export/excel', isAdmin, modelController.exportModels);
-router.get('/template/download', isAdmin, modelController.downloadTemplate);
+// 导入导出功能（管理员、采购、生产可访问）
+router.post('/import', checkRole('admin', 'purchaser', 'producer'), upload.single('file'), modelController.importModels);
+router.post('/export/excel', checkRole('admin', 'purchaser', 'producer'), modelController.exportModels);
+router.get('/template/download', checkRole('admin', 'purchaser', 'producer'), modelController.downloadTemplate);
 
 module.exports = router;

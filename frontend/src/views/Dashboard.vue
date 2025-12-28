@@ -13,10 +13,10 @@
         <h1 class="text-3xl font-bold text-slate-800 mb-2 tracking-tight">
           {{ greeting }}
         </h1>
-        <p class="text-slate-500 flex items-center text-m">
-          <span class="w-1.5 h-1.5 rounded-full bg-slate-300 mr-2"></span>
-          欢迎回来，今天又是高效工作的一天~
-        </p>
+<p class="text-slate-500 flex items-center text-m">
+  <span class="w-1.5 h-1.5 rounded-full bg-slate-300 mr-2"></span>
+  {{ subGreeting }}
+</p>
       </div>
 
       <!-- 右侧日期排版 -->
@@ -227,7 +227,7 @@
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-lg font-semibold text-slate-800 flex items-center">
             <i class="ri-line-chart-line mr-2 text-blue-500"></i>
-            报价单对比 (环比)
+            成本月度对比 
           </h2>
           <!-- 图例 -->
           <div class="flex items-center space-x-4 text-xs text-slate-500">
@@ -387,6 +387,15 @@ const pendingCount = ref(0)
 const greeting = computed(() => {
   const userName = authStore.realName || authStore.username || '用户'
   return `${getTimeGreeting()}，${userName}`
+})
+
+// 副问候语
+const subGreeting = computed(() => {
+  const hour = new Date().getHours()
+  if (hour >= 18 || hour < 6) {
+    return '温馨提示：当前为下班时间段，请注意休息~'
+  }
+  return '欢迎回来，今天又是高效工作的一天~'
 })
 
 // 统计数据
@@ -646,8 +655,12 @@ const loadDashboardData = async () => {
       }
     }
 
-    // 获取待审核数量
-    pendingCount.value = await reviewStore.fetchPendingCount()
+    // 获取待审核数量（producer和purchaser角色不调用）
+    const userRole = authStore.user?.role
+    const excludedRoles = ['producer', 'purchaser']
+    if (!excludedRoles.includes(userRole)) {
+      pendingCount.value = await reviewStore.fetchPendingCount()
+    }
   } catch (err) {
     console.error('加载仪表盘数据失败:', err)
   }

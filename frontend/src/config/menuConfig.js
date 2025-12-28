@@ -108,8 +108,8 @@ export const menuConfig = [
 export function filterMenuByRole(menuItems, userRole) {
   if (!userRole) return []
 
-  return menuItems.filter(item => {
-    // 分割线始终显示
+  const filtered = menuItems.filter(item => {
+    // 分割线先保留，后续处理
     if (item.type === 'divider') {
       return true
     }
@@ -124,6 +124,16 @@ export function filterMenuByRole(menuItems, userRole) {
       return false
     }
 
+    return true
+  })
+
+  // 移除"成本数据"分割线（如果下方没有可见菜单项）
+  return filtered.filter((item, index) => {
+    if (item.type === 'divider' && item.label === '成本数据') {
+      const nextItem = filtered[index + 1]
+      // 如果下一项也是分割线或不存在，则隐藏当前分割线
+      if (!nextItem || nextItem.type === 'divider') return false
+    }
     return true
   })
 }

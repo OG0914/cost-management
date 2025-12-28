@@ -37,7 +37,10 @@ cost-analysis-system/
 │   │   ├── regulationRoutes.js         # 法规类别模块
 │   │   ├── modelRoutes.js              # 型号模块
 │   │   ├── configRoutes.js             # 系统配置模块
-│   │   └── standardCostRoutes.js       # 标准成本模块
+│   │   ├── standardCostRoutes.js       # 标准成本模块
+│   │   ├── reviewRoutes.js             # 审核流程模块
+│   │   ├── bomRoutes.js                # 产品BOM模块
+│   │   └── dashboardRoutes.js          # 仪表盘模块
 │   ├── controllers/                    # 控制器：业务逻辑处理层
 │   │   ├── authController.js
 │   │   ├── costController.js
@@ -46,7 +49,9 @@ cost-analysis-system/
 │   │   ├── regulationController.js
 │   │   ├── modelController.js
 │   │   ├── configController.js
-│   │   └── standardCostController.js
+│   │   ├── standardCostController.js
+│   │   ├── reviewController.js         # 审核控制器
+│   │   └── dashboardController.js       # 仪表盘控制器
 │   ├── models/                         # 数据模型层
 │   │   ├── User.js
 │   │   ├── Regulation.js
@@ -59,7 +64,9 @@ cost-analysis-system/
 │   │   ├── QuotationItem.js
 │   │   ├── QuotationCustomFee.js
 │   │   ├── StandardCost.js
-│   │   └── SystemConfig.js
+│   │   ├── SystemConfig.js
+│   │   ├── Comment.js                  # 批注模型
+│   │   └── ModelBom.js                 # 产品BOM模型
 │   ├── utils/                          # 工具函数与公式计算
 │   │   ├── costCalculator.js           # 成本计算核心逻辑
 │   │   ├── excelGenerator.js           # Excel 生成
@@ -72,7 +79,8 @@ cost-analysis-system/
 │   │   └── roleCheck.js
 │   ├── scripts/                        # 管理脚本
 │   │   ├── createAdmin.js
-│   │   └── resetAdmin.js
+│   │   ├── resetAdmin.js
+│   │   └── resetAdminPg.js             # PostgreSQL管理员重置脚本
 │   ├── uploads/                        # 文件上传目录
 │   └── tests/                          # 测试目录
 │
@@ -83,7 +91,15 @@ cost-analysis-system/
 │   │   ├── router/                     # 路由定义
 │   │   │   └── index.js
 │   │   ├── store/                      # Pinia 状态管理
+│   │   │   ├── auth.js
+│   │   │   ├── config.js
+│   │   │   ├── quotation.js
+│   │   │   └── review.js
 │   │   ├── components/                 # 可复用组件
+│   │   │   ├── common/                 # 通用组件
+│   │   │   ├── dashboard/              # 仪表盘组件
+│   │   │   ├── layout/                 # 布局组件
+│   │   │   └── review/                 # 审核组件
 │   │   ├── views/                      # 页面模块
 │   │   │   ├── Login.vue               # 登录页
 │   │   │   ├── Dashboard.vue           # 仪表盘
@@ -106,8 +122,16 @@ cost-analysis-system/
 │   │   │   │   └── RegulationManage.vue
 │   │   │   ├── model/                  # 型号管理模块
 │   │   │   │   └── ModelManage.vue
-│   │   │   └── user/                   # 用户管理模块
-│   │   │       └── UserManage.vue
+│   │   │   ├── user/                   # 用户管理模块
+│   │   │   │   ├── UserManage.vue
+│   │   │   │   └── ProfileSettings.vue
+│   │   │   └── review/                 # 审核管理模块
+│   │   │       ├── PendingReview.vue   # 待审核记录
+│   │   │       └── ApprovedReview.vue  # 已审核记录
+│   │   ├── config/                     # 配置文件
+│   │   │   ├── categoryColors.js
+│   │   │   ├── menuConfig.js
+│   │   │   └── packagingTypes.js
 │   │   ├── styles/                     # 全局样式
 │   │   ├── utils/                      # 工具函数
 │   │   └── images/                     # 图片资源
@@ -115,6 +139,16 @@ cost-analysis-system/
 │   ├── vite.config.js
 │   ├── tailwind.config.js
 │   └── package.json
+│
+├── .kiro/                              # 项目规范目录
+│   ├── specs/                          # 功能规格文档
+│   │   ├── backend-pagination/          # 后端分页
+│   │   ├── card-view-toggle/           # 卡片视图切换
+│   │   ├── quotation-review/            # 审核流程
+│   │   ├── custom-fees-after-overhead/  # 自定义费用
+│   │   ├── quotation-vat-rate-override/# 自定义税率
+│   │   └── ...                         # 其他功能规格
+│   └── settings/                       # 项目设置
 │
 ├── docs/                               # 项目文档
 │   ├── prd.md                          # 产品需求文档
@@ -136,6 +170,9 @@ cost-analysis-system/
 │   ├─ 新增成本
 │   ├─ 标准成本
 │   └─ 成本记录
+├─ 审核管理
+│   ├─ 待审核记录
+│   └─ 已审核记录
 ├─ 法规管理
 ├─ 型号管理
 ├─ 原料管理
@@ -152,14 +189,15 @@ cost-analysis-system/
 | **仪表盘 Dashboard**   | 系统首页，快速导航入口                                                   | ✅ 已实现 |
 | **成本管理 Cost**      | 核心模块：新增报价、成本记录查询、成本比较、标准成本管理                 | ✅ 已实现 |
 | **法规管理 Regulation**| 管理法规类别（NIOSH、GB、CE等）                                          | ✅ 已实现 |
-| **型号管理 Model**     | 管理产品型号，绑定法规类别                                               | ✅ 已实现 |
+| **型号管理 Model**     | 管理产品型号，绑定法规类别，产品BOM管理                                  | ✅ 已实现 |
 | **原料管理 Material**  | 管理原料明细（品名、用量、单价、币别），支持Excel导入                    | ✅ 已实现 |
-| **包材管理 Packaging** | 管理包装配置及包材明细                                                   | ✅ 已实现 |
-| **工序管理 Process**   | 维护工序及单价配置                                                       | ✅ 已实现 |
+| **包材管理 Packaging** | 管理包装配置及包材明细，支持卡片/列表视图切换                            | ✅ 已实现 |
+| **工序管理 Process**   | 维护工序及单价配置，支持卡片/列表视图切换                               | ✅ 已实现 |
 | **系统配置 Config**    | 管理管销率、税率、汇率、利润区间等系统参数                               | ✅ 已实现 |
 | **用户管理 User**      | 管理六种账号类型及权限                                                   | ✅ 已实现 |
+| **审核流程 Review**    | 审核人批注、差异高亮、状态流转、待审核/已审核页面                        | ✅ 已实现 |
 | **报表导出 Report**    | 导出Excel格式报价单                                                      | 🚧 待开发 |
-| **审核流程 Review**    | 审核人批注、差异高亮、状态流转                                           | 🚧 待开发 |
+| **仪表盘统计图表**     | 报价次数、审核时长、成本趋势等可视化统计                                 | 🚧 待开发 |
 
 ---
 
@@ -256,12 +294,48 @@ npm run dev
 - 异步数据库操作，使用连接池提高性能
 - 成本计算公式全在后端封装（防止前端公式被误删）
 - 页面布局以侧边导航为主，卡片式操作直观简洁
+- 后端分页优化，支持全量数据的高效查询和搜索
+- 灵活的权限控制，支持6种角色和细粒度权限管理
 
 ---
 
-## 八、待开发功能
+## 八、已实现高级功能
 
-- [ ] 审核流程（状态流转、批注、差异高亮）
+### 8.1 审核流程 ✅
+- **状态流转**：草稿 → 已提交 → 已审核/已退回 → 可重新提交
+- **差异高亮**：业务员修改的明细项自动标记颜色
+- **批注功能**：审核人和业务员均可添加批注
+- **审核历史**：完整的时间线追溯
+- **权限控制**：管理员/审核人/业务员可访问，其他读用户受限
+
+### 8.2 后端分页 ✅
+- **高效查询**：避免一次性加载全量数据
+- **搜索功能**：支持多字段模糊搜索
+- **防抖优化**：300ms防抖减少无效请求
+- **排序支持**：按时间、状态等字段排序
+
+### 8.3 卡片/列表视图切换 ✅
+- **包材管理**：卡片视图展示包装配置详情
+- **工序管理**：卡片视图展示工序配置详情
+- **响应式布局**：自动适应不同屏幕尺寸
+
+### 8.4 自定义费用 ✅
+- **管销后累乘**：支持关税、服务费等额外费用
+- **灵活配置**：可添加、删除费用项
+- **自动计算**：实时更新总结金额
+
+### 8.5 自定义增值税率 ✅
+- **报价单级别**：单个报价单可覆盖全局税率
+- **税率验证**：支持0-1之间的税率值
+- **复制继承**：复制报价单时继承税率配置
+
+### 8.6 产品BOM ✅
+- **型号级别**：每个型号可配置标准原料清单
+- **用量管理**：记录标准用量
+- **排序支持**：自定义显示顺序
+
+## 九、待开发功能
+
 - [ ] 报表导出页面（ReportExport.vue）
 - [ ] PDF 导出支持
 - [ ] 仪表盘统计图表（报价次数、审核时长、成本趋势）
