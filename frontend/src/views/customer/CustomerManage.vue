@@ -102,7 +102,7 @@ const total = ref(0)
 let searchTimer = null
 
 const form = reactive({ id: null, vc_code: '', name: '', region: '', remark: '' })
-const canEdit = computed(() => authStore.isAdmin || authStore.isPurchaser || authStore.user?.role === 'salesperson')
+const canEdit = computed(() => authStore.isAdmin || authStore.user?.role === 'reviewer')
 
 const fetchCustomers = async () => {
   loading.value = true

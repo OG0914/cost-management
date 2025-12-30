@@ -1,0 +1,525 @@
+<style scoped>
+/* 全局容器 */
+.cost-add-page {
+  background-color: #f5f7fa;
+  min-height: 100vh;
+  padding-bottom: 20px;
+}
+
+/* 顶部导航 */
+.page-header {
+  background: white;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #ebeef5;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.back-btn {
+  font-size: 14px;
+  color: #606266;
+  padding: 0;
+}
+
+.divider {
+  color: #dcdfe6;
+}
+
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+}
+
+/* 主内容 */
+.main-content {
+  max-width: 1000px;
+  margin: 24px auto;
+  padding: 0 24px;
+}
+
+.content-section {
+  margin-bottom: 32px;
+}
+
+.section-heading {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 16px;
+  padding-left: 10px;
+  border-left: 3px solid #409eff;
+}
+
+/* 卡片容器 */
+.card-container {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+}
+
+.card-container:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+/* 销售策略卡片 */
+.strategy-cards {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.strategy-card {
+  flex: 1;
+  background: white;
+  border: 1px solid #dcdfe6;
+  border-radius: 8px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.strategy-card:hover {
+  border-color: #409eff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.strategy-card.active {
+  border: 2px solid #409eff;
+  background-color: #f0f9eb; /* 内销/外销选中时不一定都是绿色，这里可用更中性的浅蓝 */
+  background-color: #f2f6fc;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #303133;
+}
+
+.check-icon {
+  color: #409eff;
+  font-weight: bold;
+  font-size: 20px;
+}
+
+.card-body p {
+  margin: 6px 0;
+  color: #606266;
+  font-size: 14px;
+}
+
+.vat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 14px;
+  color: #606266;
+}
+
+.mini-select {
+  width: 90px;
+}
+
+/* 物流面板 */
+.logistics-panel {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  border: 1px solid #ebeef5;
+  animation: slideDown 0.3s ease-in-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sub-heading {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #606266;
+  border-bottom: 1px dashed #ebeef5;
+  padding-bottom: 8px;
+}
+
+.logistics-grid {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr;
+  gap: 24px;
+  align-items: end;
+}
+
+.logistics-item label {
+  display: block;
+  font-size: 13px;
+  color: #909399;
+  margin-bottom: 8px;
+}
+
+/* 切换组 */
+.toggle-group {
+  display: flex;
+  background: #f5f7fa;
+  border-radius: 4px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.toggle-option {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+  font-size: 13px;
+  color: #606266;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.toggle-option:hover {
+  background: #e6e8eb;
+}
+
+.toggle-option.active {
+  background: white;
+  color: #409eff;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.port-selection {
+  display: flex;
+  align-items: center;
+  height: 40px;
+}
+
+/* 表格样式 */
+.detail-block {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.detail-block h4 {
+  margin: 0;
+  font-size: 15px;
+  color: #303133;
+}
+
+.clean-table-wrapper {
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.clean-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.clean-table th {
+  text-align: left;
+  padding: 12px 16px;
+  color: #909399;
+  font-weight: 500;
+  background: #f5f7fa;
+  font-size: 13px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.clean-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f5f7fa;
+  font-size: 14px;
+}
+
+.clean-table tr:last-child td {
+  border-bottom: none;
+}
+
+.table-input :deep(.el-input__wrapper), 
+.table-select :deep(.el-input__wrapper) {
+  box-shadow: none;
+  background: transparent;
+}
+.table-input :deep(.el-input__wrapper):hover, 
+.table-select :deep(.el-input__wrapper):hover {
+  box-shadow: none;
+  background: #f5f7fa;
+}
+
+.add-row-btn {
+  width: 100%;
+  text-align: center;
+  padding: 12px;
+  border-top: 1px dashed #dcdfe6;
+  color: #909399;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #fff;
+  font-size: 13px;
+}
+
+.add-row-btn:hover {
+  color: #409eff;
+  background-color: #fdfdfd;
+}
+
+.table-summary {
+  text-align: right;
+  margin-top: 12px;
+  padding: 0 12px;
+  font-size: 13px;
+  color: #606266;
+}
+
+/* 算价仪表盘 */
+.pricing-dashboard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: white;
+  padding: 32px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.pricing-card {
+  text-align: center;
+  flex: 1;
+}
+
+.pricing-card .label {
+  display: block;
+  font-size: 13px;
+  color: #909399;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pricing-card .value {
+  display: block;
+  font-size: 24px;
+  font-weight: 600;
+  color: #303133;
+}
+.pricing-card .value small {
+  font-size: 12px;
+  color: #909399;
+  font-weight: normal;
+  margin-left: 4px;
+}
+
+.pricing-card.highlight .value {
+  color: #409eff;
+}
+
+.pricing-op {
+  font-size: 24px;
+  color: #dcdfe6;
+  margin: 0 24px;
+  font-weight: 300;
+}
+
+.final-price-box {
+  background: #2b303b;
+  color: white;
+  padding: 32px;
+  border-radius: 8px;
+  text-align: center;
+  margin-top: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.final-label {
+  font-size: 14px;
+  opacity: 0.7;
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.final-value {
+  font-size: 42px;
+  font-weight: bold;
+  color: #e6a23c;
+  line-height: 1.2;
+}
+
+.final-meta {
+  font-size: 13px;
+  opacity: 0.5;
+  margin-top: 12px;
+}
+
+/* 利润卡片 */
+.profit-cards {
+  display: flex;
+  gap: 16px;
+}
+
+.profit-card {
+  flex: 1;
+  background: white;
+  border: 1px solid #dcdfe6;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.profit-card:hover {
+  border-color: #409eff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.profit-card.add-card {
+  border-style: dashed;
+  cursor: pointer;
+  color: #909399;
+}
+.profit-card.add-card:hover {
+  border-color: #409eff;
+  color: #409eff;
+}
+
+.profit-card .profit-label {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.profit-card .profit-price {
+  font-size: 20px;
+  font-weight: 600;
+  color: #303133;
+}
+
+/* 底部操作栏 */
+.sticky-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+  z-index: 1000; /* Ensure on top */
+}
+
+.footer-btn {
+  width: 140px;
+  height: 40px;
+  font-size: 14px;
+}
+
+.smart-advice {
+  background: #f0f9eb;
+  padding: 16px;
+  border-radius: 6px;
+  color: #67c23a;
+  font-size: 13px;
+  margin-top: 16px;
+  line-height: 1.6;
+  border-left: 4px solid #67c23a;
+}
+
+.highlight {
+  font-weight: bold;
+}
+
+/* 覆盖 Element Plus 样式 */
+.modern-input :deep(.el-input__wrapper),
+.modern-select :deep(.el-input__wrapper) {
+  box-shadow: none !important;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.modern-input :deep(.el-input__wrapper):hover,
+.modern-select :deep(.el-input__wrapper):hover {
+  border-color: #c0c4cc;
+}
+
+.modern-input :deep(.el-input__wrapper.is-focus),
+.modern-select :deep(.el-input__wrapper.is-focus) {
+  border-color: #409eff;
+}
+
+.modern-input :deep(.el-input__inner) {
+  height: 36px;
+}
+
+.extra-fees {
+  padding: 16px 32px;
+  background: white;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-top: 1px dashed #ebeef5;
+}
+
+.fee-tag {
+  background: #fdf6ec;
+  color: #e6a23c;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  border: 1px solid #fbe7ce;
+}
+
+/* 输入框微调 */
+.modern-input-number :deep(.el-input__wrapper) {
+   box-shadow: none !important;
+   border: 1px solid #dcdfe6;
+}
+</style>

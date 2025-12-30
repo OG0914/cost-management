@@ -86,7 +86,6 @@ CREATE TABLE IF NOT EXISTS packaging (
 
 -- ============================================
 -- 包装配置表（型号+包装方式的固定组合）
--- 注意: packaging_type, layer1_qty, layer2_qty, layer3_qty 字段由迁移脚本 003_add_packaging_type.sql 添加
 -- ============================================
 CREATE TABLE IF NOT EXISTS packaging_configs (
   id SERIAL PRIMARY KEY,
@@ -95,6 +94,10 @@ CREATE TABLE IF NOT EXISTS packaging_configs (
   pc_per_bag INTEGER NOT NULL,
   bags_per_box INTEGER NOT NULL,
   boxes_per_carton INTEGER NOT NULL,
+  packaging_type VARCHAR(20) NOT NULL DEFAULT 'standard_box' CHECK(packaging_type IN ('standard_box', 'no_box', 'blister_direct', 'blister_bag')),
+  layer1_qty INTEGER NOT NULL,
+  layer2_qty INTEGER NOT NULL,
+  layer3_qty INTEGER,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
@@ -131,6 +134,19 @@ CREATE TABLE IF NOT EXISTS packaging_materials (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
+-- ============================================
+-- 客户管理表
+-- ============================================
+CREATE TABLE IF NOT EXISTS customers (
+  id SERIAL PRIMARY KEY,
+  vc_code VARCHAR(50) UNIQUE NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  region VARCHAR(100),
+  remark TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
 
 -- ============================================
 -- 报价单主表
@@ -156,6 +172,7 @@ CREATE TABLE IF NOT EXISTS quotations (
   created_by INTEGER NOT NULL REFERENCES users(id),
   reviewed_by INTEGER REFERENCES users(id),
   packaging_config_id INTEGER REFERENCES packaging_configs(id),
+  customer_id INTEGER REFERENCES customers(id),
   include_freight_in_base BOOLEAN DEFAULT true,
   custom_profit_tiers TEXT,
   vat_rate DECIMAL(5,4),
@@ -235,6 +252,18 @@ CREATE TABLE IF NOT EXISTS model_bom_materials (
 );
 
 -- ============================================
+-- 审核历史表
+-- ============================================
+CREATE TABLE IF NOT EXISTS review_history (
+  id SERIAL PRIMARY KEY,
+  quotation_id INTEGER NOT NULL REFERENCES quotations(id) ON DELETE CASCADE,
+  action VARCHAR(20) NOT NULL CHECK(action IN ('created', 'submitted', 'approved', 'rejected', 'resubmitted')),
+  operator_id INTEGER NOT NULL REFERENCES users(id),
+  comment TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================
 -- 价格历史表
 -- ============================================
 CREATE TABLE IF NOT EXISTS price_history (
@@ -300,7 +329,7 @@ CREATE INDEX IF NOT EXISTS idx_packaging_model_id ON packaging(model_id);
 
 -- 包装配置表索引
 CREATE INDEX IF NOT EXISTS idx_packaging_configs_model_id ON packaging_configs(model_id);
--- 注意: idx_packaging_configs_type 索引由迁移脚本 003_add_packaging_type.sql 创建
+CREATE INDEX IF NOT EXISTS idx_packaging_configs_type ON packaging_configs(packaging_type);
 
 -- 工序配置表索引
 CREATE INDEX IF NOT EXISTS idx_process_configs_packaging_config_id ON process_configs(packaging_config_id);
@@ -325,6 +354,15 @@ CREATE INDEX IF NOT EXISTS idx_quotation_items_category ON quotation_items(categ
 
 -- 批注表索引
 CREATE INDEX IF NOT EXISTS idx_comments_quotation_id ON comments(quotation_id);
+
+-- 审核历史表索引
+CREATE INDEX IF NOT EXISTS idx_review_history_quotation ON review_history(quotation_id);
+CREATE INDEX IF NOT EXISTS idx_review_history_action ON review_history(action);
+CREATE INDEX IF NOT EXISTS idx_review_history_created_at ON review_history(created_at DESC);
+
+-- 客户表索引
+CREATE INDEX IF NOT EXISTS idx_customers_vc_code ON customers(vc_code);
+CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name);
 
 -- 自定义费用表索引
 CREATE INDEX IF NOT EXISTS idx_custom_fees_quotation ON quotation_custom_fees(quotation_id);

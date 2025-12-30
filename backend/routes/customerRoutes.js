@@ -9,15 +9,15 @@ router.use(verifyToken);
 
 router.get('/', customerController.getCustomerList);
 router.get('/search', customerController.searchCustomers);
-router.get('/template/download', customerController.downloadTemplate);
+router.get('/template/download', requireRole(['admin', 'reviewer']), customerController.downloadTemplate);
 router.get('/:id', customerController.getCustomerById);
 
-router.post('/', requireRole(['admin', 'purchaser', 'salesperson']), customerController.createCustomer);
-router.post('/import', requireRole(['admin', 'purchaser']), upload.single('file'), customerController.importCustomers);
-router.post('/export/excel', customerController.exportCustomers);
-router.post('/batch-delete', requireRole(['admin']), customerController.batchDeleteCustomers);
+router.post('/', requireRole(['admin', 'reviewer']), customerController.createCustomer);
+router.post('/import', requireRole(['admin', 'reviewer']), upload.single('file'), customerController.importCustomers);
+router.post('/export/excel', requireRole(['admin', 'reviewer']), customerController.exportCustomers);
+router.post('/batch-delete', requireRole(['admin', 'reviewer']), customerController.batchDeleteCustomers);
 
-router.put('/:id', requireRole(['admin', 'purchaser', 'salesperson']), customerController.updateCustomer);
+router.put('/:id', requireRole(['admin', 'reviewer']), customerController.updateCustomer);
 router.delete('/:id', requireRole(['admin']), customerController.deleteCustomer);
 
 module.exports = router;
