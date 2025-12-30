@@ -583,7 +583,7 @@
         </template>
 
         <div class="profit-tier-cards">
-          <div v-for="tier in allProfitTiers" :key="tier.profitPercentage || tier.customIndex" class="profit-card" :class="{ custom: tier.isCustom }">
+          <div v-for="tier in allProfitTiers" :key="tier.isCustom ? 'custom-' + tier.customIndex : 'system-' + tier.profitPercentage" class="profit-card" :class="{ custom: tier.isCustom }">
             <div class="profit-label">
               <span v-if="!tier.isCustom">{{ tier.profitPercentage }} 利润</span>
               <div v-else class="custom-rate-input">
@@ -1267,6 +1267,7 @@ const calculateFOBFreight = () => {
         form.quantity = suggestedQuantity
         quantityUnit.value = 'carton'
         quantityInput.value = maxCartons
+        shippingInfo.cartons = maxCartons // 同步更新箱数
       }
     } else if (pcsPerCarton && pcsPerCarton > 0) {
       // 没有外箱材积但有每箱只数时，提示用户
@@ -1745,12 +1746,12 @@ const loadQuotationData = async (id, isCopy = false) => {
         form.port_type = 'other'
         form.port = quotation.port || ''
       }
-      form.quantity = quotation.quantity
-      form.freight_total = quotation.freight_total
+      form.quantity = quotation.quantity ? parseInt(quotation.quantity) : null // 数量应为整数
+      form.freight_total = quotation.freight_total ? parseFloat(quotation.freight_total) : null // 运费需转数字
       form.include_freight_in_base = quotation.include_freight_in_base !== false
       // 加载增值税率，如果报价单有保存的值则使用，否则使用全局配置
       form.vat_rate = quotation.vat_rate !== null && quotation.vat_rate !== undefined 
-        ? quotation.vat_rate 
+        ? parseFloat(quotation.vat_rate) 
         : (configStore.config.vat_rate || 0.13)
       
       // 填充明细数据 - 保留完整的数据结构，PostgreSQL DECIMAL返回字符串需转换
@@ -1825,6 +1826,12 @@ const loadQuotationData = async (id, isCopy = false) => {
         
         // 计算箱数和CBM
         calculateShippingInfo()
+      }
+      
+      // 同步数量输入值（确保在任何情况下都同步）
+      if (form.quantity && !quantityInput.value) {
+        quantityInput.value = form.quantity
+        quantityUnit.value = 'pcs'
       }
       
       // 加载自定义利润档位
