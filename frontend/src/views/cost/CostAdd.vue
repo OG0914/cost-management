@@ -345,12 +345,18 @@
             </el-col>
           </el-row>
           <el-row :gutter="48" class="domestic-freight-row">
-            <el-col :span="8">
-              <el-form-item label="运费总价" prop="freight_total">
-                <el-input-number v-model="form.freight_total" :min="0" :precision="4" :controls="false" @change="calculateCost" style="width: 100%" />
+            <el-col :span="6">
+              <el-form-item label="每CBM单价">
+                <el-input-number v-model="domesticCbmPrice" :min="0" :precision="2" :controls="false" @change="onDomesticCbmPriceChange" style="width: 100%" placeholder="0" />
               </el-form-item>
             </el-col>
-            <el-col :span="14">
+            <el-col :span="8">
+              <el-form-item label="运费总价" prop="freight_total">
+                <el-input-number v-model="form.freight_total" :min="0" :precision="2" :controls="false" @change="calculateCost" style="width: 100%" />
+                <div v-if="domesticCbmPrice && shippingInfo.cbm" class="freight-hint">= {{ domesticCbmPrice }} × {{ Math.ceil(parseFloat(shippingInfo.cbm)) }} CBM</div>
+              </el-form-item>
+            </el-col>
+            <el-col :span="10">
               <el-form-item label="运费计入成本">
                 <el-radio-group v-model="form.include_freight_in_base" @change="calculateCost">
                   <el-radio :label="true">是</el-radio>
@@ -762,6 +768,9 @@ const quantityUnit = ref('pcs')
 // 数量输入值（根据单位不同，可能是片数或箱数）
 const quantityInput = ref(null)
 
+// 内销每CBM单价
+const domesticCbmPrice = ref(null)
+
 // FOB深圳运费计算结果
 const freightCalculation = ref(null)
 
@@ -954,14 +963,22 @@ const loadBomMaterials = async (modelId) => {
         item_name: b.material_name,
         usage_amount: parseFloat(b.usage_amount) || 0,
         unit_price: parseFloat(b.unit_price) || 0,
-        subtotal: (parseFloat(b.usage_amount) || 0) * (parseFloat(b.unit_price) || 0),
+        subtotal: 0, // 先设为0，后面统一应用原料系数计算
         is_changed: 0,
         from_bom: true, // 标记来自BOM
         from_standard: true, // 标记为标准数据（锁定编辑）
         after_overhead: false
       }))
+      // 应用原料系数计算小计（口罩/0.97，半面罩/0.99）
+      form.materials.forEach(row => {
+        const coefficient = materialCoefficient.value || 1
+        const rawSubtotal = (row.usage_amount || 0) * (row.unit_price || 0)
+        row.subtotal = coefficient !== 0 ? rawSubtotal / coefficient : rawSubtotal
+        row.subtotal = Math.round(row.subtotal * 10000) / 10000 // 四舍五入到4位小数
+        row.coefficient_applied = true // 标记已应用系数
+      })
       editMode.materials = false // 重置编辑状态
-      console.log('已加载BOM原料:', form.materials.length, '条')
+      console.log('已加载BOM原料:', form.materials.length, '条，原料系数:', materialCoefficient.value)
     } else {
       form.materials = [] // 无BOM数据时清空
     }
@@ -1173,6 +1190,15 @@ const onQuantityChange = () => {
   calculateCost()
 }
 
+// 内销每CBM单价变化
+const onDomesticCbmPriceChange = () => {
+  if (domesticCbmPrice.value && domesticCbmPrice.value > 0 && shippingInfo.cbm) {
+    const ceiledCbm = Math.ceil(parseFloat(shippingInfo.cbm))
+    form.freight_total = Math.round(domesticCbmPrice.value * ceiledCbm * 100) / 100
+  }
+  calculateCost()
+}
+
 // 计算箱数和CBM
 const calculateShippingInfo = () => {
   // 重置
@@ -1220,6 +1246,12 @@ const calculateShippingInfo = () => {
     // CBM = 总材积 / 35.32（保留一位小数）
     const cbm = (totalVolume / 35.32).toFixed(1)
     shippingInfo.cbm = cbm
+    
+    // 内销：如果有每CBM单价，自动计算运费总价
+    if (form.sales_type === 'domestic' && domesticCbmPrice.value && domesticCbmPrice.value > 0) {
+      const ceiledCbm = Math.ceil(parseFloat(cbm))
+      form.freight_total = Math.round(domesticCbmPrice.value * ceiledCbm * 100) / 100
+    }
   }
   
   // 如果是FOB深圳，自动计算运费
@@ -2269,6 +2301,7 @@ onMounted(async () => {
 .domestic-quantity-section { margin-top: 20px; padding-top: 16px; border-top: 1px dashed #e4e7ed; }
 .domestic-freight-row { margin-top: 16px; }
 .quantity-hint { color: #67c23a; font-size: 12px; margin-top: 4px; }
+.freight-hint { color: #909399; font-size: 12px; margin-top: 4px; }
 
 /* 成本明细区块 */
 .cost-detail-section { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #ebeef5; }

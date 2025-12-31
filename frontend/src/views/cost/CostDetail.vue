@@ -10,11 +10,11 @@
       </div>
       <div class="header-center">
         <h2>报价单详情</h2>
-      </div>
-      <div class="header-right">
-        <el-tag :type="getStatusType(quotation.status)" size="large">
+        <el-tag :type="getStatusType(quotation.status)" size="large" style="margin-left: 12px;">
           {{ getStatusText(quotation.status) }}
         </el-tag>
+      </div>
+      <div class="header-right">
         <el-button type="warning" @click="profitDialogVisible = true">
           <el-icon><TrendCharts /></el-icon>
           利润落点
@@ -69,18 +69,18 @@
           </el-col>
           <el-col :span="8">
             <div class="info-item">
-              <span class="info-label">创建人</span>
-              <span class="info-value">{{ quotation.creator_name }}</span>
-            </div>
-          </el-col>
-          <el-col :span="8">
-            <div class="info-item">
               <span class="info-label">包装方式</span>
               <span class="info-value" v-if="quotation.packaging_config_name">
                 {{ quotation.packaging_config_name }} 
                 ({{ quotation.pc_per_bag }}片/袋, {{ quotation.bags_per_box }}袋/盒, {{ quotation.boxes_per_carton }}盒/箱)
               </span>
               <span class="info-value text-muted" v-else>-</span>
+            </div>
+          </el-col>
+          <el-col :span="8">
+            <div class="info-item">
+              <span class="info-label">创建人</span>
+              <span class="info-value">{{ quotation.creator_name }}</span>
             </div>
           </el-col>
         </el-row>
@@ -352,7 +352,7 @@
 
         <!-- 最终成本价 -->
         <div class="final-cost-box">
-          <div class="final-cost-label">最终成本价{{ quotation.sales_type === 'domestic' ? `（含${((quotation.vat_rate || 0.13) * 100).toFixed(0)}%增值税）` : '（不含增值税）' }}</div>
+          <div class="final-cost-label">最终成本价</div>
           <div class="final-cost-value">{{ formatNumber(quotation.final_price) }} {{ quotation.currency }}</div>
           <div class="final-cost-info">
             <span v-if="quotation.sales_type === 'export'">汇率: {{ formatNumber(calculation?.exchangeRate || 7.2) }} | 保险: 0.3%</span>
@@ -603,6 +603,7 @@ onMounted(async () => {
 /* 顶部导航栏 */
 .page-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: #fff; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 .page-header .header-left { display: flex; align-items: center; }
+.page-header .header-center { display: flex; align-items: center; }
 .page-header .header-center h2 { margin: 0; font-size: 20px; color: #303133; }
 .page-header .header-right { display: flex; align-items: center; gap: 12px; }
 .page-header .back-btn { font-size: 14px; color: #606266; }

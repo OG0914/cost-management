@@ -86,7 +86,7 @@
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column prop="quantity" label="数量" width="100">
+        <el-table-column prop="quantity" label="数量" width="130">
           <template #default="{ row }">
             {{ formatQuantity(row.quantity) }}
           </template>
@@ -364,10 +364,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.cost-records-container {
-  /* padding 由 MainLayout 提供 */
-}
-
 .header-card {
   margin-bottom: 20px;
 }

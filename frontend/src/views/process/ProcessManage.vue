@@ -43,6 +43,22 @@
     <el-card>
       <!-- 筛选栏 -->
       <div class="filter-bar">
+        <!-- 产品类别筛选 -->
+        <el-select 
+          v-model="selectedCategory" 
+          placeholder="选择产品类别" 
+          @change="onCategoryChange" 
+          clearable
+          style="width: 150px; margin-right: 16px"
+        >
+          <el-option
+            v-for="cat in categories"
+            :key="cat"
+            :label="cat"
+            :value="cat"
+          />
+        </el-select>
+
         <el-select 
           v-model="selectedModelId" 
           placeholder="选择型号筛选" 
@@ -52,7 +68,7 @@
           style="width: 300px; margin-right: 16px"
         >
           <el-option
-            v-for="model in models"
+            v-for="model in filteredModels"
             :key="model.id"
             :label="`${model.model_name} (${model.regulation_name})`"
             :value="model.id"
@@ -394,11 +410,25 @@ const packagingTypeOptions = getPackagingTypeOptions()
 
 // 数据
 const models = ref([])
+const categories = ref([])
 const packagingConfigs = ref([])
 const selectedConfigs = ref([])
+const selectedCategory = ref(null)
 const selectedModelId = ref(null)
 const selectedPackagingType = ref(null)
 const loading = ref(false)
+
+// 根据产品类别过滤型号
+const filteredModels = computed(() => {
+  if (!selectedCategory.value) return models.value
+  return models.value.filter(m => m.model_category === selectedCategory.value)
+})
+
+// 产品类别变化
+const onCategoryChange = () => {
+  selectedModelId.value = null
+  loadPackagingConfigs()
+}
 
 // 视图切换状态: 'card' | 'list'
 const viewMode = ref('card')
@@ -513,6 +543,18 @@ const loadModels = async () => {
   }
 }
 
+// 加载产品类别
+const loadCategories = async () => {
+  try {
+    const response = await request.get('/models/categories')
+    if (response.success) {
+      categories.value = response.data
+    }
+  } catch (error) {
+    // 错误已在拦截器处理
+  }
+}
+
 // 加载包装配置
 const loadPackagingConfigs = async () => {
   loading.value = true
@@ -536,7 +578,12 @@ const loadPackagingConfigs = async () => {
     const response = await request.get(url)
     
     if (response.success) {
-      packagingConfigs.value = response.data
+      let data = response.data
+      // 按产品类别过滤
+      if (selectedCategory.value && !selectedModelId.value) {
+        data = data.filter(item => item.model_category === selectedCategory.value)
+      }
+      packagingConfigs.value = data
     }
   } catch (error) {
     ElMessage.error('加载包装配置失败')
@@ -871,6 +918,7 @@ const handleDownloadTemplate = async () => {
 onMounted(async () => {
   await configStore.loadConfig()
   loadModels()
+  loadCategories()
   loadPackagingConfigs()
 })
 </script>

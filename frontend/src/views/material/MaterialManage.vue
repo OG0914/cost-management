@@ -106,7 +106,7 @@
           <el-input v-model="form.unit" placeholder="请输入单位" />
         </el-form-item>
         <el-form-item label="单价" required>
-          <el-input-number v-model="form.price" :precision="2" :min="0" :controls="false" style="width: 100%" />
+          <el-input-number v-model="form.price" :min="0" :controls="false" style="width: 100%" />
         </el-form-item>
         <el-form-item label="币别">
           <el-select v-model="form.currency" style="width: 100%">
