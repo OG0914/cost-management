@@ -95,13 +95,13 @@
         <div class="sales-type-display">
           <div class="sales-card" :class="{ active: quotation.sales_type === 'domestic' }">
             <div class="sales-card-title">内销</div>
-            <div class="sales-card-desc">币种: 人民币 (CNY)</div>
+            <div class="sales-card-desc">币种: 人民币 CNY</div>
             <div class="sales-card-desc">含 {{ ((quotation.vat_rate || 0.13) * 100).toFixed(0) }}% 增值税</div>
           </div>
           <div class="sales-card" :class="{ active: quotation.sales_type === 'export' }">
             <div class="sales-card-title">外销</div>
-            <div class="sales-card-desc">币种: 美元 (USD)</div>
-            <div class="sales-card-desc">FOB 条款 / 0% 税率</div>
+            <div class="sales-card-desc">币种: 美元 USD</div>
+            <div class="sales-card-desc"> 0% 税率</div>
           </div>
         </div>
 
@@ -282,7 +282,7 @@
       </el-card>
 
       <!-- 简略视图：成本构成比例（业务员/只读用户可见） -->
-      <el-card class="form-section" shadow="hover" v-else>
+      <el-card class="form-section" shadow="hover">
         <template #header>
           <span class="section-title">成本构成</span>
         </template>
@@ -310,9 +310,9 @@
           </div>
         </div>
 
-        <div class="simple-view-hint">
+        <div class="simple-view-hint" v-if="!isFullView">
           <el-icon><InfoFilled /></el-icon>
-          <span>如需提交审核或查看成本明细，请前往编辑界面。</span>
+          <span>如需提交审核或查看成本明细，请前往编辑或复制界面。</span>
         </div>
       </el-card>
 
@@ -431,8 +431,10 @@ const isAdminOrReviewer = computed(() => {
 
 // 视图模式：完整视图(admin/reviewer) vs 简略视图(salesperson/readonly)
 const isFullView = computed(() => {
-  return user && (user.role === 'admin' || user.role === 'reviewer')
+  return user && (user.role === 'admin' || user.role === 'reviewer' || user.role === 'salesperson')
 })
+
+
 
 // 自定义利润档位
 const customProfitTiers = ref([])

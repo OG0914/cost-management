@@ -426,7 +426,7 @@ const greeting = computed(() => {
 const subGreeting = computed(() => {
   const hour = new Date().getHours()
   if (hour >= 18 || hour < 6) {
-    return '温馨提示：当前为下班时间段，请注意休息~'
+    return '系统检测到当前为下班时间段，请注意保存工作~'
   }
   return '欢迎回来，今天又是高效工作的一天~'
 })

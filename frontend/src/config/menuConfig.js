@@ -22,7 +22,7 @@ export const menuConfig = [
     id: 'review',
     label: '审核管理',
     icon: 'ri-checkbox-circle-line',
-    roles: ['admin', 'reviewer', 'salesperson'],
+    roles: ['admin', 'reviewer'],
     children: [
       { id: 'review_pending', label: '待审核记录', route: '/review/pending', icon: 'ri-time-line' },
       { id: 'review_approved', label: '已审核记录', route: '/review/approved', icon: 'ri-check-double-line' }

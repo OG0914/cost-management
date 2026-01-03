@@ -179,8 +179,8 @@ const pendingCount = computed(() => reviewStore.pendingPagination.total)
 // 加载待审核数量
 const loadPendingCount = async () => {
   const role = authStore.userRole
-  // 只有管理员、审核人员和业务员需要显示待审核数量
-  if (role === 'admin' || role === 'reviewer' || role === 'salesperson') {
+  // 只有管理员、审核人员需要显示待审核数量
+  if (role === 'admin' || role === 'reviewer') {
     await reviewStore.fetchPendingCount()
   }
 }

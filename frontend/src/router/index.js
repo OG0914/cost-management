@@ -137,14 +137,14 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach(async (to, from, next) => {
   const token = getToken()
-  
+
   // 检查路由或其父路由是否需要认证
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin)
   const requiresReviewer = to.matched.some(record => record.meta.requiresReviewer)
   const requiresReviewAccess = to.matched.some(record => record.meta.requiresReviewAccess)
   const forbidPurchaserProducer = to.matched.some(record => record.meta.forbidPurchaserProducer)
-  
+
   // 需要认证的页面
   if (requiresAuth) {
     if (!token) {
@@ -164,33 +164,33 @@ router.beforeEach(async (to, from, next) => {
         const { useAuthStore } = await import('../store/auth')
         const authStore = useAuthStore()
         await authStore.fetchUserInfo()
-        
+
         const role = authStore.user?.role
-        
+
         // 检查管理员权限
         if (requiresAdmin && role !== 'admin') {
           next('/dashboard')
           return
         }
-        
+
         // 检查审核人员权限（仅admin和reviewer可访问）
         if (requiresReviewer && role !== 'admin' && role !== 'reviewer') {
           next('/dashboard')
           return
         }
-        
-        // 检查审核管理访问权限（admin/reviewer/salesperson可访问）
-        if (requiresReviewAccess && role !== 'admin' && role !== 'reviewer' && role !== 'salesperson') {
+
+        // 检查审核管理访问权限（admin/reviewer可访问）
+        if (requiresReviewAccess && role !== 'admin' && role !== 'reviewer') {
           next('/dashboard')
           return
         }
-        
+
         // 检查采购/生产人员限制
         if (forbidPurchaserProducer && (role === 'purchaser' || role === 'producer')) {
           next('/dashboard')
           return
         }
-        
+
         next()
       } catch (error) {
         clearAuth()
@@ -200,29 +200,29 @@ router.beforeEach(async (to, from, next) => {
       const { useAuthStore } = await import('../store/auth')
       const authStore = useAuthStore()
       const role = authStore.user?.role
-      
+
       if (requiresAdmin && role !== 'admin') {
         next('/dashboard')
         return
       }
-      
+
       // 检查审核人员权限
       if (requiresReviewer && role !== 'admin' && role !== 'reviewer') {
         next('/dashboard')
         return
       }
-      
-      // 检查审核管理访问权限（admin/reviewer/salesperson可访问）
-      if (requiresReviewAccess && role !== 'admin' && role !== 'reviewer' && role !== 'salesperson') {
+
+      // 检查审核管理访问权限（admin/reviewer可访问）
+      if (requiresReviewAccess && role !== 'admin' && role !== 'reviewer') {
         next('/dashboard')
         return
       }
-      
+
       if (forbidPurchaserProducer && (role === 'purchaser' || role === 'producer')) {
         next('/dashboard')
         return
       }
-      
+
       next()
     }
   } else {
