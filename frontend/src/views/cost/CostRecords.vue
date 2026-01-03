@@ -6,15 +6,10 @@
           <h2>成本记录</h2>
         </div>
         <div class="header-right">
-          <el-button 
-            type="success" 
-            icon="DataAnalysis" 
-            @click="goToCompare"
-            :disabled="selectedQuotations.length < 2"
-          >
+          <ActionButton type="compare" @click="goToCompare" :disabled="selectedQuotations.length < 2">
             对比模式 ({{ selectedQuotations.length }})
-          </el-button>
-          <el-button type="primary" icon="Plus" @click="showCategoryModal">新增报价单</el-button>
+          </ActionButton>
+          <ActionButton type="add" @click="showCategoryModal">新增报价单</ActionButton>
         </div>
       </div>
     </el-card>
@@ -130,6 +125,7 @@ import { formatQuantity } from '@/utils/review'
 import { getUser } from '@/utils/auth'
 import ProductCategoryModal from '@/components/ProductCategoryModal.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
+import ActionButton from '@/components/common/ActionButton.vue'
 
 const router = useRouter()
 

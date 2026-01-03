@@ -5,10 +5,7 @@
         <div class="toolbar-wrapper">
           <el-button class="toolbar-toggle" :icon="showToolbar ? CaretRight : CaretLeft" circle @click="showToolbar = !showToolbar" :title="showToolbar ? '收起工具栏' : '展开工具栏'" />
           <transition name="toolbar-fade">
-            <el-button v-if="showToolbar && authStore.isAdmin" type="primary" @click="handleAdd">
-              <el-icon><Plus /></el-icon>
-              新增法规
-            </el-button>
+            <ActionButton v-if="showToolbar && authStore.isAdmin" type="add" @click="handleAdd">新增法规</ActionButton>
           </transition>
         </div>
       </template>
@@ -86,7 +83,7 @@
           <el-input v-model="form.description" type="textarea" :rows="3" placeholder="请输入描述" />
         </el-form-item>
         <el-form-item label="状态" v-if="isEdit">
-          <el-switch v-model="form.is_active" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="禁用" />
+          <StatusSwitch v-model="form.is_active" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="禁用" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -106,6 +103,8 @@ import { useAuthStore } from '../../store/auth'
 import { formatDateTime } from '@/utils/format'
 import PageHeader from '@/components/common/PageHeader.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
+import ActionButton from '@/components/common/ActionButton.vue'
+import StatusSwitch from '@/components/common/StatusSwitch.vue'
 
 const authStore = useAuthStore()
 const showToolbar = ref(false)

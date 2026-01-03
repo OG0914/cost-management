@@ -3,6 +3,10 @@
     <el-card class="header-card">
       <div class="header-content">
         <div class="header-left">
+          <el-button text @click="goBack" class="back-btn">
+            <el-icon><ArrowLeft /></el-icon>
+            <span>返回</span>
+          </el-button>
           <h2>成本对比分析</h2>
         </div>
       </div>
@@ -286,6 +290,10 @@ import { formatNumber } from '@/utils/format'
 const router = useRouter()
 const route = useRoute()
 const loading = ref(false)
+
+const goBack = () => {
+  router.back()
+}
 
 // 对比数据
 const compareData = reactive({
@@ -639,6 +647,12 @@ onMounted(() => {
 <style scoped>
 .cost-compare-container {
   /* padding 由 MainLayout 提供 */
+}
+
+.back-btn {
+  font-size: 14px;
+  color: #606266;
+  margin-right: 8px;
 }
 
 .header-card {

@@ -7,35 +7,14 @@
           <el-button class="toolbar-toggle" :icon="showToolbar ? CaretRight : CaretLeft" circle @click="showToolbar = !showToolbar" :title="showToolbar ? '收起工具栏' : '展开工具栏'" />
           <transition name="toolbar-fade">
             <el-space v-if="showToolbar && canEdit">
-          <el-button type="success" @click="handleDownloadTemplate">
-            <el-icon><Download /></el-icon>
-            下载模板
-          </el-button>
-          <el-upload
-            action="#"
-            :auto-upload="false"
-            :on-change="handleFileChange"
-            :show-file-list="false"
-            accept=".xlsx,.xls"
-          >
-            <el-button type="warning">
-              <el-icon><Upload /></el-icon>
-              导入Excel
-            </el-button>
-          </el-upload>
-          <el-button type="info" @click="handleExport">
-            <el-icon><Download /></el-icon>
-            导出Excel
-          </el-button>
-          <el-button type="danger" @click="handleBatchDelete" :disabled="selectedConfigs.length === 0">
-            <el-icon><Delete /></el-icon>
-            批量删除
-          </el-button>
-          <el-button type="primary" @click="showCreateDialog">
-            <el-icon><Plus /></el-icon>
-            新增包装配置
-          </el-button>
-        </el-space>
+              <ActionButton type="download" @click="handleDownloadTemplate">下载模板</ActionButton>
+              <el-upload action="#" :auto-upload="false" :on-change="handleFileChange" :show-file-list="false" accept=".xlsx,.xls">
+                <ActionButton type="import">导入Excel</ActionButton>
+              </el-upload>
+              <ActionButton type="export" @click="handleExport">导出Excel</ActionButton>
+              <ActionButton type="delete" :disabled="selectedConfigs.length === 0" @click="handleBatchDelete">批量删除</ActionButton>
+              <ActionButton type="add" @click="showCreateDialog">新增包装配置</ActionButton>
+            </el-space>
           </transition>
         </div>
       </template>
@@ -272,7 +251,7 @@
         </el-form-item>
 
         <el-form-item label="状态" v-if="isEdit">
-          <el-switch
+          <StatusSwitch
             v-model="form.is_active"
             :active-value="1"
             :inactive-value="0"
@@ -433,6 +412,8 @@ import {
 } from '../../config/packagingTypes';
 import PageHeader from '../../components/common/PageHeader.vue';
 import CommonPagination from '../../components/common/CommonPagination.vue';
+import ActionButton from '../../components/common/ActionButton.vue';
+import StatusSwitch from '../../components/common/StatusSwitch.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();

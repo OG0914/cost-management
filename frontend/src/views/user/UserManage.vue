@@ -190,7 +190,7 @@
         </el-form-item>
 
         <el-form-item label="状态" prop="is_active" v-if="isEdit">
-          <el-switch
+          <StatusSwitch
             v-model="form.is_active"
             active-text="启用"
             inactive-text="禁用"
@@ -232,6 +232,7 @@ import request from '../../utils/request';
 import { formatDateTime } from '@/utils/format';
 import PageHeader from '../../components/common/PageHeader.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue';
+import StatusSwitch from '@/components/common/StatusSwitch.vue';
 
 // 数据
 const users = ref([]);

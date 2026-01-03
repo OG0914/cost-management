@@ -6,14 +6,9 @@
           <h2>标准成本</h2>
         </div>
         <div class="header-right">
-          <el-button 
-            type="success" 
-            icon="DataAnalysis" 
-            @click="goToStandardCostCompare"
-            :disabled="selectedStandardCosts.length < 2"
-          >
+          <ActionButton type="compare" @click="goToStandardCostCompare" :disabled="selectedStandardCosts.length < 2">
             对比模式 ({{ selectedStandardCosts.length }})
-          </el-button>
+          </ActionButton>
         </div>
       </div>
     </el-card>
@@ -162,6 +157,7 @@ import { formatNumber, formatDateTime } from '@/utils/format'
 import { formatQuantity } from '@/utils/review'
 import { getUser } from '@/utils/auth'
 import CommonPagination from '@/components/common/CommonPagination.vue'
+import ActionButton from '@/components/common/ActionButton.vue'
 
 const router = useRouter()
 
