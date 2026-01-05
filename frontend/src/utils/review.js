@@ -73,57 +73,45 @@ export function calculateDiffStatus(item, standardItems) {
   if (!standardItems || standardItems.length === 0) {
     return 'unchanged'
   }
-  
+
   // 查找对应的标准配置项
   const standardItem = standardItems.find(
     s => s.category === item.category && s.item_name === item.item_name
   )
-  
+
   if (!standardItem) {
     // 标准配置中不存在，为新增项
     return 'added'
   }
-  
+
   // 比较用量和单价
   const usageDiff = Math.abs(parseFloat(item.usage_amount) - parseFloat(standardItem.usage_amount))
   const priceDiff = Math.abs(parseFloat(item.unit_price) - parseFloat(standardItem.unit_price))
-  
+
   if (usageDiff > 0.0001 || priceDiff > 0.0001) {
     return 'modified'
   }
-  
+
   return 'unchanged'
 }
 
 /**
  * 计算利润报价
- * @param {number|string} baseCost - 成本价
- * @param {number} overheadRate - 管销率
- * @param {number} exchangeRate - 汇率
+ * 公式：利润报价 = 最终成本价 / (1 - 利润率)
+ * @param {number|string} finalPrice - 最终成本价（内销价或外销保险价）
  * @param {string} salesType - 销售类型 'domestic' | 'export'
  * @returns {Array} 利润报价数组
  */
-export function calculateProfitPricing(baseCost, overheadRate = 0.2, exchangeRate = 7.2, salesType = 'export') {
+export function calculateProfitPricing(finalPrice, salesType = 'export') {
   const profitTiers = [0.05, 0.10, 0.25, 0.50]
-  // 确保 baseCost 是数字
-  const cost = parseFloat(baseCost) || 0
-  const overheadPrice = cost * (1 + overheadRate)
-  
-  return profitTiers.map(rate => {
-    let price = overheadPrice * (1 + rate)
-    let currency = 'CNY'
-    
-    if (salesType === 'export') {
-      price = price / exchangeRate
-      currency = 'USD'
-    }
-    
-    return {
-      rate: rate * 100, // 转为百分比
-      price: parseFloat(price.toFixed(4)),
-      currency
-    }
-  })
+  const price = parseFloat(finalPrice) || 0
+  const currency = salesType === 'export' ? 'USD' : 'CNY'
+
+  return profitTiers.map(rate => ({
+    rate: rate * 100,
+    price: parseFloat((price / (1 - rate)).toFixed(4)),
+    currency
+  }))
 }
 
 /**
@@ -134,14 +122,14 @@ export function calculateProfitPricing(baseCost, overheadRate = 0.2, exchangeRat
  */
 export function formatDateTime(date, format = 'full') {
   if (!date) return '-'
-  
+
   const d = new Date(date)
   const year = d.getFullYear()
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   const hours = String(d.getHours()).padStart(2, '0')
   const minutes = String(d.getMinutes()).padStart(2, '0')
-  
+
   switch (format) {
     case 'date':
       return `${year}-${month}-${day}`

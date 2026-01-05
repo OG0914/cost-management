@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="visible" title="配置产品BOM" width="800px" :close-on-click-modal="false" @close="handleClose">
+  <el-dialog v-model="visible" title="配置产品BOM" width="800px" append-to-body :close-on-click-modal="false" @close="handleClose">
     <div class="bom-config">
       <!-- 添加原料区域 -->
       <div class="add-section">

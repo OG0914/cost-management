@@ -201,11 +201,9 @@ const handleBeforeClose = (done) => {
 const profitPricing = computed(() => {
   if (!quotationDetail.value) return []
   
-  // 系统默认利润区间
+  // 系统默认利润区间（使用最终成本价计算）
   const systemTiers = calculateProfitPricing(
-    quotationDetail.value.base_cost,
-    0.25,
-    7.2,
+    quotationDetail.value.final_price,
     quotationDetail.value.sales_type
   ).map(tier => ({ ...tier, isCustom: false }))
   

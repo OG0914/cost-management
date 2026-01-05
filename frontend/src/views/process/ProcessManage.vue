@@ -199,122 +199,194 @@
     <!-- 创建/编辑包装配置对话框 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="isEdit ? '编辑包装配置' : '新增工序配置'"
-      width="700px"
+      :title="isEdit ? '编辑工序配置' : '新增工序配置'"
+      width="850px"
+      align-center
+      class="minimal-dialog"
       append-to-body
+      :close-on-click-modal="false"
     >
-      <el-form :model="form" ref="formRef" label-width="140px">
-        <el-form-item label="型号" required>
-          <el-select 
-            v-model="form.model_id" 
-            placeholder="请选择型号" 
-            :disabled="isEdit"
-            filterable
-            style="width: 100%"
-          >
-            <el-option
-              v-for="model in models"
-              :key="model.id"
-              :label="`${model.model_name} (${model.regulation_name})`"
-              :value="model.id"
-            />
-          </el-select>
-        </el-form-item>
+      <el-form :model="form" ref="formRef" label-position="top" class="px-2">
         
-        <el-form-item label="配置名称" required>
-          <el-input v-model="form.config_name" placeholder="如：C5标准包装" />
-        </el-form-item>
-
-        <!-- 包装类型选择器 -->
-        <el-form-item label="包装类型" required>
-          <el-select 
-            v-model="form.packaging_type" 
-            placeholder="请选择包装类型"
-            @change="onPackagingTypeChange"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="type in packagingTypeOptions"
-              :key="type.value"
-              :label="type.label"
-              :value="type.value"
-            />
-          </el-select>
-        </el-form-item>
-
-        <el-divider content-position="left">包装方式</el-divider>
-
-        <!-- 动态包装方式输入字段 -->
-        <template v-if="currentPackagingTypeConfig">
-          <el-form-item 
-            v-for="(label, index) in currentPackagingTypeConfig.fieldLabels" 
-            :key="index"
-            :label="label" 
-            required
-          >
-            <el-input-number 
-              v-model="form[`layer${index + 1}_qty`]" 
-              :min="1" 
-              :controls="false" 
-              style="width: 200px" 
-            />
+        <!-- 第一部分：基础信息 -->
+        <div class="grid grid-cols-2 gap-6 mb-6">
+          <el-form-item label="产品型号" required class="mb-0">
+            <el-select 
+              v-model="form.model_id" 
+              placeholder="选择型号" 
+              :disabled="isEdit"
+              filterable
+              class="w-full"
+            >
+              <el-option
+                v-for="model in models"
+                :key="model.id"
+                :label="`${model.model_name} (${model.regulation_name})`"
+                :value="model.id"
+              />
+            </el-select>
           </el-form-item>
-        </template>
+          
+          <el-form-item label="配置名称" required class="mb-0">
+            <el-input v-model="form.config_name" placeholder="例如：C5标准包装" />
+          </el-form-item>
+        </div>
 
-        <!-- 每箱总数显示 -->
-        <el-form-item label="每箱总数">
-          <span class="total-per-carton">{{ computedTotalPerCarton }} pcs</span>
-        </el-form-item>
+        <!-- 第二部分：包装规格定义 -->
+        <div class="bg-slate-50 rounded-xl p-5 mb-8 border border-slate-100">
+          <div class="mb-4">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">包装类型</span>
+            <el-radio-group v-model="form.packaging_type" size="small" @change="onPackagingTypeChange">
+              <el-radio-button label="standard_box">标准彩盒</el-radio-button>
+              <el-radio-button label="no_box">无彩盒</el-radio-button>
+              <el-radio-button label="blister_direct">吸塑直出</el-radio-button>
+              <el-radio-button label="blister_bag">袋装吸塑</el-radio-button>
+            </el-radio-group>
+          </div>
 
-        <el-form-item label="状态" v-if="isEdit">
-          <StatusSwitch
+          <div class="flex items-center space-x-4">
+            <!-- 动态层级输入 -->
+            <div class="flex-1 grid grid-cols-3 gap-4" v-if="currentPackagingTypeConfig">
+              <!-- Layer 1 -->
+              <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-100 text-center transition-shadow hover:shadow-md focus-within:ring-2 focus-within:ring-blue-100">
+                <div class="text-xs text-slate-500 mb-2">{{ currentPackagingTypeConfig.fieldLabels[0] }}</div>
+                <el-input-number 
+                  v-model="form.layer1_qty" 
+                  :min="1" 
+                  :controls="false" 
+                  size="large"
+                  class="w-full text-center no-border-input"
+                  placeholder="0"
+                />
+              </div>
+
+              <!-- Layer 2 -->
+              <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-100 text-center transition-shadow hover:shadow-md focus-within:ring-2 focus-within:ring-blue-100" v-if="currentPackagingTypeConfig.layers >= 2">
+                <div class="text-xs text-slate-500 mb-2">{{ currentPackagingTypeConfig.fieldLabels[1] }}</div>
+                <el-input-number 
+                  v-model="form.layer2_qty" 
+                  :min="1" 
+                  :controls="false" 
+                  size="large"
+                  class="w-full text-center no-border-input"
+                  placeholder="0"
+                />
+              </div>
+              
+              <!-- Layer 3 (if needed) -->
+              <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-100 text-center transition-shadow hover:shadow-md focus-within:ring-2 focus-within:ring-blue-100" v-if="currentPackagingTypeConfig.layers >= 3">
+                <div class="text-xs text-slate-500 mb-2">{{ currentPackagingTypeConfig.fieldLabels[2] }}</div>
+                 <el-input-number 
+                  v-model="form.layer3_qty" 
+                  :min="1" 
+                  :controls="false" 
+                  size="large"
+                  class="w-full text-center no-border-input"
+                  placeholder="0"
+                />
+              </div>
+
+              <!-- Total Result -->
+              <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-100 text-center relative overflow-hidden flex flex-col justify-center">
+                <div class="absolute top-0 right-0 p-1">
+                  <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                </div>
+                <div class="text-xs text-slate-500 mb-1">每箱总数 (自动计算)</div>
+                <div class="text-2xl font-bold text-green-600">
+                   {{ computedTotalPerCarton }} <span class="text-sm font-normal text-slate-400">pcs</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 第三部分：工序明细 -->
+        <div class="mb-3 flex justify-between items-end">
+          <div>
+            <div class="text-sm font-bold text-slate-900">工序列表</div>
+            <div class="text-xs text-slate-500 mt-1">配置生产所需的标准工序及单价</div>
+          </div>
+          <el-button type="primary" plain size="small" @click="addProcess">
+            <el-icon class="mr-1"><Plus /></el-icon> Add Process
+          </el-button>
+        </div>
+
+        <div class="border border-slate-200 rounded-lg overflow-hidden mb-6">
+          <el-table 
+            :data="form.processes" 
+            style="width: 100%" 
+            :header-cell-style="{ background: '#f8fafc', color: '#64748b', fontWeight: '500', fontSize: '12px' }"
+          >
+            <el-table-column label="序号" width="60" type="index" align="center" />
+            
+            <el-table-column label="工序名称" min-width="200">
+              <template #default="{ row }">
+                <el-input 
+                  v-model="row.process_name" 
+                  placeholder="请输入工序名称" 
+                  size="small"
+                  class="w-full" 
+                />
+              </template>
+            </el-table-column>
+            
+            <el-table-column label="工序单价 (¥)" width="150">
+              <template #default="{ row }">
+                <el-input-number 
+                  v-model="row.unit_price" 
+                  :min="0" 
+                  :precision="4" 
+                  :step="0.01" 
+                  :controls="false"
+                  size="small"
+                  class="w-full"
+                  placeholder="0.00"
+                />
+              </template>
+            </el-table-column>
+            
+            <el-table-column width="60" align="center">
+              <template #default="{ $index }">
+                <el-button 
+                  link 
+                  type="danger" 
+                  size="small" 
+                  @click="removeProcess($index)"
+                  class="text-slate-400 hover:text-red-500 transition-colors"
+                >
+                  <el-icon><Delete /></el-icon>
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+
+        <div class="flex justify-end items-center mb-6 text-sm bg-slate-50 p-3 rounded-lg border border-slate-100">
+           <div class="text-slate-500 mr-6">工序小计: ¥{{ formatNumber(formProcessSubtotal) }}</div>
+           <div class="font-bold text-slate-700">
+             工序总价 (含系数{{ configStore.getProcessCoefficient() }}): 
+             <span class="text-blue-600 text-lg ml-1">¥{{ formatNumber(formTotalProcessPrice) }}</span>
+           </div>
+        </div>
+
+        <div v-if="isEdit" class="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-100">
+           <span class="text-sm text-slate-600 font-medium">配置状态</span>
+           <StatusSwitch
             v-model="form.is_active"
             :active-value="1"
             :inactive-value="0"
-            active-text="启用"
-            inactive-text="禁用"
+            active-text="启用中"
+            inactive-text="已停用"
           />
-        </el-form-item>
+        </div>
 
-        <el-divider content-position="left">
-          工序列表
-          <el-button size="small" type="primary" @click="addProcess" style="margin-left: 10px">
-            <el-icon><Plus /></el-icon>
-            添加工序
-          </el-button>
-        </el-divider>
-
-        <el-table :data="form.processes" border style="margin-bottom: 20px">
-          <el-table-column label="序号" width="60" type="index" />
-          <el-table-column label="工序名称" min-width="200">
-            <template #default="{ row }">
-              <el-input v-model="row.process_name" placeholder="请输入工序名称" size="small" />
-            </template>
-          </el-table-column>
-          <el-table-column label="单价" width="150">
-            <template #default="{ row }">
-              <el-input-number 
-                v-model="row.unit_price" 
-                :min="0" 
-                :precision="4" 
-                :step="0.01" 
-                :controls="false"
-                size="small"
-                style="width: 100%"
-              />
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="80">
-            <template #default="{ $index }">
-              <el-button size="small" type="danger" @click="removeProcess($index)">删除</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
       </el-form>
-
+      
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitForm" :loading="loading">确定</el-button>
+        <div class="flex justify-end pt-4 border-t border-slate-100">
+          <el-button @click="dialogVisible = false" size="large" class="w-32">取消</el-button>
+          <el-button type="primary" @click="submitForm" :loading="loading" size="large" class="w-32">保存配置</el-button>
+        </div>
       </template>
     </el-dialog>
 
@@ -358,7 +430,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, ArrowLeft, Download, Delete, Upload, Grid, List, View, EditPen, CopyDocument, CaretLeft, CaretRight } from '@element-plus/icons-vue'
+import { Plus, ArrowLeft, Download, Delete, Upload, Grid, List, View, EditPen, CopyDocument, CaretLeft, CaretRight, InfoFilled } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { useConfigStore } from '../../store/config'
@@ -479,6 +551,17 @@ const processSubtotal = computed(() => {
 const totalProcessPrice = computed(() => {
   const coefficient = configStore.getProcessCoefficient()
   return processSubtotal.value * coefficient
+})
+
+// 表单工序小计（用于编辑/新增对话框）
+const formProcessSubtotal = computed(() => {
+  return form.processes.reduce((total, p) => total + (parseFloat(p.unit_price) || 0), 0)
+})
+
+// 表单工序总价（用于编辑/新增对话框）
+const formTotalProcessPrice = computed(() => {
+  const coefficient = configStore.getProcessCoefficient()
+  return formProcessSubtotal.value * coefficient
 })
 
 // 包装类型标签颜色
@@ -1160,4 +1243,36 @@ onMounted(async () => {
 .toolbar-toggle { flex-shrink: 0; }
 .toolbar-fade-enter-active, .toolbar-fade-leave-active { transition: opacity 0.3s, transform 0.3s; }
 .toolbar-fade-enter-from, .toolbar-fade-leave-to { opacity: 0; transform: translateX(10px); }
+
+/* Minimal Dialog Styles */
+:deep(.minimal-dialog .el-dialog__header) {
+  padding: 20px 24px 10px;
+  margin-right: 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+:deep(.minimal-dialog .el-dialog__body) {
+  padding: 24px;
+}
+:deep(.minimal-dialog .el-dialog__footer) {
+  padding: 0 24px 24px;
+  border-top: none;
+}
+:deep(.minimal-dialog .el-dialog__title) {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* No Border Input for the Grid */
+:deep(.no-border-input .el-input__wrapper) {
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0;
+}
+:deep(.no-border-input .el-input__inner) {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: #334155;
+}
 </style>

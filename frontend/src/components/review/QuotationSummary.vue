@@ -100,9 +100,7 @@ const props = defineProps({
 const profitPricing = computed(() => {
   if (!props.quotation || !props.showProfitPricing) return []
   return calculateProfitPricing(
-    props.quotation.base_cost,
-    0.25,
-    7.2,
+    props.quotation.final_price,
     props.quotation.sales_type
   )
 })

@@ -15,17 +15,9 @@ import { computed } from 'vue'
 import { calculateProfitPricing } from '@/utils/review'
 
 const props = defineProps({
-  baseCost: {
+  finalPrice: {
     type: Number,
     required: true
-  },
-  overheadRate: {
-    type: Number,
-    default: 0.25
-  },
-  exchangeRate: {
-    type: Number,
-    default: 7.2
   },
   salesType: {
     type: String,
@@ -47,13 +39,8 @@ const props = defineProps({
 })
 
 const profitItems = computed(() => {
-  if (!props.baseCost) return []
-  return calculateProfitPricing(
-    props.baseCost,
-    props.overheadRate,
-    props.exchangeRate,
-    props.salesType
-  )
+  if (!props.finalPrice) return []
+  return calculateProfitPricing(props.finalPrice, props.salesType)
 })
 </script>
 

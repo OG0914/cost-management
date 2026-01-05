@@ -177,9 +177,7 @@ const handleBeforeClose = (done) => {
 const profitPricing = computed(() => {
   if (!quotationDetail.value) return []
   return calculateProfitPricing(
-    quotationDetail.value.base_cost,
-    0.25,
-    7.2,
+    quotationDetail.value.final_price,
     quotationDetail.value.sales_type
   )
 })

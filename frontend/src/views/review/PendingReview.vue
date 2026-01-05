@@ -65,18 +65,21 @@
             {{ formatDateTime(row.submitted_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="140" fixed="right">
+        <el-table-column label="操作" width="100" fixed="right">
           <template #default="{ row }">
             <!-- 管理员/审核人可以审核 -->
-            <el-button v-if="canReview" type="primary" size="small" @click="handleReview(row)">审核</el-button>
+            <el-button v-if="canReview" :icon="View" circle size="small" @click="handleReview(row)" title="审核" />
             <!-- 业务员只能查看 -->
-            <el-button v-else type="primary" size="small" @click="handleView(row)">查看</el-button>
+            <el-button v-else :icon="View" circle size="small" @click="handleView(row)" title="查看" />
             <el-button 
               v-if="isAdmin" 
-              type="danger" 
+              :icon="Delete" 
+              circle 
               size="small" 
+              class="delete-btn"
               @click="handleDelete(row)"
-            >删除</el-button>
+              title="删除"
+            />
           </template>
         </el-table-column>
       </el-table>
@@ -104,7 +107,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search } from '@element-plus/icons-vue'
+import { Search, View, Delete } from '@element-plus/icons-vue'
 import { useReviewStore } from '@/store/review'
 import { useAuthStore } from '@/store/auth'
 import PageHeader from '@/components/common/PageHeader.vue'
@@ -269,5 +272,14 @@ onMounted(() => {
 
 .filter-bar {
   margin-bottom: 16px;
+}
+
+/* 操作按钮样式 */
+.delete-btn {
+  color: #F56C6C;
+}
+.delete-btn:hover:not(:disabled) {
+  color: #f78989;
+  border-color: #f78989;
 }
 </style>

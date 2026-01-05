@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     :model-value="modelValue"
-    :title="`📋 报价单审核   ${quotationDetail?.quotation_no || ''}`"
+    title="报价单审核"
     width="900px"
     top="5vh"
     :close-on-click-modal="false"
@@ -11,71 +11,63 @@
   >
     <div v-loading="loading" class="review-detail-content">
       <template v-if="quotationDetail">
-        <!-- 基本信息 -->
-        <div class="section">
-          <div class="section-title">基本信息</div>
-          <div class="info-grid">
-            <div class="info-row">
-              <div class="info-item">
-                <span class="label">审核状态:</span>
-                <el-tag :type="getStatusType(quotationDetail.status)">
-                  {{ getStatusName(quotationDetail.status) }}
-                </el-tag>
+        <!-- 顶部核心标题 -->
+        <div class="dashboard-header simple">
+           <div class="title-row">
+              <span class="quotation-no">{{ quotationDetail.quotation_no }}</span>
+              <el-tag :type="getStatusType(quotationDetail.status)" effect="dark" class="status-tag">
+                {{ getStatusName(quotationDetail.status) }}
+              </el-tag>
+              <div class="sales-type-badge" :class="quotationDetail.sales_type">
+                {{ getSalesTypeName(quotationDetail.sales_type) }}
               </div>
-              <div class="info-item">
-                <span class="label">销售类型:</span>
-                <span class="value">{{ getSalesTypeName(quotationDetail.sales_type) }}</span>
-              </div>
+           </div>
+        </div>
+
+        <!-- 详细信息网格 (2x4) -->
+        <div class="info-dashboard-grid">
+           <!-- Row 1 -->
+           <div class="grid-card">
+              <div class="card-label">客户名称</div>
+              <div class="card-value">{{ quotationDetail.customer_name }}</div>
+           </div>
+           <div class="grid-card">
+              <div class="card-label">客户地区</div>
+              <div class="card-value">{{ quotationDetail.customer_region || '-' }}</div>
+           </div>
+           <div class="grid-card">
+              <div class="card-label">法规类别</div>
+              <div class="card-value">{{ quotationDetail.regulation_name || '-' }}</div>
+           </div>
+           <div class="grid-card">
+              <div class="card-label">产品数量</div>
+              <div class="card-value">{{ formatQuantity(quotationDetail.quantity) }}</div>
+           </div>
+
+           <!-- Row 2 -->
+           <div class="grid-card">
+              <div class="card-label">产品型号</div>
+              <div class="card-value">{{ quotationDetail.model_name }}</div>
+           </div>
+            <div class="grid-card">
+               <div class="card-label">包装配置</div>
+               <div class="card-value">
+                  <div class="text-ellipsis" :title="quotationDetail.packaging_config_name">
+                     {{ quotationDetail.packaging_config_name || '-' }}
+                  </div>
+                  <div class="sub-text text-ellipsis" :title="formatPackagingSpec(quotationDetail)">
+                     {{ formatPackagingSpec(quotationDetail) }}
+                  </div>
+               </div>
             </div>
-            <div class="info-row">
-              <div class="info-item">
-                <span class="label">客户名称:</span>
-                <span class="value">{{ quotationDetail.customer_name }}</span>
-              </div>
-              <div class="info-item">
-                <span class="label">客户地区:</span>
-                <span class="value">{{ quotationDetail.customer_region || '-' }}</span>
-              </div>
-            </div>
-            <div class="info-row">
-              <div class="info-item">
-                <span class="label">法规类别:</span>
-                <span class="value">{{ quotationDetail.regulation_name || '-' }}</span>
-              </div>
-              <div class="info-item">
-                <span class="label">产品型号:</span>
-                <span class="value">{{ quotationDetail.model_name }}</span>
-              </div>
-            </div>
-            <div class="info-row">
-              <div class="info-item">
-                <span class="label">包装配置:</span>
-                <span class="value">
-                  <template v-if="quotationDetail.packaging_config_name">
-                    {{ quotationDetail.packaging_config_name }}
-                    <span style="color: #909399; font-size: 12px; margin-left: 8px;">
-                      {{ formatPackagingSpec(quotationDetail) }}
-                    </span>
-                  </template>
-                  <template v-else>-</template>
-                </span>
-              </div>
-              <div class="info-item">
-                <span class="label">订单数量:</span>
-                <span class="value">{{ formatQuantity(quotationDetail.quantity) }}</span>
-              </div>
-            </div>
-            <div class="info-row">
-              <div class="info-item">
-                <span class="label">创建人员:</span>
-                <span class="value">{{ quotationDetail.creator_name }}</span>
-              </div>
-              <div class="info-item">
-                <span class="label">提交时间:</span>
-                <span class="value">{{ formatDateTime(quotationDetail.submitted_at) }}</span>
-              </div>
-            </div>
-          </div>
+           <div class="grid-card">
+              <div class="card-label">创建人</div>
+              <div class="card-value">{{ quotationDetail.creator_name }}</div>
+           </div>
+           <div class="grid-card">
+              <div class="card-label">提交时间</div>
+              <div class="card-value">{{ formatDateTime(quotationDetail.submitted_at).split(' ')[0] }}</div>
+           </div>
         </div>
 
         <!-- 成本明细 -->
@@ -172,54 +164,116 @@
               </div>
             </el-tab-pane>
           </el-tabs>
+          
+          <!-- 运费信息 (3卡片布局) -->
+          <div class="freight-dashboard-grid" v-if="quotationDetail.freight_total || quotationDetail.freight_per_unit">
+            <!-- Card 1: 费用概览 -->
+            <div class="freight-card">
+               <div class="fc-label">运费概览</div>
+               <div class="fc-row">
+                 <span>总运费:</span> <span class="fw-500">¥{{ formatNumber(quotationDetail.freight_total || 0, 2) }}</span>
+               </div>
+               <div class="fc-row mt-4">
+                 <span>每片分摊:</span> <span class="fw-500">{{ formatNumber(quotationDetail.freight_per_unit || 0) }} 元</span>
+               </div>
+            </div>
+
+            <!-- Card 2: 成本归属 -->
+            <div class="freight-card">
+               <div class="fc-label">运费是否计入成本</div>
+               <div class="fc-value-large">
+                  <span :class="quotationDetail.include_freight_in_base ? 'text-blue' : 'text-gray'">
+                     {{ quotationDetail.include_freight_in_base ? '是' : '否' }}
+                  </span>
+               </div>
+            </div>
+
+            <!-- Card 3: 物流配置 (仅外销显示) -->
+            <div class="freight-card" v-if="quotationDetail.sales_type === 'export'">
+               <div class="fc-label">物流配置</div>
+               <div class="fc-row">
+                 <span>方式:</span> {{ getShippingMethodName(quotationDetail.shipping_method) }}
+               </div>
+               <div class="fc-row mt-4" v-if="quotationDetail.port">
+                 <span>港口:</span> {{ quotationDetail.port }}
+               </div>
+            </div>
+          </div>
         </div>
 
         <!-- 价格汇总 -->
-        <div class="section">
-          <div class="section-title">价格汇总</div>
-          <div class="price-summary">
-            <div class="price-row">
-              <span>成本价: {{ formatNumber(quotationDetail.base_cost) }} 元</span>
-              <span>管销价: {{ formatNumber(quotationDetail.overhead_price) }} 元</span>
-              <span>{{ quotationDetail.sales_type === 'export' ? '外销价' : '内销价' }}: {{ formatAmount(quotationDetail.final_price, quotationDetail.currency) }}</span>
+        <!-- 财务与利润区域 (Card Dashboard) -->
+        <div class="financial-section-rows">
+          <!-- Row 1: Cost + Price -->
+          <div class="fin-row-top">
+            <!-- Cost Card -->
+            <div class="fin-card cost-card compact">
+               <div class="fin-title">成本数据</div>
+               <div class="cost-item">
+                  <span class="c-label">基础成本</span>
+                  <span class="c-value">{{ formatNumber(quotationDetail.base_cost) }}</span>
+               </div>
+               <div class="cost-item">
+                  <span class="c-label">管销费用</span>
+                  <span class="c-value">{{ formatNumber(quotationDetail.overhead_price) }}</span>
+               </div>
             </div>
-            <div class="profit-pricing">
-              <div class="profit-title">利润报价:</div>
-              <div class="profit-items">
-                <div v-for="item in profitPricing" :key="item.rate" class="profit-item" :class="{ 'custom-tier': item.isCustom }">
-                  {{ item.rate }}%: {{ formatNumber(item.price) }} {{ item.currency }}
-                  <span v-if="item.isCustom" class="custom-tag">自定义</span>
+
+            <!-- Price Card -->
+            <div class="fin-card price-card compact">
+                 <div class="fin-title">{{ quotationDetail.sales_type === 'export' ? '外销最终价' : '内销最终价' }}</div>
+                 <div class="price-main-display">
+                    <span class="currency">{{ quotationDetail.currency }}</span>
+                    <span class="amount">{{ formatNumber(quotationDetail.final_price) }}</span>
+                 </div>
+            </div>
+          </div>
+
+          <!-- Row 2: Profit Independent -->
+          <div class="fin-row-bottom">
+            <div class="fin-card profit-independent-card">
+                <div class="fin-title">利润区间</div>
+                <div class="profit-scroll-view">
+                    <div 
+                      v-for="item in profitPricing" 
+                      :key="item.rate" 
+                      class="profit-simple-pill"
+                    >
+                      <span class="pp-rate">{{ item.rate }}%</span>
+                      <span class="pp-val">{{ formatNumber(item.price) }}</span>
+                    </div>
                 </div>
-              </div>
             </div>
           </div>
         </div>
       </template>
     </div>
+    
+    <!-- 静态审核意见区 (固定在底部) -->
+    <div class="static-feedback-section" v-if="quotationDetail">
+       <div class="fb-header">
+         <el-icon><EditPen /></el-icon> 审核意见
+         <span class="fb-hint">（通过时选填，退回时必填）</span>
+       </div>
+       <el-input 
+          v-model="reviewComment" 
+          type="textarea" 
+          :rows="2"
+          placeholder="请输入审核批注或退回原因..."
+          class="fb-input"
+          resize="none"
+       />
+    </div>
 
     <!-- 底部按钮 -->
     <template #footer>
       <div class="dialog-footer">
-        <el-button type="success" @click="handleApprove">✓ 通过</el-button>
-        <el-button type="danger" @click="handleReject">✗ 退回</el-button>
+        <el-button type="danger" @click="handleReject" :loading="submitting">退回报价</el-button>
+        <el-button type="success" @click="handleApprove" :loading="submitting">此时通过</el-button>
       </div>
     </template>
 
-    <!-- 通过确认弹窗 -->
-    <ApproveConfirmDialog
-      v-model="approveDialogVisible"
-      :quotation="quotationDetail"
-      :profit-pricing="profitPricing"
-      @confirm="confirmApprove"
-    />
-
-    <!-- 退回确认弹窗 -->
-    <RejectConfirmDialog
-      v-model="rejectDialogVisible"
-      :quotation="quotationDetail"
-      :profit-pricing="profitPricing"
-      @confirm="confirmReject"
-    />
+    <!-- 弹窗已移除，改为内嵌交互 -->
   </el-dialog>
 </template>
 
@@ -237,8 +291,9 @@ import {
   formatQuantity,
   calculateProfitPricing
 } from '@/utils/review'
-import ApproveConfirmDialog from './ApproveConfirmDialog.vue'
-import RejectConfirmDialog from './RejectConfirmDialog.vue'
+
+
+import { User, Location, Goods, EditPen } from '@element-plus/icons-vue'
 
 const props = defineProps({
   modelValue: {
@@ -257,8 +312,10 @@ const reviewStore = useReviewStore()
 
 const loading = ref(false)
 const activeTab = ref('material')
-const approveDialogVisible = ref(false)
-const rejectDialogVisible = ref(false)
+
+// removed reviewMode
+const reviewComment = ref('')
+const submitting = ref(false)
 
 // 数据
 const quotationDetail = ref(null)
@@ -278,6 +335,7 @@ watch(() => props.modelValue, (val) => {
     standardItems.value = []
     customProfitTiers.value = []
     activeTab.value = 'material'
+    reviewComment.value = ''
   }
 }, { immediate: true })
 
@@ -312,11 +370,9 @@ const packagingStandardSubtotal = computed(() => {
 const profitPricing = computed(() => {
   if (!quotationDetail.value) return []
   
-  // 系统默认利润区间
+  // 系统默认利润区间（使用最终成本价计算）
   const systemTiers = calculateProfitPricing(
-    quotationDetail.value.base_cost,
-    0.25,
-    7.2,
+    quotationDetail.value.final_price,
     quotationDetail.value.sales_type
   ).map(tier => ({ ...tier, isCustom: false }))
   
@@ -415,181 +471,413 @@ const getDiffStatus = (item, category) => {
 
 const getDiffStatusText = (item, category) => {
   const status = getDiffStatus(item, category)
-  const map = { unchanged: '✓ 一致', modified: '⚠ 修改', added: '➕ 新增', deleted: '➖ 删除' }
+  const map = { unchanged: '✓ 一致', modified: '⚠ 修改', added: '+ 新增', deleted: '- 删除' }
   return map[status] || status
+}
+
+// 获取运输方式中文名称
+const getShippingMethodName = (method) => {
+  const map = { fcl_40: '40GP 大柜', fcl_20: '20GP 小柜', lcl: 'LCL 散货' }
+  return map[method] || method || '-'
 }
 
 // 关闭弹窗
 const closeDialog = () => {
   emit('update:modelValue', false)
+  reviewComment.value = ''
 }
 
-const handleApprove = () => {
-  approveDialogVisible.value = true
-}
-
-const handleReject = () => {
-  rejectDialogVisible.value = true
-}
-
-const confirmApprove = async (comment) => {
+// 提交审核：通过
+const handleApprove = async () => {
+  submitting.value = true
   try {
-    await reviewStore.approveQuotation(props.quotationId, comment)
-    approveDialogVisible.value = false
-    closeDialog()
+    await reviewStore.approveQuotation(props.quotationId, reviewComment.value)
+    ElMessage.success('审核通过成功')
     emit('approved')
+    closeDialog()
   } catch (error) {
     ElMessage.error('审核通过失败')
+  } finally {
+    submitting.value = false
   }
 }
 
-const confirmReject = async (reason) => {
+// 提交审核：退回
+const handleReject = async () => {
+  if (!reviewComment.value.trim()) {
+    ElMessage.warning('请在下方填写退回原因')
+    // 聚焦输入框 (简单的做法，或者ref)
+    const input = document.querySelector('.fb-input textarea')
+    if(input) input.focus()
+    return
+  }
+
+  submitting.value = true
   try {
-    await reviewStore.rejectQuotation(props.quotationId, reason)
-    rejectDialogVisible.value = false
-    closeDialog()
+    await reviewStore.rejectQuotation(props.quotationId, reviewComment.value)
+    ElMessage.success('退回成功')
     emit('rejected')
+    closeDialog()
   } catch (error) {
     ElMessage.error('退回失败')
+  } finally {
+    submitting.value = false
   }
 }
 </script>
 
 <style scoped>
+/* 顶部仪表盘样式 */
 .review-detail-content {
-  max-height: 70vh;
+  max-height: 55vh; /* 调整高度，留出更多空间给底部 */
   overflow-y: auto;
-  min-height: 300px;
+  padding-bottom: 20px;
 }
 
-.section {
+.dashboard-header {
+  background: #ffffff;
+  padding: 0 0 16px 0;
+  border-bottom: 1px solid #f0f2f5;
   margin-bottom: 20px;
-  padding: 16px;
-  background: #fafafa;
-  border-radius: 8px;
+  display: flex;
+  align-items: center; /* Center vertically */
+  /* justify-content removed if redundant or keep space-between if needed? */
+}
+.dashboard-header.simple .title-row {
+  margin-bottom: 0;
+} 
+/* Removed .header-main, .meta-row etc since they are gone */
+
+.header-main {
+  flex: 1;
 }
 
-.section-title {
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.quotation-no {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a1a;
+  letter-spacing: -0.5px;
+}
+
+.status-tag {
   font-weight: 600;
+}
+
+.meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #606266;
+  font-size: 13px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.highlight-qty {
+  color: #1a1a1a;
+  font-weight: 500;
+  background: #f4f4f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.sales-type-badge {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.sales-type-badge.domestic { background: #e6f7ff; color: #1890ff; }
+.sales-type-badge.export { background: #fff7e6; color: #fa8c16; }
+
+/* 网格布局 */
+.info-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.grid-card {
+  background: #fcfcfc;
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+  padding: 12px;
+  transition: all 0.2s;
+}
+
+.grid-card:hover {
+  border-color: #dcdfe6;
+  transform: translateY(-1px);
+}
+/* Removed full-width */
+.text-ellipsis {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sub-text {
+  font-size: 12px;
+  color: #909399;
+  font-weight: normal;
+  margin-top: 2px;
+}
+
+.card-label {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 4px;
+}
+
+.card-value {
   font-size: 14px;
   color: #303133;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #e4e7ed;
-}
-
-.info-grid {
+  font-weight: 500;
   display: flex;
-  flex-direction: column;
+  align-items: baseline;
   gap: 8px;
 }
 
-.info-row {
-  display: flex;
-  gap: 40px;
-}
-
-.info-item {
-  flex: 1;
-  display: flex;
-  align-items: center;
-}
-
-.info-item .label {
-  width: 70px;
+.sub-value {
+  font-size: 11px;
   color: #909399;
-  font-size: 13px;
+  font-weight: normal;
 }
 
-.info-item .value {
+/* 成本区域去噪 */
+.section {
+  background: transparent;
+  padding: 0;
+  margin-bottom: 24px;
+}
+.section-title {
+  border-bottom: none;
+  font-size: 15px;
+  margin-bottom: 12px;
   color: #303133;
-  font-size: 13px;
+  font-weight: 600;
 }
 
 .cost-tabs {
-  margin-top: 8px;
+  margin-top: 0;
 }
 
 .subtotal-row {
   margin-top: 12px;
-  padding: 8px 12px;
-  background: #f5f7fa;
-  border-radius: 4px;
+  padding: 10px 12px;
+  background: #f9fafc;
+  border-radius: 6px;
   font-size: 13px;
   color: #606266;
+  border: 1px solid #ebeef5;
 }
 
+/* 差异高亮 */
 .diff-status {
   font-size: 12px;
   padding: 2px 6px;
   border-radius: 4px;
 }
+.diff-unchanged { color: #67c23a; }
+.diff-modified { color: #1890ff; background: #e6f7ff; }
+.diff-added { color: #52c41a; background: #f6ffed; }
+.diff-deleted { color: #ff4d4f; background: #fff1f0; }
 
-.diff-unchanged {
-  color: #67c23a;
+/* 运费 */
+.freight-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* Rigid 3 cols */
+  gap: 16px;
+  margin-top: 16px;
 }
-
-.diff-modified {
-  color: #1890ff;
-  background: #e6f7ff;
+.freight-card {
+  background: #ffffff;
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+  padding: 16px;
 }
-
-.diff-added {
-  color: #52c41a;
-  background: #f6ffed;
-}
-
-.diff-deleted {
-  color: #ff4d4f;
-  background: #fff1f0;
-}
-
-.price-summary {
-  font-size: 13px;
-}
-
-.price-row {
-  display: flex;
-  gap: 40px;
+/* Enhanced Titles as requested */
+.fc-label, .fin-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
   margin-bottom: 12px;
 }
 
-.profit-pricing {
+.fc-row {
+  font-size: 13px;
+  color: #606266;
   display: flex;
-  align-items: flex-start;
-  gap: 16px;
+  justify-content: space-between;
 }
+.fc-row.mt-4 { margin-top: 8px; }
 
-.profit-title {
-  color: #909399;
-}
-
-.profit-items {
+/* Financial Layout Rows */
+.financial-section-rows {
   display: flex;
   flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.fin-row-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Equal width */
+  gap: 16px;
+}
+/* Row bottom is just grouping div */
+
+.fin-card {
+  background: #ffffff;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+
+/* Cost Card & Price Card Compact */
+.cost-card.compact, .price-card.compact {
+  height: auto; /* Let content dictate height */
+  background: #fdfdfd;
+}
+.price-card.compact {
+  background: linear-gradient(135deg, #f8fbff 0%, #ffffff 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.price-card.compact .fin-title {
+   margin-bottom: 8px; /* Tighter */
+   color: #409eff;
+}
+
+.cost-item { display: flex; justify-content: space-between; margin-bottom: 10px; }
+.cost-item:last-child { margin-bottom: 0; }
+.c-label { font-size: 13px; color: #606266; }
+.c-value { font-size: 14px; font-weight: 500; color: #303133; }
+
+/* Profit Full Width */
+.profit-independent-card {
+  background: #fdfdfd;
+}
+.profit-scroll-view {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  align-items: center;
+  padding-bottom: 4px;
+}
+.profit-simple-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ebeef5;
+  background: #ffffff;
+  border-radius: 4px;
+  padding: 6px 14px;
+  min-width: 64px;
+}
+.pp-rate { font-size: 12px; color: #909399; margin-bottom: 4px; }
+.pp-val { font-size: 13px; font-weight: 600; color: #606266; }
+
+.price-main-display {
+  display: flex;
+  align-items: baseline;
   gap: 4px;
 }
+.price-main-display .currency { font-size: 16px; color: #606266; margin-right: 4px; }
+.price-main-display .amount { font-size: 28px; font-weight: 700; color: #409eff; line-height: 1; }
 
-.profit-item {
+/* 静态反馈区 */
+.static-feedback-section {
+  padding: 20px 24px;
+  border-top: 1px solid #ebeef5;
+  background: #fcfcfc;
+}
+
+.fb-header {
+  font-size: 14px;
+  font-weight: 600;
   color: #303133;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.profit-item.custom-tier {
-  color: #E6A23C;
-}
-
-.custom-tag {
-  font-size: 10px;
-  background: #fdf6ec;
-  color: #E6A23C;
-  padding: 1px 4px;
-  border-radius: 2px;
-  margin-left: 6px;
+.fb-hint {
+  font-weight: normal;
+  color: #909399;
+  font-size: 12px;
 }
 
 .dialog-footer {
   display: flex;
-  justify-content: center;
-  gap: 20px;
+  justify-content: center; /* Centered buttons */
+  gap: 24px; /* Wider gap for centered buttons */
+  padding: 0 24px 20px 24px;
+  background: #fcfcfc;
+  border-radius: 0 0 8px 8px;
 }
+
+/* 覆盖表格样式 */
+:deep(.el-table) {
+  --el-table-header-bg-color: #f5f7fa;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* 运费卡片 (如果还在用) */
+.freight-info-card {
+  margin-top: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f0f9eb 0%, #f9fafc 100%); /* Greenish tint for logistics? Or blue */
+  background: #f8fbff;
+  border: 1px solid #dcecfd;
+  border-radius: 8px;
+}
+.freight-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: #409eff;
+  font-weight: 600;
+  font-size: 14px;
+}
+.freight-content {
+  display: flex;
+  gap: 24px;
+  font-size: 13px;
+}
+.freight-item { display: flex; align-items: center; gap: 6px; }
+.freight-label { color: #909399; }
+.freight-value { color: #303133; font-weight: 500; }
+.freight-value { color: #303133; font-weight: 500; }
+
+/* 差异对比状态 - 统一风格 (无背景，仅文字颜色) */
+.diff-status {
+  font-weight: 500;
+  padding: 0;
+  background: none !important;
+  border: none !important; /* Explicitly remove any borders */
+  border-radius: 0;
+}
+.diff-unchanged { color: #67c23a; }
+.diff-modified { color: #e6a23c; }
+.diff-added { color: #409eff; }
+.diff-deleted { color: #f56c6c; }
 </style>
+```

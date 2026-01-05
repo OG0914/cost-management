@@ -310,4 +310,21 @@ const getInitial = (name) => {
   max-height: 0;
   opacity: 0;
 }
+
+/* 侧边栏滚动条样式：默认隐藏，hover时显示 */
+nav::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+  background-color: transparent;
+}
+
+nav::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background-color: transparent; /* 默认透明 */
+  transition: background-color 0.3s;
+}
+
+nav:hover::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1; /* hover时显示灰色，对应 slate-300 */
+}
 </style>
