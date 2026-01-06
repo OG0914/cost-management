@@ -175,7 +175,7 @@ const getWeeklyQuotations = async (req, res) => {
  */
 const getWeeklyData = async (monthStart, monthEnd) => {
   const weeks = [0, 0, 0, 0];
-  
+
   const result = await dbManager.query(
     `SELECT created_at FROM quotations WHERE created_at >= $1 AND created_at <= $2`,
     [monthStart.toISOString().split('T')[0], monthEnd.toISOString().split('T')[0]]
@@ -201,9 +201,9 @@ const getRecentActivities = async (req, res) => {
   try {
     const userId = req.user.id;
     const userRole = req.user.role;
-    
+
     const activities = [];
-    
+
     // 根据角色获取不同的操作记录
     if (['salesperson', 'admin', 'reviewer'].includes(userRole)) {
       // 业务员/审核员：获取最近的报价单操作
@@ -214,7 +214,7 @@ const getRecentActivities = async (req, res) => {
         ORDER BY q.updated_at DESC
         LIMIT 3
       `, [userId]);
-      
+
       quotationsResult.rows.forEach(row => {
         const statusMap = { draft: '创建草稿', submitted: '提交审核', approved: '审核通过', rejected: '被退回' };
         activities.push({
@@ -224,7 +224,7 @@ const getRecentActivities = async (req, res) => {
         });
       });
     }
-    
+
     if (['purchaser', 'producer', 'admin'].includes(userRole)) {
       // 采购/生产：获取最近的原料更新
       const materialsResult = await dbManager.query(`
@@ -232,7 +232,7 @@ const getRecentActivities = async (req, res) => {
         ORDER BY updated_at DESC
         LIMIT 3
       `);
-      
+
       materialsResult.rows.forEach(row => {
         activities.push({
           icon: 'ri-stack-line',
@@ -241,10 +241,10 @@ const getRecentActivities = async (req, res) => {
         });
       });
     }
-    
+
     // 按时间排序，取最近5条
     activities.sort((a, b) => new Date(b.rawTime || 0) - new Date(a.rawTime || 0));
-    
+
     res.json(success(activities.slice(0, 5), '获取最近操作成功'));
   } catch (err) {
     console.error('获取最近操作失败:', err);
@@ -261,7 +261,7 @@ const formatTimeAgo = (dateStr) => {
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
-  
+
   if (diffMins < 1) return '刚刚';
   if (diffMins < 60) return `${diffMins}分钟前`;
   if (diffHours < 24) return `${diffHours}小时前`;

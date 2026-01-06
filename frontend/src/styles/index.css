@@ -262,3 +262,11 @@ body {
 .el-message-box__btns .el-button + .el-button {
   margin-left: 12px;
 }
+
+/* ========== Element Plus Table 样式覆盖 ========== */
+
+/* 表头文字加粗 */
+.el-table th.el-table__cell {
+  font-weight: 700 !important;
+  color: #303133;
+}

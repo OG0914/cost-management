@@ -281,33 +281,115 @@
                 </div>
               </div>
 
-              <!-- FOB深圳运费计算明细 - 整柜 -->
-              <div v-if="form.port_type === 'fob_shenzhen' && (form.shipping_method === 'fcl_20' || form.shipping_method === 'fcl_40') && freightCalculation" class="freight-detail">
-                <el-descriptions :column="2" border size="small" title="运费计算明细">
-                  <el-descriptions-item label="单箱材积" v-if="freightCalculation.cartonVolume">{{ freightCalculation.cartonVolume }} 立方英尺</el-descriptions-item>
-                  <el-descriptions-item label="可装箱数" v-if="freightCalculation.maxCartons">{{ freightCalculation.maxCartons }}箱</el-descriptions-item>
-                  <el-descriptions-item label="每箱只数" v-if="freightCalculation.pcsPerCarton">{{ freightCalculation.pcsPerCarton }} pcs</el-descriptions-item>
-                  <el-descriptions-item label="运费(USD)">${{ freightCalculation.freightUSD }}</el-descriptions-item>
-                  <el-descriptions-item label="汇率">{{ freightCalculation.exchangeRate }}</el-descriptions-item>
-                  <el-descriptions-item label="运费总计(CNY)">
-                    <span class="highlight-value">¥{{ freightCalculation.totalFreight }}</span>
-                  </el-descriptions-item>
-                </el-descriptions>
-              </div>
+              <!-- FOB深圳运费计算明细 - 现代化卡片设计 -->
+              <div v-if="form.port_type === 'fob_shenzhen' && freightCalculation" class="mt-4 mb-2">
+                
+                <!-- 整柜 (FCL) 卡片 -->
+                <div v-if="(form.shipping_method === 'fcl_20' || form.shipping_method === 'fcl_40')" 
+                     class="bg-gradient-to-br from-blue-50 to-white rounded-xl border border-blue-100 shadow-sm overflow-hidden relative group transition-all duration-300 hover:shadow-md">
+                  
+                  <!-- 装饰背景 -->
+                  <div class="absolute right-0 top-0 w-32 h-32 bg-blue-100/40 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+                  
+                  <div class="p-5 relative z-10 flex flex-col md:flex-row md:items-stretch gap-6">
+                    <!-- 左侧：核心费用 -->
+                    <div class="flex-1 flex flex-col justify-center min-w-[200px]">
+                      <div class="flex items-center gap-2 mb-1">
+                        <span class="text-xs font-semibold text-blue-600 uppercase tracking-wider bg-blue-100/50 px-2 py-0.5 rounded">整柜运费 ({{ form.shipping_method === 'fcl_40' ? '40GP' : '20GP' }})</span>
+                      </div>
+                      <div class="flex items-baseline gap-2">
+                         <h3 class="text-3xl font-bold text-gray-900 font-mono tracking-tight">
+                           <span class="text-lg text-gray-500 font-normal mr-1">¥</span>{{ Math.round(freightCalculation.totalFreight).toLocaleString() }}
+                         </h3>
+                      </div>
+                      <div class="mt-2 flex items-center gap-3 text-sm text-gray-500">
+                        <div class="flex items-center gap-1 bg-white/60 px-2 py-1 rounded border border-gray-100">
+                          <span class="font-medium text-gray-700">${{ freightCalculation.freightUSD }}</span>
+                          <span class="text-xs">USD</span>
+                        </div>
+                        <span class="text-gray-300">|</span>
+                        <span>汇率 {{ freightCalculation.exchangeRate }}</span>
+                      </div>
+                    </div>
 
-              <!-- FOB深圳运费计算明细 - 散货 -->
-              <div v-if="form.port_type === 'fob_shenzhen' && form.shipping_method === 'lcl' && freightCalculation" class="freight-detail">
-                <el-descriptions :column="2" border size="small" title="运费计算明细（散货）">
-                  <el-descriptions-item label="CBM（实际）">{{ freightCalculation.cbm }}</el-descriptions-item>
-                  <el-descriptions-item label="CBM（取整）">{{ freightCalculation.ceiledCBM }}</el-descriptions-item>
-                  <el-descriptions-item label="基础运费">¥{{ freightCalculation.baseFreight }}</el-descriptions-item>
-                  <el-descriptions-item label="操作费">¥{{ freightCalculation.handlingCharge }}</el-descriptions-item>
-                  <el-descriptions-item label="拼箱费">¥{{ freightCalculation.cfs }}</el-descriptions-item>
-                  <el-descriptions-item label="文件费">¥{{ freightCalculation.documentFee }}</el-descriptions-item>
-                  <el-descriptions-item label="运费总计" :span="2">
-                    <span class="highlight-value">¥{{ freightCalculation.totalFreight }}</span>
-                  </el-descriptions-item>
-                </el-descriptions>
+                    <!-- 分割线 -->
+                    <div class="hidden md:block w-px bg-gradient-to-b from-transparent via-blue-200 to-transparent"></div>
+
+                    <!-- 右侧：装箱参数 -->
+                    <div class="flex-1 grid grid-cols-2 gap-y-3 gap-x-4">
+                       <div class="space-y-1">
+                          <div class="text-xs text-gray-400">单箱材积</div>
+                          <div class="font-medium text-gray-700">{{ freightCalculation.cartonVolume || '-' }} ft³</div>
+                       </div>
+                       <div class="space-y-1">
+                          <div class="text-xs text-gray-400">最大可装</div>
+                          <div class="font-medium text-blue-700">{{ freightCalculation.maxCartons ? Number(freightCalculation.maxCartons).toLocaleString() : '-' }} 箱</div>
+                       </div>
+                       <div class="space-y-1">
+                          <div class="text-xs text-gray-400">每箱只数</div>
+                          <div class="font-medium text-gray-700">{{ freightCalculation.pcsPerCarton || '-' }} pcs</div>
+                       </div>
+                       <div class="space-y-1">
+                          <div class="text-xs text-gray-400">本次数量</div>
+                          <div class="font-medium text-gray-700">{{ form.quantity ? Number(form.quantity).toLocaleString() : '-' }} pcs</div>
+                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 散货 (LCL) 卡片 -->
+                <div v-else-if="form.shipping_method === 'lcl'" 
+                     class="bg-gradient-to-br from-orange-50 to-white rounded-xl border border-orange-100 shadow-sm overflow-hidden relative group transition-all duration-300 hover:shadow-md">
+                  
+                  <!-- 装饰背景 -->
+                  <div class="absolute right-0 top-0 w-32 h-32 bg-orange-100/40 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+
+                  <div class="p-5 relative z-10 flex flex-col md:flex-row md:items-stretch gap-6">
+                    <!-- 左侧：核心费用 -->
+                    <div class="flex-1 flex flex-col justify-center min-w-[200px]">
+                      <div class="flex items-center gap-2 mb-1">
+                         <span class="text-xs font-semibold text-orange-600 uppercase tracking-wider bg-orange-100/50 px-2 py-0.5 rounded">散货拼箱运费</span>
+                      </div>
+                      <div class="flex items-baseline gap-2">
+                         <h3 class="text-3xl font-bold text-gray-900 font-mono tracking-tight">
+                           <span class="text-lg text-gray-500 font-normal mr-1">¥</span>{{ freightCalculation.totalFreight }}
+                         </h3>
+                      </div>
+                      <div class="mt-2 text-sm text-gray-500">
+                        <span class="bg-white/60 px-2 py-1 rounded border border-gray-100">
+                          计费体积: <span class="font-bold text-gray-800">{{ freightCalculation.ceiledCBM }}</span> CBM
+                        </span>
+                      </div>
+                    </div>
+
+                     <!-- 分割线 -->
+                    <div class="hidden md:block w-px bg-gradient-to-b from-transparent via-orange-200 to-transparent"></div>
+
+                    <!-- 右侧：费用明细 -->
+                    <div class="flex-1 grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
+                       <div class="flex justify-between">
+                          <span class="text-gray-500">基础运费:</span>
+                          <span class="font-medium text-gray-700">¥{{ freightCalculation.baseFreight }}</span>
+                       </div>
+                       <div class="flex justify-between">
+                          <span class="text-gray-500">操作费:</span>
+                          <span class="font-medium text-gray-700">¥{{ freightCalculation.handlingCharge }}</span>
+                       </div>
+                       <div class="flex justify-between">
+                          <span class="text-gray-500">拼箱费:</span>
+                          <span class="font-medium text-gray-700">¥{{ freightCalculation.cfs }}</span>
+                       </div>
+                       <div class="flex justify-between">
+                          <span class="text-gray-500">文件费:</span>
+                          <span class="font-medium text-gray-700">¥{{ freightCalculation.documentFee }}</span>
+                       </div>
+                       <div class="col-span-2 mt-1 pt-2 border-t border-orange-100 flex justify-between items-center">
+                          <span class="text-xs text-gray-400">实际CBM: {{ freightCalculation.cbm }}</span>
+                       </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
 
               <!-- 运费总价（非FOB深圳时手动输入） -->
@@ -2315,9 +2397,6 @@ onMounted(async () => {
 .tip-title { font-weight: 600; color: #1890ff; margin-bottom: 4px; }
 .tip-content div { color: #606266; font-size: 13px; line-height: 1.6; }
 
-/* 运费明细 */
-.freight-detail { margin-top: 16px; }
-.highlight-value { color: #409eff; font-weight: 600; font-size: 16px; }
 
 /* 内销数量区域 */
 .domestic-quantity-section { margin-top: 20px; padding-top: 16px; border-top: 1px dashed #e4e7ed; }
