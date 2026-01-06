@@ -100,25 +100,28 @@
             <div class="header-info">
               <div class="model-name">{{ config.model_name }}</div>
               <div class="config-name">{{ config.config_name }}</div>
+              <div class="packaging-method">
+                {{ formatPackagingMethodFromConfig(config) }}
+              </div>
+              <div class="total-qty">
+                每箱: {{ calculateTotalFromConfig(config) }} pcs
+              </div>
             </div>
-            <div class="category-badge">
-              {{ config.model_category || '未分类' }}
+            <div class="category-badge" :style="{ backgroundColor: getRegulationColor(config.regulation_name) }">
+              {{ config.regulation_name || '未知法规' }}
             </div>
           </div>
           
-          <!-- 卡片内容 -->
           <div class="card-body">
             <el-tag :type="getPackagingTypeTagType(config.packaging_type)" size="small">
               {{ config.packaging_type_name || getPackagingTypeName(config.packaging_type) }}
             </el-tag>
-            <div class="packaging-method">
-              {{ formatPackagingMethodFromConfig(config) }}
-            </div>
-            <div class="total-qty">
-              每箱: {{ calculateTotalFromConfig(config) }} pcs
-            </div>
             <div class="price">
               工序总价: ¥{{ formatNumber(config.process_total_price || 0) }}
+            </div>
+            <div class="status">
+              <span :class="config.is_active ? 'status-active' : 'status-inactive'"></span>
+              {{ config.is_active ? '已启用' : '已禁用' }}
             </div>
           </div>
           
@@ -635,18 +638,15 @@ const getPackagingTypeTagType = (type) => {
   return typeMap[type] || ''
 }
 
-// 产品类别颜色映射
-const CATEGORY_COLORS = {
-  '半面罩': '#409EFF',
-  '全面罩': '#67C23A',
-  '滤盒': '#E6A23C',
-  '滤棉': '#F56C6C',
-  '配件': '#909399'
+// 法规颜色映射
+const REGULATION_COLORS = { 
+  'NIOSH': '#409EFF', 
+  'GB': '#67C23A', 
+  'CE': '#E6A23C', 
+  'ASNZS': '#F56C6C', 
+  'KN': '#9B59B6' 
 }
-
-const getCategoryColor = (category) => {
-  return CATEGORY_COLORS[category] || '#909399'
-}
+const getRegulationColor = (name) => REGULATION_COLORS[name] || '#909399'
 
 // 包装类型变更时重置层级数量
 const onPackagingTypeChange = () => {
@@ -1207,15 +1207,13 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #303133;
+  color: #fff;
   font-size: 11px;
   font-weight: 500;
   text-align: center;
   line-height: 1.2;
   flex-shrink: 0;
   margin-left: 12px;
-  background-color: transparent;
-  border: 1px solid #dcdfe6;
 }
 
 .config-card .card-body {
@@ -1367,43 +1365,4 @@ onMounted(async () => {
 }
 </style>
 
-<!-- 全局样式覆盖：解决 append-to-body 导致的样式无法生效问题 -->
-<style>
-.minimal-dialog.el-dialog {
-  display: flex !important;
-  flex-direction: column !important;
-  margin-top: 5vh !important;
-  height: 90vh !important;
-  max-height: 90vh !important;
-  overflow: hidden !important;
-  position: relative !important;
-  left: 0 !important; /* 修正可能的位置偏移 */
-}
 
-.minimal-dialog .el-dialog__header {
-  padding: 20px 24px 10px !important;
-  margin-right: 0 !important;
-  border-bottom: 1px solid #f1f5f9;
-  flex-shrink: 0;
-}
-
-.minimal-dialog .el-dialog__body {
-  padding: 24px !important;
-  flex: 1;
-  overflow-y: auto !important; /* 强制开启内部滚动 */
-  height: auto !important;
-  max-height: none !important;
-}
-
-.minimal-dialog .el-dialog__footer {
-  padding: 0 24px 24px !important;
-  border-top: none;
-  flex-shrink: 0;
-}
-
-.minimal-dialog .el-dialog__title {
-  font-size: 18px !important;
-  font-weight: 600 !important;
-  color: #1e293b !important;
-}
-</style>

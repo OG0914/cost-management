@@ -14,7 +14,7 @@ const { isValidPackagingType, getPackagingTypeName, VALID_PACKAGING_TYPE_KEYS, P
 exports.getAllPackagingConfigs = async (req, res) => {
   try {
     const { packaging_type } = req.query;
-    
+
     // 验证 packaging_type 参数
     if (packaging_type && !isValidPackagingType(packaging_type)) {
       return res.status(400).json({
@@ -22,24 +22,24 @@ exports.getAllPackagingConfigs = async (req, res) => {
         message: `无效的包装类型: ${packaging_type}。有效值: ${VALID_PACKAGING_TYPE_KEYS.join(', ')}`
       });
     }
-    
+
     const configs = await PackagingConfig.findAll({ packaging_type });
-    
+
     // 获取工价系数
     const processCoefficient = parseFloat(await SystemConfig.getValue('process_coefficient')) || 1.56;
-    
+
     // 为每个配置计算工序总价和包材总价
     const configsWithPrice = await Promise.all(configs.map(async config => {
       const processes = await ProcessConfig.findByPackagingConfigId(config.id);
       const processSum = processes.reduce((sum, p) => sum + parseFloat(p.unit_price), 0);
       const processTotalPrice = processSum * processCoefficient;
-      
+
       const materials = await PackagingMaterial.findByPackagingConfigId(config.id);
       // 包材总价 = Σ(单价 ÷ 基本用量)
       const materialTotalPrice = materials.reduce((sum, m) => {
         return sum + (m.basic_usage !== 0 ? parseFloat(m.unit_price) / parseFloat(m.basic_usage) : 0);
       }, 0);
-      
+
       return {
         ...config,
         packaging_type_name: getPackagingTypeName(config.packaging_type),
@@ -47,7 +47,7 @@ exports.getAllPackagingConfigs = async (req, res) => {
         material_total_price: materialTotalPrice
       };
     }));
-    
+
     res.json({
       success: true,
       data: configsWithPrice
@@ -69,26 +69,26 @@ exports.getPackagingConfigsByModel = async (req, res) => {
 
     // 获取工价系数
     const processCoefficient = parseFloat(await SystemConfig.getValue('process_coefficient')) || 1.56;
-    
+
     // 为每个配置计算工序总价和包材总价
     const configsWithPrice = await Promise.all(configs.map(async config => {
       const processes = await ProcessConfig.findByPackagingConfigId(config.id);
       const processSum = processes.reduce((sum, p) => sum + parseFloat(p.unit_price), 0);
       const processTotalPrice = processSum * processCoefficient;
-      
+
       const materials = await PackagingMaterial.findByPackagingConfigId(config.id);
       // 包材总价 = Σ(单价 ÷ 基本用量)
       const materialTotalPrice = materials.reduce((sum, m) => {
         return sum + (m.basic_usage !== 0 ? parseFloat(m.unit_price) / parseFloat(m.basic_usage) : 0);
       }, 0);
-      
+
       return {
         ...config,
         process_total_price: processTotalPrice,
         material_total_price: materialTotalPrice
       };
     }));
-    
+
     res.json({
       success: true,
       data: configsWithPrice
@@ -107,7 +107,7 @@ exports.getPackagingConfigDetail = async (req, res) => {
   try {
     const { id } = req.params;
     const config = await PackagingConfig.findWithProcesses(id);
-    
+
     if (!config) {
       return res.status(404).json({
         success: false,
@@ -133,7 +133,7 @@ exports.getPackagingConfigFullDetail = async (req, res) => {
   try {
     const { id } = req.params;
     const config = await PackagingConfig.findWithDetails(id);
-    
+
     if (!config) {
       return res.status(404).json({
         success: false,
@@ -158,19 +158,19 @@ exports.getPackagingConfigFullDetail = async (req, res) => {
 // 支持 packaging_type 和 layer1/2/3_qty 新字段
 exports.createPackagingConfig = async (req, res) => {
   try {
-    const { 
-      model_id, 
-      config_name, 
+    const {
+      model_id,
+      config_name,
       packaging_type = 'standard_box',
       layer1_qty,
       layer2_qty,
       layer3_qty,
       // 兼容旧字段名
-      pc_per_bag, 
-      bags_per_box, 
-      boxes_per_carton, 
-      processes, 
-      materials 
+      pc_per_bag,
+      bags_per_box,
+      boxes_per_carton,
+      processes,
+      materials
     } = req.body;
 
     // 验证包装类型
@@ -229,7 +229,7 @@ exports.createPackagingConfig = async (req, res) => {
     });
   } catch (error) {
     console.error('创建包装配置失败:', error);
-    
+
     // 检查是否是包装类型验证错误
     if (error.message && error.message.includes('无效的包装类型')) {
       return res.status(400).json({
@@ -237,16 +237,16 @@ exports.createPackagingConfig = async (req, res) => {
         message: error.message
       });
     }
-    
+
     // 检查是否是唯一性约束错误（PostgreSQL）
-    if (error.code === '23505' || 
-        (error.message && error.message.includes('duplicate key'))) {
+    if (error.code === '23505' ||
+      (error.message && error.message.includes('duplicate key'))) {
       return res.status(400).json({
         success: false,
         message: '该型号下已存在同名的配置，请修改配置名称'
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: error.message || '创建包装配置失败'
@@ -259,19 +259,19 @@ exports.createPackagingConfig = async (req, res) => {
 exports.updatePackagingConfig = async (req, res) => {
   try {
     const { id } = req.params;
-    const { 
-      config_name, 
+    const {
+      config_name,
       packaging_type,
       layer1_qty,
       layer2_qty,
       layer3_qty,
       // 兼容旧字段名
-      pc_per_bag, 
-      bags_per_box, 
-      boxes_per_carton, 
-      is_active, 
-      processes, 
-      materials 
+      pc_per_bag,
+      bags_per_box,
+      boxes_per_carton,
+      is_active,
+      processes,
+      materials
     } = req.body;
 
     // 验证包装类型（如果提供）
@@ -319,7 +319,7 @@ exports.updatePackagingConfig = async (req, res) => {
     });
   } catch (error) {
     console.error('更新包装配置失败:', error);
-    
+
     // 检查是否是包装类型验证错误
     if (error.message && error.message.includes('无效的包装类型')) {
       return res.status(400).json({
@@ -327,7 +327,7 @@ exports.updatePackagingConfig = async (req, res) => {
         message: error.message
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: '更新包装配置失败'
@@ -360,14 +360,14 @@ exports.deletePackagingConfig = async (req, res) => {
 exports.getPackagingConfigsGrouped = async (req, res) => {
   try {
     const { model_id } = req.query;
-    
+
     const options = {};
     if (model_id) {
       options.model_id = parseInt(model_id);
     }
-    
+
     const grouped = await PackagingConfig.findGroupedByType(options);
-    
+
     // 为每个分组添加中文名称
     const result = {};
     for (const [type, configs] of Object.entries(grouped)) {
@@ -379,7 +379,7 @@ exports.getPackagingConfigsGrouped = async (req, res) => {
         }))
       };
     }
-    
+
     res.json({
       success: true,
       data: result
@@ -398,7 +398,7 @@ exports.getProcessConfigs = async (req, res) => {
   try {
     const { packagingConfigId } = req.params;
     const processes = await ProcessConfig.findByPackagingConfigId(packagingConfigId);
-    
+
     res.json({
       success: true,
       data: processes
@@ -497,7 +497,7 @@ exports.getPackagingMaterials = async (req, res) => {
   try {
     const { packagingConfigId } = req.params;
     const materials = await PackagingMaterial.findByPackagingConfigId(packagingConfigId);
-    
+
     res.json({
       success: true,
       data: materials
@@ -614,44 +614,44 @@ exports.importProcesses = async (req, res) => {
         message: '请上传文件'
       });
     }
-    
+
     filePath = req.file.path;
     console.log('开始解析工序文件:', filePath);
-    
+
     const result = await ExcelParser.parseProcessExcel(filePath);
     console.log('解析结果:', result);
-    
+
     if (!result.success) {
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
-      
+
       return res.status(400).json({
         success: false,
         message: '文件解析失败',
         errors: result.errors
       });
     }
-    
+
     if (result.valid === 0) {
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
-      
+
       return res.status(400).json({
         success: false,
         message: '没有有效的数据行'
       });
     }
-    
+
     // 解析包装方式，支持所有四种包装类型
     const parsePackagingMethod = (packagingType, packagingMethod) => {
       const numbers = packagingMethod.match(/\d+/g);
       if (!numbers) return null;
-      
+
       const config = PACKAGING_TYPES[packagingType];
       if (!config) return null;
-      
+
       if (config.layers === 2) {
         // 无彩盒、泡壳直装：2层
         if (numbers.length < 2) return null;
@@ -670,24 +670,24 @@ exports.importProcesses = async (req, res) => {
         };
       }
     };
-    
+
     // 按配置分组处理数据
     const configMap = new Map();
     const parseErrors = [];
-    
+
     result.data.forEach((item, index) => {
       const rowNum = index + 2;
       const parsed = parsePackagingMethod(item.packaging_type, item.packaging_method);
-      
+
       if (!parsed) {
         parseErrors.push(`第 ${rowNum} 行：无法解析包装方式 "${item.packaging_method}"`);
         return;
       }
-      
+
       const { pc_per_bag, bags_per_box, boxes_per_carton } = parsed;
-      
+
       const key = `${item.model_name}|${item.config_name}|${item.packaging_type}|${pc_per_bag}|${bags_per_box}|${boxes_per_carton}`;
-      
+
       if (!configMap.has(key)) {
         configMap.set(key, {
           model_name: item.model_name,
@@ -699,17 +699,17 @@ exports.importProcesses = async (req, res) => {
           processes: []
         });
       }
-      
+
       configMap.get(key).processes.push({
         process_name: item.process_name,
         unit_price: item.unit_price
       });
     });
-    
+
     let created = 0;
     let updated = 0;
     const errors = [...parseErrors];
-    
+
     // 处理每个配置
     for (const [key, configData] of configMap) {
       // 查找型号
@@ -718,17 +718,17 @@ exports.importProcesses = async (req, res) => {
         errors.push(`型号 "${configData.model_name}" 不存在，请先创建该型号`);
         continue;
       }
-      
+
       // 查找或创建配置（包含 packaging_type）
       const existingConfigs = await PackagingConfig.findByModelId(model.id);
-      let config = existingConfigs.find(c => 
+      let config = existingConfigs.find(c =>
         c.config_name === configData.config_name &&
         c.packaging_type === configData.packaging_type &&
         c.pc_per_bag === configData.pc_per_bag &&
         c.bags_per_box === configData.bags_per_box &&
         c.boxes_per_carton === configData.boxes_per_carton
       );
-      
+
       if (config) {
         // 更新：删除旧工序，添加新工序
         await ProcessConfig.deleteByPackagingConfigId(config.id);
@@ -748,12 +748,12 @@ exports.importProcesses = async (req, res) => {
         created++;
       }
     }
-    
+
     // 删除临时文件
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
-    
+
     res.json({
       success: true,
       data: {
@@ -763,7 +763,7 @@ exports.importProcesses = async (req, res) => {
         updated,
         errors: errors.length > 0 ? errors : undefined
       },
-      message: errors.length > 0 
+      message: errors.length > 0
         ? `部分导入成功。创建 ${created} 条，更新 ${updated} 条。${errors.length} 个错误。`
         : '导入成功'
     });
@@ -785,7 +785,7 @@ exports.importProcesses = async (req, res) => {
 exports.exportProcesses = async (req, res) => {
   try {
     const { ids } = req.body;
-    
+
     let configs;
     if (ids && ids.length > 0) {
       const configPromises = ids.map(id => PackagingConfig.findById(id));
@@ -793,17 +793,17 @@ exports.exportProcesses = async (req, res) => {
     } else {
       configs = await PackagingConfig.findAll();
     }
-    
+
     if (configs.length === 0) {
       return res.status(400).json({
         success: false,
         message: '没有可导出的数据'
       });
     }
-    
+
     const processes = [];
     const { formatPackagingMethod } = require('../config/packagingTypes');
-    
+
     for (const config of configs) {
       const configProcesses = await ProcessConfig.findByPackagingConfigId(config.id);
       // 使用新的格式化函数，支持不同包装类型
@@ -812,7 +812,7 @@ exports.exportProcesses = async (req, res) => {
       const layer2 = config.layer2_qty ?? config.bags_per_box;
       const layer3 = config.layer3_qty ?? config.boxes_per_carton;
       const packagingMethod = formatPackagingMethod(packagingType, layer1, layer2, layer3);
-      
+
       configProcesses.forEach(p => {
         processes.push({
           model_name: config.model_name,
@@ -824,19 +824,19 @@ exports.exportProcesses = async (req, res) => {
         });
       });
     }
-    
+
     const workbook = await ExcelGenerator.generateProcessExcel(processes);
-    
+
     const fileName = `工序清单_${Date.now()}.xlsx`;
     const filePath = path.join(__dirname, '../temp', fileName);
-    
+
     const tempDir = path.join(__dirname, '../temp');
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
-    
+
     await workbook.xlsx.writeFile(filePath);
-    
+
     res.download(filePath, fileName, (err) => {
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
@@ -860,17 +860,17 @@ exports.exportProcesses = async (req, res) => {
 exports.downloadProcessTemplate = async (req, res) => {
   try {
     const workbook = await ExcelGenerator.generateProcessTemplate();
-    
+
     const fileName = '工序导入模板.xlsx';
     const filePath = path.join(__dirname, '../temp', fileName);
-    
+
     const tempDir = path.join(__dirname, '../temp');
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
-    
+
     await workbook.xlsx.writeFile(filePath);
-    
+
     res.download(filePath, fileName, (err) => {
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
@@ -900,44 +900,44 @@ exports.importPackagingMaterials = async (req, res) => {
         message: '请上传文件'
       });
     }
-    
+
     filePath = req.file.path;
     console.log('开始解析包材文件:', filePath);
-    
+
     const result = await ExcelParser.parsePackagingMaterialExcel(filePath);
     console.log('解析结果:', result);
-    
+
     if (!result.success) {
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
-      
+
       return res.status(400).json({
         success: false,
         message: '文件解析失败',
         errors: result.errors
       });
     }
-    
+
     if (result.valid === 0) {
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
-      
+
       return res.status(400).json({
         success: false,
         message: '没有有效的数据行'
       });
     }
-    
+
     // 解析包装方式，支持所有四种包装类型
     const parsePackagingMethod = (packagingType, packagingMethod) => {
       const numbers = packagingMethod.match(/\d+/g);
       if (!numbers) return null;
-      
+
       const config = PACKAGING_TYPES[packagingType];
       if (!config) return null;
-      
+
       if (config.layers === 2) {
         if (numbers.length < 2) return null;
         return {
@@ -954,24 +954,24 @@ exports.importPackagingMaterials = async (req, res) => {
         };
       }
     };
-    
+
     // 按配置分组处理数据
     const configMap = new Map();
     const parseErrors = [];
-    
+
     result.data.forEach((item, index) => {
       const rowNum = index + 2;
       const parsed = parsePackagingMethod(item.packaging_type, item.packaging_method);
-      
+
       if (!parsed) {
         parseErrors.push(`第 ${rowNum} 行：无法解析包装方式 "${item.packaging_method}"`);
         return;
       }
-      
+
       const { pc_per_bag, bags_per_box, boxes_per_carton } = parsed;
-      
+
       const key = `${item.model_name}|${item.config_name}|${item.packaging_type}|${pc_per_bag}|${bags_per_box}|${boxes_per_carton}`;
-      
+
       if (!configMap.has(key)) {
         configMap.set(key, {
           model_name: item.model_name,
@@ -983,7 +983,7 @@ exports.importPackagingMaterials = async (req, res) => {
           materials: []
         });
       }
-      
+
       configMap.get(key).materials.push({
         material_name: item.material_name,
         basic_usage: item.basic_usage,
@@ -991,11 +991,11 @@ exports.importPackagingMaterials = async (req, res) => {
         carton_volume: item.carton_volume
       });
     });
-    
+
     let created = 0;
     let updated = 0;
     const errors = [...parseErrors];
-    
+
     // 处理每个配置
     for (const [key, configData] of configMap) {
       // 查找型号
@@ -1004,17 +1004,17 @@ exports.importPackagingMaterials = async (req, res) => {
         errors.push(`型号 "${configData.model_name}" 不存在，请先创建该型号`);
         continue;
       }
-      
+
       // 查找或创建配置（包含 packaging_type）
       const existingConfigs = await PackagingConfig.findByModelId(model.id);
-      let config = existingConfigs.find(c => 
+      let config = existingConfigs.find(c =>
         c.config_name === configData.config_name &&
         c.packaging_type === configData.packaging_type &&
         c.pc_per_bag === configData.pc_per_bag &&
         c.bags_per_box === configData.bags_per_box &&
         c.boxes_per_carton === configData.boxes_per_carton
       );
-      
+
       if (config) {
         // 更新：删除旧包材，添加新包材
         await PackagingMaterial.deleteByPackagingConfigId(config.id);
@@ -1034,12 +1034,12 @@ exports.importPackagingMaterials = async (req, res) => {
         created++;
       }
     }
-    
+
     // 删除临时文件
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
-    
+
     res.json({
       success: true,
       data: {
@@ -1049,7 +1049,7 @@ exports.importPackagingMaterials = async (req, res) => {
         updated,
         errors: errors.length > 0 ? errors : undefined
       },
-      message: errors.length > 0 
+      message: errors.length > 0
         ? `部分导入成功。创建 ${created} 条，更新 ${updated} 条。${errors.length} 个错误。`
         : '导入成功'
     });
@@ -1071,7 +1071,7 @@ exports.importPackagingMaterials = async (req, res) => {
 exports.exportPackagingMaterials = async (req, res) => {
   try {
     const { ids } = req.body;
-    
+
     let configs;
     if (ids && ids.length > 0) {
       const configPromises = ids.map(id => PackagingConfig.findById(id));
@@ -1079,17 +1079,17 @@ exports.exportPackagingMaterials = async (req, res) => {
     } else {
       configs = await PackagingConfig.findAll();
     }
-    
+
     if (configs.length === 0) {
       return res.status(400).json({
         success: false,
         message: '没有可导出的数据'
       });
     }
-    
+
     const materials = [];
     const { formatPackagingMethod } = require('../config/packagingTypes');
-    
+
     for (const config of configs) {
       const configMaterials = await PackagingMaterial.findByPackagingConfigId(config.id);
       // 使用新的格式化函数，支持不同包装类型
@@ -1098,7 +1098,7 @@ exports.exportPackagingMaterials = async (req, res) => {
       const layer2 = config.layer2_qty ?? config.bags_per_box;
       const layer3 = config.layer3_qty ?? config.boxes_per_carton;
       const packagingMethod = formatPackagingMethod(packagingType, layer1, layer2, layer3);
-      
+
       configMaterials.forEach(m => {
         materials.push({
           model_name: config.model_name,
@@ -1112,19 +1112,19 @@ exports.exportPackagingMaterials = async (req, res) => {
         });
       });
     }
-    
+
     const workbook = await ExcelGenerator.generatePackagingMaterialExcel(materials);
-    
+
     const fileName = `包材清单_${Date.now()}.xlsx`;
     const filePath = path.join(__dirname, '../temp', fileName);
-    
+
     const tempDir = path.join(__dirname, '../temp');
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
-    
+
     await workbook.xlsx.writeFile(filePath);
-    
+
     res.download(filePath, fileName, (err) => {
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
@@ -1148,17 +1148,17 @@ exports.exportPackagingMaterials = async (req, res) => {
 exports.downloadPackagingMaterialTemplate = async (req, res) => {
   try {
     const workbook = await ExcelGenerator.generatePackagingMaterialTemplate();
-    
+
     const fileName = '包材导入模板.xlsx';
     const filePath = path.join(__dirname, '../temp', fileName);
-    
+
     const tempDir = path.join(__dirname, '../temp');
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
-    
+
     await workbook.xlsx.writeFile(filePath);
-    
+
     res.download(filePath, fileName, (err) => {
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);

@@ -72,7 +72,9 @@
       v-model="dialogVisible"
       :title="dialogTitle"
       width="500px"
+      class="minimal-dialog-auto"
       append-to-body
+      :close-on-click-modal="false"
     >
       <el-form :model="form" label-width="100px">
         <el-form-item label="品号" required>

@@ -1,0 +1,68 @@
+/* Global Minimal Dialog Styles */
+/* 统一的弹窗样式组件，分为“固定高度”和“居中自适应”两种模式 */
+
+/* --- 基础共享样式 --- */
+.minimal-dialog,
+.minimal-dialog-auto {
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  background: #fff;
+}
+
+/* 统一头部 */
+.minimal-dialog .el-dialog__header,
+.minimal-dialog-auto .el-dialog__header {
+  padding: 20px 24px 10px !important;
+  margin-right: 0 !important;
+  border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0;
+}
+
+.minimal-dialog .el-dialog__title,
+.minimal-dialog-auto .el-dialog__title {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: #1e293b !important;
+}
+
+/* 统一底部 */
+.minimal-dialog .el-dialog__footer,
+.minimal-dialog-auto .el-dialog__footer {
+  padding: 0 24px 24px !important;
+  border-top: none;
+  flex-shrink: 0;
+}
+
+/* 统一 Body (支持内部滚动) */
+.minimal-dialog .el-dialog__body,
+.minimal-dialog-auto .el-dialog__body {
+  padding: 24px !important;
+  flex: 1;
+  overflow-y: auto !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+/* --- 变体 1: 固定满屏高度 (Fixed Full Height) --- */
+/* 适用于: 包材配置、工序配置等内容较长的表格页面 */
+/* 调用方式: <el-dialog class="minimal-dialog" top="5vh" ...> */
+.minimal-dialog.el-dialog {
+  margin: 0 auto 0 !important;
+  margin-top: 5vh !important; /* 显式控制顶部距离，配合 top="5vh" 使用 */
+  height: 90vh !important;    /* 强制占用 90% 屏幕高度 */
+  position: relative !important;
+}
+
+/* --- 变体 2: 垂直居中自适应 (Centered Auto Height) --- */
+/* 适用于: 型号编辑、新增等简单表单页面 */
+/* 调用方式: <el-dialog class="minimal-dialog-auto" ...> (无需 top 属性) */
+.minimal-dialog-auto.el-dialog {
+  margin: 0 !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  height: auto !important;
+  max-height: 90vh !important; /* 最大不超过 90% */
+}

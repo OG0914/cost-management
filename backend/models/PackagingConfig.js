@@ -29,14 +29,14 @@ class PackagingConfig {
       WHERE pc.is_active = true
     `;
     const params = [];
-    
+
     if (options.packaging_type) {
       params.push(options.packaging_type);
       sql += ` AND pc.packaging_type = $${params.length}`;
     }
-    
+
     sql += ` ORDER BY pc.created_at DESC`;
-    
+
     const result = await dbManager.query(sql, params);
     return result.rows;
   }
@@ -60,14 +60,14 @@ class PackagingConfig {
       WHERE pc.model_id = $1 AND pc.is_active = true
     `;
     const params = [modelId];
-    
+
     if (options.packaging_type) {
       params.push(options.packaging_type);
       sql += ` AND pc.packaging_type = $${params.length}`;
     }
-    
+
     sql += ` ORDER BY pc.created_at DESC`;
-    
+
     const result = await dbManager.query(sql, params);
     return result.rows;
   }
@@ -102,7 +102,7 @@ class PackagingConfig {
     if (!isValidPackagingType(packagingType)) {
       throw new Error(`无效的包装类型: ${packagingType}`);
     }
-    
+
     const result = await dbManager.query(
       `SELECT pc.id, pc.model_id, pc.config_name, pc.packaging_type,
               pc.layer1_qty, pc.layer2_qty, pc.layer3_qty,
@@ -136,28 +136,28 @@ class PackagingConfig {
       WHERE pc.is_active = true
     `;
     const params = [];
-    
+
     if (options.model_id) {
       params.push(options.model_id);
       sql += ` AND pc.model_id = $${params.length}`;
     }
-    
+
     sql += ` ORDER BY pc.packaging_type, pc.created_at DESC`;
-    
+
     const result = await dbManager.query(sql, params);
-    
+
     // 按 packaging_type 分组
     const grouped = {};
     for (const type of VALID_PACKAGING_TYPE_KEYS) {
       grouped[type] = [];
     }
-    
+
     for (const row of result.rows) {
       if (grouped[row.packaging_type]) {
         grouped[row.packaging_type].push(row);
       }
     }
-    
+
     return grouped;
   }
 
@@ -190,9 +190,9 @@ class PackagingConfig {
    * @returns {Promise<number>} 新配置的 ID
    */
   static async create(data) {
-    const { 
-      model_id, 
-      config_name, 
+    const {
+      model_id,
+      config_name,
       packaging_type = 'standard_box',
       layer1_qty,
       layer2_qty,
@@ -202,20 +202,20 @@ class PackagingConfig {
       bags_per_box,
       boxes_per_carton
     } = data;
-    
+
     // 验证包装类型
     if (!isValidPackagingType(packaging_type)) {
       throw new Error(`无效的包装类型: ${packaging_type}`);
     }
-    
+
     // 使用新字段名，如果没有则回退到旧字段名
     const l1 = layer1_qty !== undefined ? layer1_qty : pc_per_bag;
     const l2 = layer2_qty !== undefined ? layer2_qty : bags_per_box;
     const l3 = layer3_qty !== undefined ? layer3_qty : boxes_per_carton;
-    
+
     // 旧字段 boxes_per_carton 有 NOT NULL 约束，对于 2 层类型需要设置默认值 1
     const l3ForOldField = l3 !== null && l3 !== undefined ? l3 : 1;
-    
+
     const result = await dbManager.query(
       `INSERT INTO packaging_configs 
        (model_id, config_name, packaging_type, layer1_qty, layer2_qty, layer3_qty, pc_per_bag, bags_per_box, boxes_per_carton)
@@ -223,7 +223,7 @@ class PackagingConfig {
        RETURNING id`,
       [model_id, config_name, packaging_type, l1, l2, l3, l1, l2, l3ForOldField]
     );
-    
+
     return result.rows[0].id;
   }
 
@@ -234,8 +234,8 @@ class PackagingConfig {
    * @returns {Promise<Object>} 更新结果 { rowCount }
    */
   static async update(id, data) {
-    const { 
-      config_name, 
+    const {
+      config_name,
       packaging_type,
       layer1_qty,
       layer2_qty,
@@ -246,20 +246,20 @@ class PackagingConfig {
       bags_per_box,
       boxes_per_carton
     } = data;
-    
+
     // 如果提供了 packaging_type，验证其有效性
     if (packaging_type !== undefined && !isValidPackagingType(packaging_type)) {
       throw new Error(`无效的包装类型: ${packaging_type}`);
     }
-    
+
     // 使用新字段名，如果没有则回退到旧字段名
     const l1 = layer1_qty !== undefined ? layer1_qty : pc_per_bag;
     const l2 = layer2_qty !== undefined ? layer2_qty : bags_per_box;
     const l3 = layer3_qty !== undefined ? layer3_qty : boxes_per_carton;
-    
+
     // 旧字段 boxes_per_carton 有 NOT NULL 约束，对于 2 层类型需要设置默认值 1
     const l3ForOldField = l3 !== null && l3 !== undefined ? l3 : 1;
-    
+
     const result = await dbManager.query(
       `UPDATE packaging_configs
        SET config_name = $1, 
@@ -270,7 +270,7 @@ class PackagingConfig {
        WHERE id = $8`,
       [config_name, packaging_type, l1, l2, l3, l3ForOldField, is_active, id]
     );
-    
+
     return { rowCount: result.rowCount };
   }
 
@@ -286,10 +286,10 @@ class PackagingConfig {
     if (!config) {
       throw new Error('配置不存在');
     }
-    
+
     // 软删除时，在配置名称后添加删除标记和时间戳，避免唯一性约束冲突
     const deletedName = `${config.config_name}_deleted_${Date.now()}`;
-    
+
     const result = await dbManager.query(
       `UPDATE packaging_configs
        SET is_active = false, 
@@ -298,7 +298,7 @@ class PackagingConfig {
        WHERE id = $2`,
       [deletedName, id]
     );
-    
+
     return { rowCount: result.rowCount };
   }
 

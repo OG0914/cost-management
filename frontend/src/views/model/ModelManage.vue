@@ -336,45 +336,4 @@ onMounted(() => { fetchRegulations(); fetchModels() })
 .toolbar-fade-enter-from, .toolbar-fade-leave-to { opacity: 0; transform: translateX(10px); }
 </style>
 
-<!-- 全局样式覆盖：用于型号编辑弹窗的自适应高度样式 -->
-<style>
-.minimal-dialog-auto.el-dialog {
-  display: flex !important;
-  flex-direction: column !important;
-  margin: 0 !important;
-  position: absolute !important;
-  top: 50% !important;
-  left: 50% !important;
-  transform: translate(-50%, -50%) !important;
-  height: auto !important;
-  max-height: 90vh !important;
-  overflow: hidden !important;
-  margin-bottom: 0 !important;
-}
 
-.minimal-dialog-auto .el-dialog__header {
-  padding: 20px 24px 10px !important;
-  margin-right: 0 !important;
-  border-bottom: 1px solid #f1f5f9;
-  flex-shrink: 0;
-}
-
-.minimal-dialog-auto .el-dialog__body {
-  padding: 24px !important;
-  flex: 1; /* 虽然是auto高度，但在max-height限制下，flex:1能处理溢出 */
-  overflow-y: auto !important;
-  min-height: 100px;
-}
-
-.minimal-dialog-auto .el-dialog__footer {
-  padding: 0 24px 24px !important;
-  border-top: none;
-  flex-shrink: 0;
-}
-
-.minimal-dialog-auto .el-dialog__title {
-  font-size: 18px !important;
-  font-weight: 600 !important;
-  color: #1e293b !important;
-}
-</style>

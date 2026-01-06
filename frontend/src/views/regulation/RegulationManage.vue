@@ -74,7 +74,14 @@
     </el-card>
 
     <!-- 新增/编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px" append-to-body>
+    <el-dialog 
+      v-model="dialogVisible" 
+      :title="dialogTitle" 
+      width="500px" 
+      class="minimal-dialog-auto"
+      append-to-body 
+      :close-on-click-modal="false"
+    >
       <el-form :model="form" label-width="100px">
         <el-form-item label="法规名称" required>
           <el-input v-model="form.name" placeholder="请输入法规名称" />
