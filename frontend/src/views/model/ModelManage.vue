@@ -110,7 +110,7 @@
     </el-dialog>
 
     <!-- BOM配置弹窗 -->
-    <BomConfigDialog v-model="bomDialogVisible" :model-id="currentBomModelId" :model-name="currentBomModelName" />
+    <BomConfigDialog v-model="bomDialogVisible" :model-id="currentBomModelId" :model-name="currentBomModelName" :regulation-name="currentBomRegulationName" />
   </div>
 </template>
 
@@ -133,6 +133,7 @@ const models = ref([])
 const bomDialogVisible = ref(false)
 const currentBomModelId = ref(null)
 const currentBomModelName = ref('')
+const currentBomRegulationName = ref('')
 const filteredModels = ref([])
 const selectedModels = ref([])
 const regulations = ref([])
@@ -196,6 +197,7 @@ const handleEdit = (row) => {
 const handleConfigBom = (row) => {
   currentBomModelId.value = row.id
   currentBomModelName.value = row.model_name
+  currentBomRegulationName.value = row.regulation_name || ''
   bomDialogVisible.value = true
 }
 

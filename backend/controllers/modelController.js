@@ -14,7 +14,7 @@ const fs = require('fs');
 const getAllModels = async (req, res, next) => {
   try {
     const { model_category, regulation_id } = req.query;
-    
+
     let models;
     if (model_category && regulation_id) {
       // 同时按型号分类和法规过滤
@@ -26,7 +26,17 @@ const getAllModels = async (req, res, next) => {
       // 获取所有型号
       models = await Model.findAll();
     }
-    
+
+    res.json(success(models));
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 获取所有型号（带BOM数量，用于BOM复制选择）
+const getModelsWithBomCount = async (req, res, next) => {
+  try {
+    const models = await Model.findAllWithBomCount();
     res.json(success(models));
   } catch (err) {
     next(err);
@@ -59,11 +69,11 @@ const getModelById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const model = await Model.findById(id);
-    
+
     if (!model) {
       return res.status(404).json(error('型号不存在', 404));
     }
-    
+
     res.json(success(model));
   } catch (err) {
     next(err);
@@ -74,11 +84,11 @@ const getModelById = async (req, res, next) => {
 const createModel = async (req, res, next) => {
   try {
     const { regulation_id, model_name, model_category } = req.body;
-    
+
     if (!regulation_id || !model_name) {
       return res.status(400).json(error('法规类别和型号名称不能为空', 400));
     }
-    
+
     const id = await Model.create({ regulation_id, model_name, model_category });
     res.status(201).json(success({ id }, '创建成功'));
   } catch (err) {
@@ -91,16 +101,16 @@ const updateModel = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { regulation_id, model_name, model_category, is_active } = req.body;
-    
+
     const model = await Model.findById(id);
     if (!model) {
       return res.status(404).json(error('型号不存在', 404));
     }
-    
+
     if (!regulation_id || !model_name) {
       return res.status(400).json(error('法规类别和型号名称不能为空', 400));
     }
-    
+
     await Model.update(id, { regulation_id, model_name, model_category, is_active: is_active !== undefined ? is_active : 1 });
     res.json(success(null, '更新成功'));
   } catch (err) {
@@ -112,17 +122,17 @@ const updateModel = async (req, res, next) => {
 const deleteModel = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
+
     const model = await Model.findById(id);
     if (!model) {
       return res.status(404).json(error('型号不存在', 404));
     }
-    
+
     // 检查是否被报价单使用
     if (await Model.isUsedInQuotations(id)) {
       return res.status(400).json(error('该型号已被报价单使用，无法删除', 400));
     }
-    
+
     await Model.delete(id);
     res.json(success(null, '删除成功'));
   } catch (err) {
@@ -136,22 +146,22 @@ const importModels = async (req, res, next) => {
     if (!req.file) {
       return res.status(400).json(error('请上传文件', 400));
     }
-    
+
     const filePath = req.file.path;
     const result = await ExcelParser.parseModelExcel(filePath);
-    
+
     // 删除临时文件
     fs.unlinkSync(filePath);
-    
+
     if (!result.success) {
       return res.status(400).json(error('文件解析失败', 400, result.errors));
     }
-    
+
     // 导入数据
     let created = 0;
     let updated = 0;
     const errors = [];
-    
+
     for (let index = 0; index < result.data.length; index++) {
       const modelData = result.data[index];
       try {
@@ -161,10 +171,10 @@ const importModels = async (req, res, next) => {
           errors.push(`第 ${index + 2} 行：法规类别"${modelData.regulation_name}"不存在`);
           continue;
         }
-        
+
         // 检查型号是否已存在（根据法规ID和型号名称）
         const existing = await Model.findByRegulationAndName(regulation.id, modelData.model_name);
-        
+
         if (existing) {
           // 更新已存在的型号
           await Model.update(existing.id, {
@@ -187,7 +197,7 @@ const importModels = async (req, res, next) => {
         errors.push(`第 ${index + 2} 行：${err.message}`);
       }
     }
-    
+
     res.json(success({
       total: result.total,
       valid: result.valid,
@@ -208,7 +218,7 @@ const importModels = async (req, res, next) => {
 const exportModels = async (req, res, next) => {
   try {
     const { ids } = req.body;
-    
+
     let models;
     if (ids && ids.length > 0) {
       // 导出选中的数据
@@ -218,25 +228,25 @@ const exportModels = async (req, res, next) => {
       // 如果没有指定ID，导出所有数据
       models = await Model.findAll();
     }
-    
+
     if (models.length === 0) {
       return res.status(400).json(error('没有可导出的数据', 400));
     }
-    
+
     const workbook = await ExcelGenerator.generateModelExcel(models);
-    
+
     // 生成文件
     const fileName = `型号清单_${Date.now()}.xlsx`;
     const filePath = path.join(__dirname, '../temp', fileName);
-    
+
     // 确保 temp 目录存在
     const tempDir = path.join(__dirname, '../temp');
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
-    
+
     await workbook.xlsx.writeFile(filePath);
-    
+
     // 发送文件
     res.download(filePath, fileName, (err) => {
       // 删除临时文件
@@ -256,17 +266,17 @@ const exportModels = async (req, res, next) => {
 const downloadTemplate = async (req, res, next) => {
   try {
     const workbook = await ExcelGenerator.generateModelTemplate();
-    
+
     const fileName = '型号导入模板.xlsx';
     const filePath = path.join(__dirname, '../temp', fileName);
-    
+
     const tempDir = path.join(__dirname, '../temp');
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
-    
+
     await workbook.xlsx.writeFile(filePath);
-    
+
     res.download(filePath, fileName, (err) => {
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
@@ -292,6 +302,7 @@ const getModelCategories = async (req, res, next) => {
 
 module.exports = {
   getAllModels,
+  getModelsWithBomCount,
   getActiveModels,
   getModelsByRegulation,
   getModelById,

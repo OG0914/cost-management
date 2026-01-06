@@ -128,7 +128,6 @@
           <div class="card-actions">
             <el-button :icon="View" circle @click="viewMaterials(config)" title="查看" />
             <el-button :icon="EditPen" circle @click="editConfig(config)" v-if="canEdit" title="编辑" />
-            <el-button :icon="CopyDocument" circle @click="copyConfig(config)" v-if="canEdit" title="复制" />
             <el-button :icon="Delete" circle class="delete-btn" @click="deleteConfig(config)" v-if="canEdit" title="删除" />
           </div>
         </div>
@@ -184,11 +183,10 @@
             {{ formatDateTime(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="140" fixed="right">
           <template #default="{ row }">
             <el-button :icon="View" circle size="small" @click="viewMaterials(row)" title="查看" />
             <el-button :icon="EditPen" circle size="small" @click="editConfig(row)" v-if="canEdit" title="编辑" />
-            <el-button :icon="CopyDocument" circle size="small" @click="copyConfig(row)" v-if="canEdit" title="复制" />
             <el-button :icon="Delete" circle size="small" class="delete-btn" @click="deleteConfig(row)" v-if="canEdit" title="删除" />
           </template>
         </el-table-column>
@@ -207,7 +205,7 @@
       v-model="dialogVisible"
       :title="isEdit ? '编辑包装配置' : '新增包装配置'"
       width="850px"
-      align-center
+      top="5vh"
       class="minimal-dialog"
       append-to-body
       :close-on-click-modal="false"
@@ -290,9 +288,14 @@
             <div class="text-sm font-bold text-slate-900">包材明细</div>
             <div class="text-xs text-slate-500 mt-1">添加并管理该配置所需的所有包装材料</div>
           </div>
-          <el-button type="primary" plain size="small" @click="addMaterial">
-            <el-icon class="mr-1"><Plus /></el-icon> Add Material
-          </el-button>
+          <div class="flex gap-2">
+            <el-button type="success" plain size="small" @click="openMaterialCopyDialog">
+              <el-icon class="mr-1"><CopyDocument /></el-icon>一键复制
+            </el-button>
+            <el-button type="primary" plain size="small" @click="addMaterial">
+              <el-icon class="mr-1"><Plus /></el-icon>Add Material
+            </el-button>
+          </div>
         </div>
 
         <div class="border border-slate-200 rounded-lg overflow-hidden mb-6">
@@ -455,6 +458,49 @@
         </p>
       </div>
     </el-dialog>
+
+    <!-- 一键复制包材弹窗 -->
+    <el-dialog v-model="showMaterialCopyDialog" title="从其他配置复制包材" width="550px" append-to-body :close-on-click-modal="false">
+      <el-form label-width="100px">
+        <el-form-item label="源配置" required>
+          <el-select v-model="copySourceConfigId" filterable placeholder="选择要复制的源配置" style="width: 100%" @change="handleCopySourceChange" :loading="copyConfigsLoading">
+            <template #empty>
+              <div style="padding: 10px; text-align: center; color: #909399;">{{ copyConfigsLoading ? '加载中...' : '暂无已配置包材的配置' }}</div>
+            </template>
+            <el-option v-for="c in configsWithMaterials" :key="c.id" :label="`${c.model_name} - ${c.config_name}`" :value="c.id">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>{{ c.model_name }} - {{ c.config_name }}</span>
+                <el-tag size="small" type="success">{{ c.material_count }}项</el-tag>
+              </div>
+            </el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="包材预览" v-if="copySourcePreview.length > 0">
+          <div class="source-preview">
+            <el-tag v-for="item in copySourcePreview.slice(0, 5)" :key="item.id" size="small" style="margin: 2px">
+              {{ item.material_name }}
+            </el-tag>
+            <el-tag v-if="copySourcePreview.length > 5" size="small" type="info">+{{ copySourcePreview.length - 5 }}项</el-tag>
+          </div>
+        </el-form-item>
+        <el-form-item label="复制模式">
+          <el-radio-group v-model="copyMode">
+            <el-radio value="replace">
+              <span>替换模式</span>
+              <el-text type="info" size="small" style="margin-left: 4px">清空现有包材后复制</el-text>
+            </el-radio>
+            <el-radio value="merge">
+              <span>合并模式</span>
+              <el-text type="info" size="small" style="margin-left: 4px">保留现有，追加新包材</el-text>
+            </el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showMaterialCopyDialog = false">取消</el-button>
+        <el-button type="primary" @click="handleCopyMaterials" :loading="copyLoading" :disabled="!copySourceConfigId">确认复制</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -462,7 +508,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, ArrowLeft, Download, Delete, Upload, Grid, List, View, EditPen, CopyDocument, CaretLeft, CaretRight, InfoFilled } from '@element-plus/icons-vue';
+import { Plus, ArrowLeft, Download, Delete, Upload, Grid, List, View, EditPen, CaretLeft, CaretRight, InfoFilled, CopyDocument } from '@element-plus/icons-vue';
 import request from '../../utils/request';
 import { useAuthStore } from '../../store/auth';
 import { formatNumber, formatDateTime } from '../../utils/format';
@@ -574,6 +620,20 @@ const form = reactive({
 // 当前查看的配置
 const currentConfig = ref(null);
 const currentMaterials = ref([]);
+
+// 一键复制包材相关
+const showMaterialCopyDialog = ref(false);
+const copySourceConfigId = ref(null);
+const copyMode = ref('replace');
+const copyLoading = ref(false);
+const copyConfigsLoading = ref(false);
+const copySourcePreview = ref([]);
+const allConfigsForCopy = ref([]);
+
+// 过滤有包材的配置（排除当前配置）
+const configsWithMaterials = computed(() => {
+  return allConfigsForCopy.value.filter(c => c.id !== form.id && c.material_count > 0);
+});
 
 // 包材总价（小计之和：单价÷基本用量）
 const totalMaterialPrice = computed(() => {
@@ -725,6 +785,105 @@ const loadPackagingConfigs = async () => {
   }
 };
 
+// 加载所有配置及其包材数量（用于一键复制）
+const loadConfigsForCopy = async () => {
+  copyConfigsLoading.value = true;
+  try {
+    const response = await request.get('/processes/packaging-configs');
+    if (response.success) {
+      // 获取每个配置的包材数量
+      const configsWithCount = await Promise.all(
+        response.data.map(async (config) => {
+          try {
+            const detailResponse = await request.get(`/processes/packaging-configs/${config.id}/full`);
+            return {
+              ...config,
+              material_count: detailResponse.success ? (detailResponse.data.materials?.length || 0) : 0
+            };
+          } catch {
+            return { ...config, material_count: 0 };
+          }
+        })
+      );
+      allConfigsForCopy.value = configsWithCount;
+    }
+  } catch (error) {
+    console.error('加载配置列表失败:', error);
+  } finally {
+    copyConfigsLoading.value = false;
+  }
+};
+
+// 打开一键复制弹窗
+const openMaterialCopyDialog = async () => {
+  copySourceConfigId.value = null;
+  copySourcePreview.value = [];
+  copyMode.value = 'replace';
+  showMaterialCopyDialog.value = true;
+  await loadConfigsForCopy();
+};
+
+// 选择源配置时加载预览
+const handleCopySourceChange = async (configId) => {
+  if (!configId) {
+    copySourcePreview.value = [];
+    return;
+  }
+  try {
+    const response = await request.get(`/processes/packaging-configs/${configId}/full`);
+    if (response.success) {
+      copySourcePreview.value = response.data.materials || [];
+    }
+  } catch (error) {
+    copySourcePreview.value = [];
+  }
+};
+
+// 执行包材复制
+const handleCopyMaterials = () => {
+  if (!copySourceConfigId.value || copySourcePreview.value.length === 0) {
+    ElMessage.warning('请选择有包材的源配置');
+    return;
+  }
+  
+  copyLoading.value = true;
+  try {
+    if (copyMode.value === 'replace') {
+      // 替换模式：清空现有包材
+      form.materials = copySourcePreview.value.map((m, index) => ({
+        material_name: m.material_name,
+        basic_usage: m.basic_usage,
+        unit_price: m.unit_price,
+        carton_volume: m.carton_volume,
+        sort_order: index
+      }));
+    } else {
+      // 合并模式：追加新包材（跳过重复）
+      const existingNames = form.materials.map(m => m.material_name);
+      const newMaterials = copySourcePreview.value
+        .filter(m => !existingNames.includes(m.material_name))
+        .map((m, index) => ({
+          material_name: m.material_name,
+          basic_usage: m.basic_usage,
+          unit_price: m.unit_price,
+          carton_volume: m.carton_volume,
+          sort_order: form.materials.length + index
+        }));
+      form.materials.push(...newMaterials);
+      
+      if (newMaterials.length < copySourcePreview.value.length) {
+        const skipped = copySourcePreview.value.length - newMaterials.length;
+        ElMessage.info(`已跳过 ${skipped} 个重复包材`);
+      }
+    }
+    
+    showMaterialCopyDialog.value = false;
+    ElMessage.success(`成功复制 ${copyMode.value === 'replace' ? copySourcePreview.value.length : form.materials.length} 项包材`);
+  } finally {
+    copyLoading.value = false;
+  }
+};
+
 // 显示创建对话框
 const showCreateDialog = () => {
   isEdit.value = false;
@@ -762,56 +921,7 @@ const editConfig = async (row) => {
   }
 };
 
-// 复制配置
-const copyConfig = async (row) => {
-  isEdit.value = false;
-  
-  try {
-    const response = await request.get(`/processes/packaging-configs/${row.id}/full`);
-    
-    if (response.success) {
-      const data = response.data;
-      
-      // 获取该型号下所有配置（从后端获取，确保完整性）
-      const modelConfigsResponse = await request.get(`/processes/packaging-configs/model/${data.model_id}`);
-      const allModelConfigs = modelConfigsResponse.success ? modelConfigsResponse.data : [];
-      
-      // 生成唯一的配置名称
-      let copyName = data.config_name + ' - 副本';
-      let counter = 1;
-      
-      while (allModelConfigs.some(c => c.config_name === copyName)) {
-        counter++;
-        copyName = `${data.config_name} - 副本${counter}`;
-      }
-      
-      form.id = null;
-      form.model_id = data.model_id;
-      form.config_name = copyName;
-      form.packaging_type = data.packaging_type || 'standard_box';
-      form.layer1_qty = data.layer1_qty ?? data.pc_per_bag;
-      form.layer2_qty = data.layer2_qty ?? data.bags_per_box;
-      form.layer3_qty = data.layer3_qty ?? data.boxes_per_carton;
-      // 兼容旧字段名
-      form.pc_per_bag = data.pc_per_bag;
-      form.bags_per_box = data.bags_per_box;
-      form.boxes_per_carton = data.boxes_per_carton;
-      form.is_active = 1;
-      form.materials = (data.materials || []).map(m => ({
-        material_name: m.material_name,
-        basic_usage: m.basic_usage,
-        unit_price: m.unit_price,
-        carton_volume: m.carton_volume,
-        sort_order: m.sort_order
-      }));
-      
-      dialogVisible.value = true;
-      ElMessage.success('已复制配置，请修改配置名称后保存');
-    }
-  } catch (error) {
-    // 错误已在拦截器处理
-  }
-};
+
 
 // 查看包材
 const viewMaterials = async (row) => {
@@ -1288,24 +1398,6 @@ onMounted(() => {
 .toolbar-fade-enter-active, .toolbar-fade-leave-active { transition: opacity 0.3s, transform 0.3s; }
 .toolbar-fade-enter-from, .toolbar-fade-leave-to { opacity: 0; transform: translateX(10px); }
 
-/* Minimal Dialog Styles */
-:deep(.minimal-dialog .el-dialog__header) {
-  padding: 20px 24px 10px;
-  margin-right: 0;
-  border-bottom: 1px solid #f1f5f9;
-}
-:deep(.minimal-dialog .el-dialog__body) {
-  padding: 24px;
-}
-:deep(.minimal-dialog .el-dialog__footer) {
-  padding: 0 24px 24px;
-  border-top: none;
-}
-:deep(.minimal-dialog .el-dialog__title) {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1e293b;
-}
 
 /* No Border Input for the Grid */
 :deep(.no-border-input .el-input__wrapper) {
@@ -1318,5 +1410,46 @@ onMounted(() => {
   font-size: 18px;
   font-weight: 600;
   color: #334155;
+}
+</style>
+
+<!-- 全局样式覆盖：解决 append-to-body 导致的样式无法生效问题 -->
+<style>
+.minimal-dialog.el-dialog {
+  display: flex !important;
+  flex-direction: column !important;
+  margin-top: 5vh !important;
+  height: 90vh !important;
+  max-height: 90vh !important;
+  overflow: hidden !important;
+  position: relative !important;
+  left: 0 !important; /* 修正可能的位置偏移 */
+}
+
+.minimal-dialog .el-dialog__header {
+  padding: 20px 24px 10px !important;
+  margin-right: 0 !important;
+  border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0;
+}
+
+.minimal-dialog .el-dialog__body {
+  padding: 24px !important;
+  flex: 1;
+  overflow-y: auto !important; /* 强制开启内部滚动 */
+  height: auto !important;
+  max-height: none !important;
+}
+
+.minimal-dialog .el-dialog__footer {
+  padding: 0 24px 24px !important;
+  border-top: none;
+  flex-shrink: 0;
+}
+
+.minimal-dialog .el-dialog__title {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: #1e293b !important;
 }
 </style>

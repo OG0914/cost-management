@@ -103,6 +103,38 @@ class ModelBom {
     `, [materialId]);
     return result.rows;
   }
+
+  /** 复制BOM到目标型号 - mode: 'replace'替换 | 'merge'合并 */
+  static async copyBom(sourceModelId, targetModelId, mode = 'replace') {
+    return await dbManager.transaction(async (client) => {
+      const sourceResult = await client.query( // 获取源型号BOM
+        'SELECT material_id, usage_amount, sort_order FROM model_bom_materials WHERE model_id = $1 AND is_active = true ORDER BY sort_order',
+        [sourceModelId]
+      );
+      if (sourceResult.rows.length === 0) throw new Error('源型号没有BOM数据');
+
+      if (mode === 'replace') { // 替换模式：删除目标型号现有BOM
+        await client.query('DELETE FROM model_bom_materials WHERE model_id = $1', [targetModelId]);
+      }
+
+      let copiedCount = 0, skippedCount = 0;
+      for (const item of sourceResult.rows) {
+        if (mode === 'merge') { // 合并模式：检查是否已存在
+          const exists = await client.query(
+            'SELECT id FROM model_bom_materials WHERE model_id = $1 AND material_id = $2',
+            [targetModelId, item.material_id]
+          );
+          if (exists.rows.length > 0) { skippedCount++; continue; }
+        }
+        await client.query(
+          'INSERT INTO model_bom_materials (model_id, material_id, usage_amount, sort_order) VALUES ($1, $2, $3, $4)',
+          [targetModelId, item.material_id, item.usage_amount, item.sort_order]
+        );
+        copiedCount++;
+      }
+      return { copiedCount, skippedCount, totalSource: sourceResult.rows.length };
+    });
+  }
 }
 
 module.exports = ModelBom;

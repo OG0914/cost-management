@@ -20,6 +20,20 @@ class Model {
     return result.rows;
   }
 
+  /** 获取所有型号（带BOM数量） */
+  static async findAllWithBomCount() {
+    const result = await dbManager.query(`
+      SELECT m.*, r.name as regulation_name, 
+             COALESCE(bom.bom_count, 0)::int as bom_count
+      FROM models m
+      LEFT JOIN regulations r ON m.regulation_id = r.id
+      LEFT JOIN (SELECT model_id, COUNT(*) as bom_count FROM model_bom_materials WHERE is_active = true GROUP BY model_id) bom ON m.id = bom.model_id
+      WHERE m.is_active = true
+      ORDER BY bom.bom_count DESC NULLS LAST, m.model_name
+    `);
+    return result.rows;
+  }
+
   /**
    * 获取所有激活的型号
    * @returns {Promise<Array>} 激活的型号列表
@@ -106,14 +120,14 @@ class Model {
    */
   static async create(data) {
     const { regulation_id, model_name, model_category } = data;
-    
+
     const result = await dbManager.query(
       `INSERT INTO models (regulation_id, model_name, model_category)
        VALUES ($1, $2, $3)
        RETURNING id`,
       [regulation_id, model_name, model_category || null]
     );
-    
+
     return result.rows[0].id;
   }
 
@@ -126,14 +140,14 @@ class Model {
    */
   static async update(id, data) {
     const { regulation_id, model_name, model_category, is_active } = data;
-    
+
     const result = await dbManager.query(
       `UPDATE models
        SET regulation_id = $1, model_name = $2, model_category = $3, is_active = $4, updated_at = NOW()
        WHERE id = $5`,
       [regulation_id, model_name, model_category, is_active, id]
     );
-    
+
     return { rowCount: result.rowCount };
   }
 
@@ -147,25 +161,25 @@ class Model {
       // 删除相关的原料数据（注意：materials 表没有 model_id 字段，跳过）
       // 删除相关的工序数据
       await client.query('DELETE FROM processes WHERE model_id = $1', [id]);
-      
+
       // 删除相关的包材数据
       await client.query('DELETE FROM packaging WHERE model_id = $1', [id]);
-      
+
       // 获取相关的包装配置
       const configsResult = await client.query(
         'SELECT id FROM packaging_configs WHERE model_id = $1',
         [id]
       );
-      
+
       // 删除相关的工序配置和包材配置
       for (const config of configsResult.rows) {
         await client.query('DELETE FROM process_configs WHERE packaging_config_id = $1', [config.id]);
         await client.query('DELETE FROM packaging_materials WHERE packaging_config_id = $1', [config.id]);
       }
-      
+
       // 删除包装配置
       await client.query('DELETE FROM packaging_configs WHERE model_id = $1', [id]);
-      
+
       // 最后删除型号本身
       await client.query('DELETE FROM models WHERE id = $1', [id]);
     });

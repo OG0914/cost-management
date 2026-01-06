@@ -9,6 +9,7 @@ const { isAdmin } = require('../middleware/roleCheck');
 router.use(verifyToken); // 所有路由需要认证
 
 router.get('/:modelId', bomController.getBomByModelId); // 获取型号BOM
+router.post('/copy', isAdmin, bomController.copyBom); // 复制BOM（仅管理员）
 router.post('/', isAdmin, bomController.createBomItem); // 添加BOM原料（仅管理员）
 router.put('/batch/:modelId', isAdmin, bomController.batchUpdateBom); // 批量更新（仅管理员）
 router.put('/:id', isAdmin, bomController.updateBomItem); // 更新BOM原料（仅管理员）

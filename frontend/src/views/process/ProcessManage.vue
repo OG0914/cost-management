@@ -126,7 +126,6 @@
           <div class="card-actions">
             <el-button :icon="View" circle @click="viewProcesses(config)" title="查看" />
             <el-button :icon="EditPen" circle @click="editConfig(config)" v-if="canEdit" title="编辑" />
-            <el-button :icon="CopyDocument" circle @click="copyConfig(config)" v-if="canEdit" title="复制" />
             <el-button :icon="Delete" circle class="delete-btn" @click="deleteConfig(config)" v-if="canEdit" title="删除" />
           </div>
         </div>
@@ -182,11 +181,10 @@
             {{ formatDateTime(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="140" fixed="right">
           <template #default="{ row }">
             <el-button :icon="View" circle size="small" @click="viewProcesses(row)" title="查看" />
             <el-button :icon="EditPen" circle size="small" @click="editConfig(row)" v-if="canEdit" title="编辑" />
-            <el-button :icon="CopyDocument" circle size="small" @click="copyConfig(row)" v-if="canEdit" title="复制" />
             <el-button :icon="Delete" circle size="small" class="delete-btn" @click="deleteConfig(row)" v-if="canEdit" title="删除" />
           </template>
         </el-table-column>
@@ -201,7 +199,7 @@
       v-model="dialogVisible"
       :title="isEdit ? '编辑工序配置' : '新增工序配置'"
       width="850px"
-      align-center
+      top="5vh"
       class="minimal-dialog"
       append-to-body
       :close-on-click-modal="false"
@@ -306,9 +304,14 @@
             <div class="text-sm font-bold text-slate-900">工序列表</div>
             <div class="text-xs text-slate-500 mt-1">配置生产所需的标准工序及单价</div>
           </div>
-          <el-button type="primary" plain size="small" @click="addProcess">
-            <el-icon class="mr-1"><Plus /></el-icon> Add Process
-          </el-button>
+          <div class="flex gap-2">
+            <el-button type="success" plain size="small" @click="openProcessCopyDialog">
+              <el-icon class="mr-1"><CopyDocument /></el-icon>一键复制
+            </el-button>
+            <el-button type="primary" plain size="small" @click="addProcess">
+              <el-icon class="mr-1"><Plus /></el-icon> Add Process
+            </el-button>
+          </div>
         </div>
 
         <div class="border border-slate-200 rounded-lg overflow-hidden mb-6">
@@ -422,6 +425,49 @@
         </p>
       </div>
     </el-dialog>
+
+    <!-- 一键复制工序弹窗 -->
+    <el-dialog v-model="showProcessCopyDialog" title="从其他配置复制工序" width="550px" append-to-body :close-on-click-modal="false">
+      <el-form label-width="100px">
+        <el-form-item label="源配置" required>
+          <el-select v-model="copySourceConfigId" filterable placeholder="选择要复制的源配置" style="width: 100%" @change="handleCopySourceChange" :loading="copyConfigsLoading">
+            <template #empty>
+              <div style="padding: 10px; text-align: center; color: #909399;">{{ copyConfigsLoading ? '加载中...' : '暂无已配置工序的配置' }}</div>
+            </template>
+            <el-option v-for="c in configsWithProcesses" :key="c.id" :label="`${c.model_name} - ${c.config_name}`" :value="c.id">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>{{ c.model_name }} - {{ c.config_name }}</span>
+                <el-tag size="small" type="success">{{ c.process_count }}项</el-tag>
+              </div>
+            </el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="工序预览" v-if="copySourcePreview.length > 0">
+          <div class="source-preview">
+            <el-tag v-for="item in copySourcePreview.slice(0, 5)" :key="item.id" size="small" style="margin: 2px">
+              {{ item.process_name }}
+            </el-tag>
+            <el-tag v-if="copySourcePreview.length > 5" size="small" type="info">+{{ copySourcePreview.length - 5 }}项</el-tag>
+          </div>
+        </el-form-item>
+        <el-form-item label="复制模式">
+          <el-radio-group v-model="copyMode">
+            <el-radio value="replace">
+              <span>替换模式</span>
+              <el-text type="info" size="small" style="margin-left: 4px">清空现有工序后复制</el-text>
+            </el-radio>
+            <el-radio value="merge">
+              <span>合并模式</span>
+              <el-text type="info" size="small" style="margin-left: 4px">保留现有，追加新工序</el-text>
+            </el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showProcessCopyDialog = false">取消</el-button>
+        <el-button type="primary" @click="handleCopyProcesses" :loading="copyLoading" :disabled="!copySourceConfigId">确认复制</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -430,7 +476,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, ArrowLeft, Download, Delete, Upload, Grid, List, View, EditPen, CopyDocument, CaretLeft, CaretRight, InfoFilled } from '@element-plus/icons-vue'
+import { Plus, ArrowLeft, Download, Delete, Upload, Grid, List, View, EditPen, CaretLeft, CaretRight, InfoFilled, CopyDocument } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { useConfigStore } from '../../store/config'
@@ -521,6 +567,20 @@ const form = reactive({
   layer3_qty: null,
   is_active: 1,
   processes: []
+})
+
+// 一键复制工序相关
+const showProcessCopyDialog = ref(false)
+const copySourceConfigId = ref(null)
+const copyMode = ref('replace')
+const copyLoading = ref(false)
+const copyConfigsLoading = ref(false)
+const copySourcePreview = ref([])
+const allConfigsForCopy = ref([])
+
+// 过滤有工序的配置（排除当前配置）
+const configsWithProcesses = computed(() => {
+  return allConfigsForCopy.value.filter(c => c.id !== form.id && c.process_count > 0)
 })
 
 // 当前包装类型配置
@@ -619,6 +679,101 @@ const loadCategories = async () => {
   }
 }
 
+// 加载所有配置及其工序数量（用于一键复制）
+const loadConfigsForCopy = async () => {
+  copyConfigsLoading.value = true
+  try {
+    const response = await request.get('/processes/packaging-configs')
+    if (response.success) {
+      // 获取每个配置的工序数量
+      const configsWithCount = await Promise.all(
+        response.data.map(async (config) => {
+          try {
+            const detailResponse = await request.get(`/processes/packaging-configs/${config.id}`)
+            return {
+              ...config,
+              process_count: detailResponse.success ? (detailResponse.data.processes?.length || 0) : 0
+            }
+          } catch {
+            return { ...config, process_count: 0 }
+          }
+        })
+      )
+      allConfigsForCopy.value = configsWithCount
+    }
+  } catch (error) {
+    console.error('加载配置列表失败:', error)
+  } finally {
+    copyConfigsLoading.value = false
+  }
+}
+
+// 打开一键复制弹窗
+const openProcessCopyDialog = async () => {
+  copySourceConfigId.value = null
+  copySourcePreview.value = []
+  copyMode.value = 'replace'
+  showProcessCopyDialog.value = true
+  await loadConfigsForCopy()
+}
+
+// 选择源配置时加载预览
+const handleCopySourceChange = async (configId) => {
+  if (!configId) {
+    copySourcePreview.value = []
+    return
+  }
+  try {
+    const response = await request.get(`/processes/packaging-configs/${configId}`)
+    if (response.success) {
+      copySourcePreview.value = response.data.processes || []
+    }
+  } catch (error) {
+    copySourcePreview.value = []
+  }
+}
+
+// 执行工序复制
+const handleCopyProcesses = () => {
+  if (!copySourceConfigId.value || copySourcePreview.value.length === 0) {
+    ElMessage.warning('请选择有工序的源配置')
+    return
+  }
+  
+  copyLoading.value = true
+  try {
+    if (copyMode.value === 'replace') {
+      // 替换模式：清空现有工序
+      form.processes = copySourcePreview.value.map((p, index) => ({
+        process_name: p.process_name,
+        unit_price: p.unit_price,
+        sort_order: index
+      }))
+    } else {
+      // 合并模式：追加新工序（跳过重复）
+      const existingNames = form.processes.map(p => p.process_name)
+      const newProcesses = copySourcePreview.value
+        .filter(p => !existingNames.includes(p.process_name))
+        .map((p, index) => ({
+          process_name: p.process_name,
+          unit_price: p.unit_price,
+          sort_order: form.processes.length + index
+        }))
+      form.processes.push(...newProcesses)
+      
+      if (newProcesses.length < copySourcePreview.value.length) {
+        const skipped = copySourcePreview.value.length - newProcesses.length
+        ElMessage.info(`已跳过 ${skipped} 个重复工序`)
+      }
+    }
+    
+    showProcessCopyDialog.value = false
+    ElMessage.success(`成功复制 ${copyMode.value === 'replace' ? copySourcePreview.value.length : form.processes.length} 项工序`)
+  } finally {
+    copyLoading.value = false
+  }
+}
+
 // 加载包装配置
 const loadPackagingConfigs = async () => {
   loading.value = true
@@ -689,50 +844,7 @@ const editConfig = async (row) => {
   }
 }
 
-// 复制配置
-const copyConfig = async (row) => {
-  isEdit.value = false
-  
-  try {
-    const response = await request.get(`/processes/packaging-configs/${row.id}`)
-    
-    if (response.success) {
-      const data = response.data
-      
-      // 获取该型号下所有配置
-      const modelConfigsResponse = await request.get(`/processes/packaging-configs/model/${data.model_id}`)
-      const allModelConfigs = modelConfigsResponse.success ? modelConfigsResponse.data : []
-      
-      // 生成唯一的配置名称
-      let copyName = data.config_name + ' - 副本'
-      let counter = 1
-      
-      while (allModelConfigs.some(c => c.config_name === copyName)) {
-        counter++
-        copyName = `${data.config_name} - 副本${counter}`
-      }
-      
-      form.id = null
-      form.model_id = data.model_id
-      form.config_name = copyName
-      form.packaging_type = data.packaging_type || 'standard_box'
-      form.layer1_qty = data.layer1_qty ?? data.pc_per_bag
-      form.layer2_qty = data.layer2_qty ?? data.bags_per_box
-      form.layer3_qty = data.layer3_qty ?? data.boxes_per_carton
-      form.is_active = 1
-      form.processes = (data.processes || []).map(p => ({
-        process_name: p.process_name,
-        unit_price: p.unit_price,
-        sort_order: p.sort_order
-      }))
-      
-      dialogVisible.value = true
-      ElMessage.success('已复制配置，请修改配置名称后保存')
-    }
-  } catch (error) {
-    // 错误已在拦截器处理
-  }
-}
+
 
 // 查看工序
 const viewProcesses = async (row) => {
@@ -988,10 +1100,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.process-management {
-  /* padding 由 MainLayout 提供 */
-}
-
 .page-header {
   margin-bottom: 16px;
 }
@@ -1244,24 +1352,6 @@ onMounted(async () => {
 .toolbar-fade-enter-active, .toolbar-fade-leave-active { transition: opacity 0.3s, transform 0.3s; }
 .toolbar-fade-enter-from, .toolbar-fade-leave-to { opacity: 0; transform: translateX(10px); }
 
-/* Minimal Dialog Styles */
-:deep(.minimal-dialog .el-dialog__header) {
-  padding: 20px 24px 10px;
-  margin-right: 0;
-  border-bottom: 1px solid #f1f5f9;
-}
-:deep(.minimal-dialog .el-dialog__body) {
-  padding: 24px;
-}
-:deep(.minimal-dialog .el-dialog__footer) {
-  padding: 0 24px 24px;
-  border-top: none;
-}
-:deep(.minimal-dialog .el-dialog__title) {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1e293b;
-}
 
 /* No Border Input for the Grid */
 :deep(.no-border-input .el-input__wrapper) {
@@ -1274,5 +1364,46 @@ onMounted(async () => {
   font-size: 18px;
   font-weight: 600;
   color: #334155;
+}
+</style>
+
+<!-- 全局样式覆盖：解决 append-to-body 导致的样式无法生效问题 -->
+<style>
+.minimal-dialog.el-dialog {
+  display: flex !important;
+  flex-direction: column !important;
+  margin-top: 5vh !important;
+  height: 90vh !important;
+  max-height: 90vh !important;
+  overflow: hidden !important;
+  position: relative !important;
+  left: 0 !important; /* 修正可能的位置偏移 */
+}
+
+.minimal-dialog .el-dialog__header {
+  padding: 20px 24px 10px !important;
+  margin-right: 0 !important;
+  border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0;
+}
+
+.minimal-dialog .el-dialog__body {
+  padding: 24px !important;
+  flex: 1;
+  overflow-y: auto !important; /* 强制开启内部滚动 */
+  height: auto !important;
+  max-height: none !important;
+}
+
+.minimal-dialog .el-dialog__footer {
+  padding: 0 24px 24px !important;
+  border-top: none;
+  flex-shrink: 0;
+}
+
+.minimal-dialog .el-dialog__title {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: #1e293b !important;
 }
 </style>
