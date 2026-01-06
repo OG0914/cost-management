@@ -44,6 +44,9 @@
               </div>
             </div>
             <div class="item-details">
+              <div class="bom-info cursor-pointer hover:text-blue-600 transition-colors" @click="handleConfigBom(item)">
+                BOM: 共 {{ item.bom_count || 0 }} 项
+              </div>
               <div class="status">
                 <span :class="item.is_active ? 'status-active' : 'status-inactive'"></span>
                 {{ item.is_active ? '已启用' : '已禁用' }}
@@ -64,6 +67,13 @@
         <el-table-column prop="regulation_name" label="法规类别" width="150" sortable />
         <el-table-column prop="model_name" label="型号名称" sortable />
         <el-table-column prop="model_category" label="型号分类" sortable />
+        <el-table-column label="BOM明细" width="120" align="center">
+          <template #default="{ row }">
+            <el-link type="primary" :underline="false" @click="handleConfigBom(row)">
+              <span class="font-bold">共 {{ row.bom_count || 0 }} 项</span>
+            </el-link>
+          </template>
+        </el-table-column>
         <el-table-column prop="is_active" label="状态" width="120" align="center">
           <template #default="{ row }">
             <div class="status">
@@ -86,7 +96,14 @@
     </el-card>
 
     <!-- 新增/编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px" append-to-body>
+    <el-dialog 
+      v-model="dialogVisible" 
+      :title="dialogTitle" 
+      width="500px" 
+      class="minimal-dialog-auto" 
+      append-to-body
+      :close-on-click-modal="false"
+    >
       <el-form :model="form" label-width="100px">
         <el-form-item label="法规类别" required>
           <el-select v-model="form.regulation_id" filterable placeholder="请选择法规类别" style="width: 100%">
@@ -303,6 +320,7 @@ onMounted(() => { fetchRegulations(); fetchModels() })
 .status { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #606266; }
 .status-active { width: 8px; height: 8px; border-radius: 50%; background-color: #67c23a; }
 .status-inactive { width: 8px; height: 8px; border-radius: 50%; background-color: #909399; }
+.bom-info { font-size: 13px; color: #606266; display: flex; align-items: center; }
 
 .card-actions { display: flex; justify-content: center; gap: 8px; padding: 12px; border-top: 1px solid #ebeef5; background: #fafafa; border-radius: 0 0 8px 8px; }
 .card-actions .el-button { transition: transform 0.2s, box-shadow 0.2s; }
@@ -316,4 +334,47 @@ onMounted(() => { fetchRegulations(); fetchModels() })
 .toolbar-toggle { flex-shrink: 0; }
 .toolbar-fade-enter-active, .toolbar-fade-leave-active { transition: opacity 0.3s, transform 0.3s; }
 .toolbar-fade-enter-from, .toolbar-fade-leave-to { opacity: 0; transform: translateX(10px); }
+</style>
+
+<!-- 全局样式覆盖：用于型号编辑弹窗的自适应高度样式 -->
+<style>
+.minimal-dialog-auto.el-dialog {
+  display: flex !important;
+  flex-direction: column !important;
+  margin: 0 !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  height: auto !important;
+  max-height: 90vh !important;
+  overflow: hidden !important;
+  margin-bottom: 0 !important;
+}
+
+.minimal-dialog-auto .el-dialog__header {
+  padding: 20px 24px 10px !important;
+  margin-right: 0 !important;
+  border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0;
+}
+
+.minimal-dialog-auto .el-dialog__body {
+  padding: 24px !important;
+  flex: 1; /* 虽然是auto高度，但在max-height限制下，flex:1能处理溢出 */
+  overflow-y: auto !important;
+  min-height: 100px;
+}
+
+.minimal-dialog-auto .el-dialog__footer {
+  padding: 0 24px 24px !important;
+  border-top: none;
+  flex-shrink: 0;
+}
+
+.minimal-dialog-auto .el-dialog__title {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: #1e293b !important;
+}
 </style>

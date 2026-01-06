@@ -12,9 +12,10 @@ class Model {
    */
   static async findAll() {
     const result = await dbManager.query(`
-      SELECT m.*, r.name as regulation_name
+      SELECT m.*, r.name as regulation_name, COALESCE(bom.bom_count, 0)::int as bom_count
       FROM models m
       LEFT JOIN regulations r ON m.regulation_id = r.id
+      LEFT JOIN (SELECT model_id, COUNT(*) as bom_count FROM model_bom_materials WHERE is_active = true GROUP BY model_id) bom ON m.id = bom.model_id
       ORDER BY m.created_at DESC
     `);
     return result.rows;
@@ -206,9 +207,10 @@ class Model {
    */
   static async findByModelCategoryAndRegulation(modelCategory, regulationId) {
     const result = await dbManager.query(
-      `SELECT m.*, r.name as regulation_name
+      `SELECT m.*, r.name as regulation_name, COALESCE(bom.bom_count, 0)::int as bom_count
        FROM models m
        LEFT JOIN regulations r ON m.regulation_id = r.id
+       LEFT JOIN (SELECT model_id, COUNT(*) as bom_count FROM model_bom_materials WHERE is_active = true GROUP BY model_id) bom ON m.id = bom.model_id
        WHERE m.model_category = $1 AND m.regulation_id = $2 AND m.is_active = true
        ORDER BY m.created_at DESC`,
       [modelCategory, regulationId]
@@ -223,9 +225,10 @@ class Model {
    */
   static async findByModelCategory(modelCategory) {
     const result = await dbManager.query(
-      `SELECT m.*, r.name as regulation_name
+      `SELECT m.*, r.name as regulation_name, COALESCE(bom.bom_count, 0)::int as bom_count
        FROM models m
        LEFT JOIN regulations r ON m.regulation_id = r.id
+       LEFT JOIN (SELECT model_id, COUNT(*) as bom_count FROM model_bom_materials WHERE is_active = true GROUP BY model_id) bom ON m.id = bom.model_id
        WHERE m.model_category = $1 AND m.is_active = true
        ORDER BY m.created_at DESC`,
       [modelCategory]
