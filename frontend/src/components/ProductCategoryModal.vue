@@ -4,9 +4,20 @@
     title="选择产品类别"
     width="400px"
     :close-on-click-modal="false"
+    append-to-body
     @close="handleClose"
   >
-    <div class="category-list">
+    <div v-if="loading" class="category-loading">
+      <el-icon class="is-loading"><Loading /></el-icon>
+      <span>加载中...</span>
+    </div>
+    <div v-else-if="categories.length === 0" class="category-empty">
+      <el-icon class="empty-icon"><Warning /></el-icon>
+      <p class="empty-title">暂无产品类别</p>
+      <p class="empty-desc">请先在「型号管理」中添加型号并设置产品类别</p>
+      <el-button type="primary" size="small" @click="goToModelManage">前往型号管理</el-button>
+    </div>
+    <div v-else class="category-list">
       <div
         v-for="category in categories"
         :key="category"
@@ -38,7 +49,8 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Check, Goods, FirstAidKit } from '@element-plus/icons-vue'
+import { Check, Goods, FirstAidKit, Loading, Warning } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
 import request from '@/utils/request'
 import logger from '@/utils/logger'
 
@@ -55,6 +67,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'confirm'])
 
+const router = useRouter()
 const visible = ref(false)
 const categories = ref([])
 const selectedCategory = ref('')
@@ -119,6 +132,12 @@ const handleConfirm = () => {
   handleClose()
 }
 
+// 前往型号管理
+const goToModelManage = () => {
+  handleClose()
+  router.push('/models')
+}
+
 onMounted(() => {
   if (props.modelValue) {
     loadCategories()
@@ -175,5 +194,45 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+/* 加载状态 */
+.category-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  color: #909399;
+  gap: 12px;
+}
+
+/* 空状态 */
+.category-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 0;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 48px;
+  color: #e6a23c;
+  margin-bottom: 12px;
+}
+
+.empty-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #303133;
+  margin: 0 0 8px 0;
+}
+
+.empty-desc {
+  font-size: 13px;
+  color: #909399;
+  margin: 0 0 16px 0;
 }
 </style>
