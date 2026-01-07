@@ -159,7 +159,7 @@ const handleAdd = () => {
 
 const handleEdit = (row) => {
   isEdit.value = true; dialogTitle.value = '编辑法规'
-  form.id = row.id; form.name = row.name; form.description = row.description; form.is_active = row.is_active
+  form.id = row.id; form.name = row.name; form.description = row.description; form.is_active = row.is_active ? 1 : 0
   dialogVisible.value = true
 }
 

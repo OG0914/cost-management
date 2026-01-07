@@ -925,7 +925,7 @@ const editConfig = async (row) => {
       form.pc_per_bag = data.pc_per_bag;
       form.bags_per_box = data.bags_per_box;
       form.boxes_per_carton = data.boxes_per_carton;
-      form.is_active = data.is_active;
+      form.is_active = data.is_active ? 1 : 0;
       form.materials = data.materials || [];
       
       dialogVisible.value = true;

@@ -115,7 +115,7 @@
 
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, View, EditPen, CopyDocument, Delete } from '@element-plus/icons-vue'
@@ -357,6 +357,10 @@ const goToCompare = () => {
 
 onMounted(() => {
   fetchQuotations()
+})
+
+onUnmounted(() => {
+  if (searchTimer) clearTimeout(searchTimer)
 })
 </script>
 

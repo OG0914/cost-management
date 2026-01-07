@@ -239,7 +239,7 @@ const handleAdd = () => {
 
 const handleEdit = (row) => {
   isEdit.value = true; dialogTitle.value = '编辑型号'
-  form.id = row.id; form.regulation_id = row.regulation_id; form.model_name = row.model_name; form.model_category = row.model_category; form.model_series = row.model_series || ''; form.is_active = row.is_active
+  form.id = row.id; form.regulation_id = row.regulation_id; form.model_name = row.model_name; form.model_category = row.model_category; form.model_series = row.model_series || ''; form.is_active = row.is_active ? 1 : 0
   dialogVisible.value = true
 }
 

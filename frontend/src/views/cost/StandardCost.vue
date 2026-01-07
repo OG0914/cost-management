@@ -148,7 +148,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, View, CopyDocument, Clock, Delete } from '@element-plus/icons-vue'
@@ -395,6 +395,10 @@ const goToStandardCostCompare = () => {
 onMounted(() => {
   loadModelCategories()
   loadStandardCosts()
+})
+
+onUnmounted(() => {
+  if (searchTimer) clearTimeout(searchTimer)
 })
 </script>
 

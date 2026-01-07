@@ -835,7 +835,7 @@ const editConfig = async (row) => {
       form.layer1_qty = data.layer1_qty ?? data.pc_per_bag
       form.layer2_qty = data.layer2_qty ?? data.bags_per_box
       form.layer3_qty = data.layer3_qty ?? data.boxes_per_carton
-      form.is_active = data.is_active
+      form.is_active = data.is_active ? 1 : 0
       form.processes = data.processes || []
       
       dialogVisible.value = true

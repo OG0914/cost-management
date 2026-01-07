@@ -748,7 +748,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, Plus, Delete, InfoFilled } from '@element-plus/icons-vue'
 import request from '@/utils/request'
@@ -1738,6 +1738,7 @@ const saveDraft = async () => {
 
       if (res.success) {
         ElMessage.success('更新成功')
+        isSaved.value = true
         router.push('/cost/records')
       }
     } else {
@@ -1762,6 +1763,7 @@ const saveDraft = async () => {
 
       if (res.success) {
         ElMessage.success('保存成功')
+        isSaved.value = true
         router.push('/cost/records')
       }
     }
@@ -1820,6 +1822,7 @@ const submitQuotation = async () => {
         
         if (submitRes.success) {
           ElMessage.success('提交成功')
+          isSaved.value = true
           router.push('/cost/records')
         }
       }
@@ -1849,6 +1852,7 @@ const submitQuotation = async () => {
         
         if (submitRes.success) {
           ElMessage.success('提交成功')
+          isSaved.value = true
           router.push('/cost/records')
         }
       }
@@ -2390,6 +2394,27 @@ onMounted(async () => {
   else if (route.query.copyFrom) {
     const id = route.query.copyFrom
     await loadQuotationData(id, true)
+  }
+})
+
+// 标记是否已保存（用于路由离开确认）
+const isSaved = ref(false)
+
+// 检查表单是否有数据
+const hasFormData = computed(() => {
+  return form.customer_name || form.model_id || form.materials.length > 0 || form.processes.length > 0 || form.packaging.length > 0
+})
+
+// 路由离开确认
+onBeforeRouteLeave((to, from, next) => {
+  if (!isSaved.value && hasFormData.value) {
+    if (window.confirm('您有未保存的数据，确定要离开吗？')) {
+      next()
+    } else {
+      next(false)
+    }
+  } else {
+    next()
   }
 })
 </script>

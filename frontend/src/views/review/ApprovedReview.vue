@@ -94,7 +94,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, View, Delete } from '@element-plus/icons-vue'
 import { useReviewStore } from '@/store/review'
@@ -211,6 +211,10 @@ const handleDelete = async (row) => {
 
 onMounted(() => {
   fetchApprovedList()
+})
+
+onUnmounted(() => {
+  if (searchTimer) clearTimeout(searchTimer)
 })
 </script>
 
