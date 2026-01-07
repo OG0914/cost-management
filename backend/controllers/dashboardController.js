@@ -205,14 +205,51 @@ const getRecentActivities = async (req, res) => {
     const activities = [];
 
     // 根据角色获取不同的操作记录
-    if (['salesperson', 'admin', 'reviewer'].includes(userRole)) {
-      // 业务员/审核员：获取最近的报价单操作
+
+    // 1. 审核员：获取待审核及已审核记录
+    if (userRole === 'reviewer') {
+      const quotationsResult = await dbManager.query(`
+        SELECT q.quotation_no, q.status, q.updated_at, q.customer_name, u.real_name as creator_name
+        FROM quotations q
+        LEFT JOIN users u ON q.created_by = u.id
+        WHERE q.status = 'submitted' OR q.reviewed_by = $1
+        ORDER BY q.updated_at DESC
+        LIMIT 10
+      `, [userId]);
+
+      quotationsResult.rows.forEach(row => {
+        let content = '';
+        let icon = 'ri-file-list-3-line';
+
+        if (row.status === 'submitted') {
+          // "张三 提交了 Q20230101 报价单（XX公司）"
+          content = `${row.creator_name || '未知用户'} 提交了 ${row.quotation_no} 报价单（${row.customer_name}）`;
+          icon = 'ri-time-line';
+        } else {
+          // "已通过 Q20230101 报价单（XX公司）"
+          const statusMap = { approved: '通过', rejected: '退回' };
+          const action = statusMap[row.status] || '审核';
+          content = `已${action} ${row.quotation_no} 报价单（${row.customer_name}）`;
+          icon = 'ri-checkbox-circle-line';
+        }
+
+        activities.push({
+          icon,
+          content,
+          time: formatTimeAgo(row.updated_at),
+          rawTime: row.updated_at
+        });
+      });
+    }
+
+    // 2. 业务员/管理员：获取自己创建的报价单操作
+    else if (['salesperson', 'admin'].includes(userRole)) {
       const quotationsResult = await dbManager.query(`
         SELECT q.quotation_no, q.status, q.updated_at, q.customer_name
         FROM quotations q
         WHERE q.created_by = $1
         ORDER BY q.updated_at DESC
-        LIMIT 3
+        LIMIT 10
       `, [userId]);
 
       quotationsResult.rows.forEach(row => {
@@ -220,24 +257,26 @@ const getRecentActivities = async (req, res) => {
         activities.push({
           icon: 'ri-file-list-3-line',
           content: `报价单 ${row.quotation_no}（${row.customer_name}）${statusMap[row.status] || row.status}`,
-          time: formatTimeAgo(row.updated_at)
+          time: formatTimeAgo(row.updated_at),
+          rawTime: row.updated_at
         });
       });
     }
 
+    // 3. 采购/生产/管理员：获取最近的原料更新
     if (['purchaser', 'producer', 'admin'].includes(userRole)) {
-      // 采购/生产：获取最近的原料更新
       const materialsResult = await dbManager.query(`
         SELECT name, updated_at FROM materials
         ORDER BY updated_at DESC
-        LIMIT 3
+        LIMIT 10
       `);
 
       materialsResult.rows.forEach(row => {
         activities.push({
           icon: 'ri-stack-line',
           content: `原料「${row.name}」已更新`,
-          time: formatTimeAgo(row.updated_at)
+          time: formatTimeAgo(row.updated_at),
+          rawTime: row.updated_at
         });
       });
     }

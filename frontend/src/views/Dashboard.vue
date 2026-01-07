@@ -182,21 +182,21 @@
           <i class="ri-notification-3-line mr-2 text-blue-500"></i>
           系统通知
         </h2>
-        <div class="space-y-3">
-          <div v-if="recentActivities.length === 0" class="text-center text-slate-400 py-6">
+        <div class="space-y-3 h-[180px] overflow-y-auto pr-2 custom-scrollbar">
+          <div v-if="recentActivities.length === 0" class="text-center text-slate-400 py-6 h-full flex flex-col justify-center items-center">
             <i class="ri-inbox-line text-3xl mb-2"></i>
             <p class="text-sm">暂无通知</p>
           </div>
           <div 
             v-for="(activity, index) in recentActivities" 
             :key="index"
-            class="flex items-start p-3 bg-slate-50 rounded-lg"
+            class="flex items-start p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
           >
-            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
+            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">
               <i :class="[activity.icon, 'text-blue-600 text-sm']"></i>
             </div>
             <div class="flex-1 min-w-0">
-              <p class="text-sm text-slate-700">{{ activity.content }}</p>
+              <p class="text-sm text-slate-700 whitespace-normal break-words leading-relaxed">{{ activity.content }}</p>
               <p class="text-xs text-slate-400 mt-1">{{ activity.time }}</p>
             </div>
           </div>
