@@ -40,6 +40,7 @@ import { ref, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Check, Goods, FirstAidKit } from '@element-plus/icons-vue'
 import request from '@/utils/request'
+import logger from '@/utils/logger'
 
 const props = defineProps({
   modelValue: {
@@ -76,17 +77,13 @@ watch(visible, (val) => {
 // 加载产品类别列表
 const loadCategories = async () => {
   loading.value = true
-  console.log('开始加载产品类别...')
   try {
     const res = await request.get('/models/categories')
-    console.log('产品类别响应:', res)
     if (res.success) {
       categories.value = res.data || []
-      console.log('产品类别列表:', categories.value)
     }
   } catch (error) {
-    console.error('加载产品类别失败:', error)
-    console.error('错误详情:', error.response)
+    logger.error('加载产品类别失败:', error)
     ElMessage.error('加载产品类别失败')
   } finally {
     loading.value = false

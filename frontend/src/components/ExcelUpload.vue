@@ -28,6 +28,7 @@
 import { ref, computed } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Upload } from '@element-plus/icons-vue';
+import logger from '../utils/logger';
 import { getToken } from '../utils/auth';
 
 const props = defineProps({
@@ -168,7 +169,7 @@ const handleSuccess = (response, file) => {
 const handleError = (error, file) => {
   loading.value = false;
   
-  console.error('上传失败:', error);
+  logger.error('上传失败:', error);
   ElMessage.error('上传失败，请重试');
   
   // 触发失败事件

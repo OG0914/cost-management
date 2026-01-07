@@ -10,6 +10,7 @@ import App from './App.vue'
 import './styles/tailwind.css'
 import './styles/index.css'
 import './styles/dialog.css'
+import './styles/cost-form.css'
 
 const app = createApp(App)
 const pinia = createPinia()

@@ -3,6 +3,7 @@
  */
 import { defineStore } from 'pinia'
 import request from '@/utils/request'
+import logger from '@/utils/logger'
 
 export const useConfigStore = defineStore('config', {
   state: () => ({
@@ -35,7 +36,7 @@ export const useConfigStore = defineStore('config', {
           this.loaded = true
         }
       } catch (error) {
-        console.error('加载系统配置失败:', error)
+        logger.error('加载系统配置失败:', error)
       }
     },
 

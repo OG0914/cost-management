@@ -3,6 +3,7 @@
  */
 import { defineStore } from 'pinia'
 import request from '@/utils/request'
+import logger from '@/utils/logger'
 
 export const useQuotationStore = defineStore('quotation', {
   state: () => ({
@@ -100,7 +101,7 @@ export const useQuotationStore = defineStore('quotation', {
         
         return response
       } catch (error) {
-        console.error('加载报价单列表失败:', error)
+        logger.error('加载报价单列表失败:', error)
         throw error
       } finally {
         this.loading = false
@@ -121,7 +122,7 @@ export const useQuotationStore = defineStore('quotation', {
         
         return response
       } catch (error) {
-        console.error('获取报价单详情失败:', error)
+        logger.error('获取报价单详情失败:', error)
         throw error
       } finally {
         this.loading = false
@@ -143,7 +144,7 @@ export const useQuotationStore = defineStore('quotation', {
         
         return response
       } catch (error) {
-        console.error('创建报价单失败:', error)
+        logger.error('创建报价单失败:', error)
         throw error
       } finally {
         this.loading = false
@@ -169,7 +170,7 @@ export const useQuotationStore = defineStore('quotation', {
         
         return response
       } catch (error) {
-        console.error('更新报价单失败:', error)
+        logger.error('更新报价单失败:', error)
         throw error
       } finally {
         this.loading = false
@@ -195,7 +196,7 @@ export const useQuotationStore = defineStore('quotation', {
         
         return response
       } catch (error) {
-        console.error('提交报价单失败:', error)
+        logger.error('提交报价单失败:', error)
         throw error
       } finally {
         this.loading = false
@@ -219,7 +220,7 @@ export const useQuotationStore = defineStore('quotation', {
         
         return response
       } catch (error) {
-        console.error('删除报价单失败:', error)
+        logger.error('删除报价单失败:', error)
         throw error
       } finally {
         this.loading = false

@@ -308,6 +308,7 @@ import { ElMessage } from 'element-plus'
 import { ArrowLeft, Printer, Download } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { formatNumber } from '@/utils/format'
+import logger from '@/utils/logger'
 
 const router = useRouter()
 const route = useRoute()
@@ -359,7 +360,7 @@ const getAllProfitTiers = (quotation) => {
         isCustom: true
       }))
     } catch (e) {
-      console.error('解析自定义利润档位失败:', e)
+      logger.error('解析自定义利润档位失败:', e)
     }
   }
   
@@ -437,7 +438,7 @@ const loadCompareData = async () => {
     }
 
   } catch (error) {
-    console.error('加载对比数据失败:', error)
+    logger.error('加载对比数据失败:', error)
     ElMessage.error('加载对比数据失败')
   } finally {
     loading.value = false

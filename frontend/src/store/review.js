@@ -3,6 +3,7 @@
  */
 import { defineStore } from 'pinia'
 import request from '@/utils/request'
+import logger from '@/utils/logger'
 
 export const useReviewStore = defineStore('review', {
   state: () => ({
@@ -81,7 +82,7 @@ export const useReviewStore = defineStore('review', {
         
         return response
       } catch (error) {
-        console.error('获取待审核列表失败:', error)
+        logger.error('获取待审核列表失败:', error)
         throw error
       } finally {
         this.loading = false
@@ -121,7 +122,7 @@ export const useReviewStore = defineStore('review', {
         
         return response
       } catch (error) {
-        console.error('获取已审核列表失败:', error)
+        logger.error('获取已审核列表失败:', error)
         throw error
       } finally {
         this.loading = false
@@ -142,7 +143,7 @@ export const useReviewStore = defineStore('review', {
         
         return response
       } catch (error) {
-        console.error('获取审核详情失败:', error)
+        logger.error('获取审核详情失败:', error)
         throw error
       } finally {
         this.loading = false
@@ -164,7 +165,7 @@ export const useReviewStore = defineStore('review', {
         
         return response
       } catch (error) {
-        console.error('审核通过失败:', error)
+        logger.error('审核通过失败:', error)
         throw error
       } finally {
         this.loading = false
@@ -186,7 +187,7 @@ export const useReviewStore = defineStore('review', {
         
         return response
       } catch (error) {
-        console.error('审核退回失败:', error)
+        logger.error('审核退回失败:', error)
         throw error
       } finally {
         this.loading = false
@@ -202,7 +203,7 @@ export const useReviewStore = defineStore('review', {
         const response = await request.post(`/review/${id}/resubmit`)
         return response
       } catch (error) {
-        console.error('重新提交失败:', error)
+        logger.error('重新提交失败:', error)
         throw error
       } finally {
         this.loading = false
@@ -225,7 +226,7 @@ export const useReviewStore = defineStore('review', {
         
         return response
       } catch (error) {
-        console.error('删除报价单失败:', error)
+        logger.error('删除报价单失败:', error)
         throw error
       } finally {
         this.loading = false
@@ -289,7 +290,7 @@ export const useReviewStore = defineStore('review', {
         }
         return response.total || 0
       } catch (error) {
-        console.error('获取待审核数量失败:', error)
+        logger.error('获取待审核数量失败:', error)
         return 0
       }
     }

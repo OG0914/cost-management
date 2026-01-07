@@ -139,6 +139,7 @@
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useReviewStore } from '@/store/review'
+import logger from '@/utils/logger'
 import {
   getSalesTypeName,
   formatDateTime,
@@ -295,7 +296,7 @@ const loadDetail = async () => {
         try {
           customProfitTiers.value = JSON.parse(quotationDetail.value.custom_profit_tiers)
         } catch (e) {
-          console.error('解析自定义利润档位失败:', e)
+          logger.error('解析自定义利润档位失败:', e)
           customProfitTiers.value = []
         }
       } else {

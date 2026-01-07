@@ -156,6 +156,7 @@ import request from '@/utils/request'
 import { formatNumber, formatDateTime } from '@/utils/format'
 import { formatQuantity } from '@/utils/review'
 import { getUser } from '@/utils/auth'
+import logger from '@/utils/logger'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
 
@@ -216,7 +217,7 @@ const loadModelCategories = async () => {
       modelCategories.value = res.data
     }
   } catch (error) {
-    console.error('加载型号分类失败:', error)
+    logger.error('加载型号分类失败:', error)
   }
 }
 
@@ -237,7 +238,7 @@ const loadStandardCosts = async () => {
       total.value = res.total
     }
   } catch (error) {
-    console.error('加载标准成本列表失败:', error)
+    logger.error('加载标准成本列表失败:', error)
     ElMessage.error('加载标准成本列表失败')
   } finally {
     loading.value = false
@@ -302,7 +303,7 @@ const showHistory = async (row) => {
       historyList.value = res.data
     }
   } catch (error) {
-    console.error('加载历史版本失败:', error)
+    logger.error('加载历史版本失败:', error)
     ElMessage.error('加载历史版本失败')
   } finally {
     historyLoading.value = false
@@ -333,7 +334,7 @@ const restoreVersion = async (row) => {
     }
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('恢复版本失败:', error)
+      logger.error('恢复版本失败:', error)
       ElMessage.error('恢复版本失败')
     }
   }
@@ -359,7 +360,7 @@ const deleteStandardCost = async (row) => {
     }
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('删除失败:', error)
+      logger.error('删除失败:', error)
       ElMessage.error('删除失败')
     }
   }

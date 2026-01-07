@@ -33,14 +33,10 @@ const healthStatus = ref(null)
 
 const checkHealth = async () => {
   try {
-    console.log('正在请求: /health')
     const response = await request.get('/health')
-    console.log('响应数据:', response)
     healthStatus.value = response
     ElMessage.success('服务器运行正常')
   } catch (error) {
-    console.error('请求失败:', error)
-    console.error('错误详情:', error.response)
     healthStatus.value = { success: false, message: '服务器连接失败' }
     ElMessage.error('无法连接到服务器')
   }

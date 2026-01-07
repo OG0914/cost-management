@@ -153,6 +153,7 @@ import { Plus, Search, Upload, Download, Delete, EditPen, Grid, List, CaretLeft,
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { formatDateTime } from '@/utils/format'
+import logger from '@/utils/logger'
 import PageHeader from '@/components/common/PageHeader.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import BomConfigDialog from '@/components/BomConfigDialog.vue'
@@ -203,7 +204,7 @@ const fetchSeries = async () => {
   try {
     const response = await request.get('/models/series')
     if (response.success) seriesList.value = response.data.map(item => ({ value: item }))
-  } catch (error) { console.error('获取产品系列失败', error) }
+  } catch (error) { logger.error('获取产品系列失败', error) }
 }
 
 const querySearchSeries = (queryString, cb) => {

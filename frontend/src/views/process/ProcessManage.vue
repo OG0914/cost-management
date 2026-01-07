@@ -484,6 +484,7 @@ import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { useConfigStore } from '../../store/config'
 import { formatNumber, formatDateTime } from '../../utils/format'
+import logger from '@/utils/logger'
 import PageHeader from '@/components/common/PageHeader.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
@@ -702,7 +703,7 @@ const loadConfigsForCopy = async () => {
       allConfigsForCopy.value = configsWithCount
     }
   } catch (error) {
-    console.error('加载配置列表失败:', error)
+    logger.error('加载配置列表失败:', error)
   } finally {
     copyConfigsLoading.value = false
   }

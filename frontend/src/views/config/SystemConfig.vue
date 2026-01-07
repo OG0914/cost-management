@@ -128,6 +128,7 @@ import { Check, Plus, Delete, ArrowLeft } from '@element-plus/icons-vue';
 import { useAuthStore } from '../../store/auth';
 import { useConfigStore } from '../../store/config';
 import request from '../../utils/request';
+import logger from '../../utils/logger';
 import { formatDateTime } from '@/utils/format';
 import PageHeader from '../../components/common/PageHeader.vue';
 
@@ -158,7 +159,7 @@ const loadConfig = async () => {
       }
     }
   } catch (error) {
-    console.error('加载配置失败:', error);
+    logger.error('加载配置失败:', error);
     ElMessage.error('加载配置失败');
   }
 };
@@ -186,7 +187,7 @@ const handleSave = async () => {
       await configStore.reloadConfig();
     }
   } catch (error) {
-    console.error('保存配置失败:', error);
+    logger.error('保存配置失败:', error);
     ElMessage.error(error.message || '保存配置失败');
   } finally { saving.value = false; }
 };

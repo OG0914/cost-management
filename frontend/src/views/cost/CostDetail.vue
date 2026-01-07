@@ -435,6 +435,7 @@ import { formatNumber } from '@/utils/format'
 import { formatQuantity } from '@/utils/review'
 import { useConfigStore } from '@/store/config'
 import { getUser } from '@/utils/auth'
+import logger from '@/utils/logger'
 import ProfitCalculatorDialog from '@/components/ProfitCalculatorDialog.vue'
 
 const router = useRouter()
@@ -542,7 +543,7 @@ const loadDetail = async () => {
       calculateShippingInfo()
     }
   } catch (error) {
-    console.error('加载详情失败:', error)
+    logger.error('加载详情失败:', error)
     ElMessage.error('加载详情失败')
   } finally {
     loading.value = false
@@ -616,7 +617,7 @@ const setAsStandardCost = async () => {
     }
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('设为标准成本失败:', error)
+      logger.error('设为标准成本失败:', error)
       ElMessage.error(error.response?.data?.message || '设为标准成本失败')
     }
   } finally {
