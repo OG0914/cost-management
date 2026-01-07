@@ -36,7 +36,7 @@
           <div class="card-body">
             <div class="item-header">
               <div class="avatar" :style="{ backgroundColor: getRegulationColor(item.regulation_name) }">
-                {{ item.model_category || '?' }}
+                {{ item.model_category || item.model_series || '?' }}
               </div>
               <div class="item-info">
                 <div class="item-name">{{ item.model_name }}</div>
@@ -44,6 +44,9 @@
               </div>
             </div>
             <div class="item-details">
+              <div class="series-tag" v-if="item.model_series">
+                <span class="label">系列:</span> {{ item.model_series }}
+              </div>
               <div class="bom-info cursor-pointer hover:text-blue-600 transition-colors" @click="handleConfigBom(item)">
                 BOM: 共 {{ item.bom_count || 0 }} 项
               </div>
@@ -64,9 +67,12 @@
       <!-- 列表视图 -->
       <el-table v-if="viewMode === 'list'" :data="paginatedModels" border stripe @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="regulation_name" label="法规类别" width="150" sortable />
+        <el-table-column prop="regulation_name" label="法规类别" width="120" sortable />
         <el-table-column prop="model_name" label="型号名称" sortable />
-        <el-table-column prop="model_category" label="型号分类" sortable />
+        <el-table-column prop="model_series" label="产品系列" width="140" sortable>
+         
+        </el-table-column>
+        <el-table-column prop="model_category" label="型号分类" width="140" sortable />
         <el-table-column label="BOM明细" width="120" align="center">
           <template #default="{ row }">
             <el-link type="primary" :underline="false" @click="handleConfigBom(row)">
@@ -113,6 +119,15 @@
         <el-form-item label="型号名称" required>
           <el-input v-model="form.model_name" placeholder="请输入型号名称" />
         </el-form-item>
+        <el-form-item label="产品系列">
+          <el-autocomplete
+            v-model="form.model_series"
+            :fetch-suggestions="querySearchSeries"
+            placeholder="请输入产品系列（如：MK81）"
+            clearable
+            style="width: 100%"
+          />
+        </el-form-item>
         <el-form-item label="型号分类">
           <el-input v-model="form.model_category" placeholder="请输入型号分类（如：口罩、半面罩）" />
         </el-form-item>
@@ -147,6 +162,7 @@ import StatusSwitch from '@/components/common/StatusSwitch.vue'
 const authStore = useAuthStore()
 const showToolbar = ref(false)
 const models = ref([])
+const seriesList = ref([]) // 所有产品系列列表
 const bomDialogVisible = ref(false)
 const currentBomModelId = ref(null)
 const currentBomModelName = ref('')
@@ -170,7 +186,7 @@ const paginatedModels = computed(() => {
 
 watch(viewMode, (newMode) => { if (newMode === 'card') selectedModels.value = [] })
 
-const form = reactive({ id: null, regulation_id: null, model_name: '', model_category: '', is_active: 1 })
+const form = reactive({ id: null, regulation_id: null, model_name: '', model_category: '', model_series: '', is_active: 1 })
 
 // 法规颜色映射（底色关联法规类别）
 const REGULATION_COLORS = { 'NIOSH': '#409EFF', 'GB': '#67C23A', 'CE': '#E6A23C', 'ASNZS': '#F56C6C', 'KN': '#9B59B6' }
@@ -181,6 +197,20 @@ const fetchRegulations = async () => {
     const response = await request.get('/regulations/active')
     if (response.success) regulations.value = response.data
   } catch (error) { ElMessage.error('获取法规列表失败') }
+}
+
+const fetchSeries = async () => {
+  try {
+    const response = await request.get('/models/series')
+    if (response.success) seriesList.value = response.data.map(item => ({ value: item }))
+  } catch (error) { console.error('获取产品系列失败', error) }
+}
+
+const querySearchSeries = (queryString, cb) => {
+  const results = queryString
+    ? seriesList.value.filter(item => item.value.toLowerCase().includes(queryString.toLowerCase()))
+    : seriesList.value
+  cb(results)
 }
 
 const fetchModels = async () => {
@@ -194,19 +224,21 @@ const handleSearch = () => {
   if (!searchKeyword.value) { filteredModels.value = models.value; return }
   const keyword = searchKeyword.value.toLowerCase()
   filteredModels.value = models.value.filter(item => 
-    item.model_name.toLowerCase().includes(keyword) || (item.regulation_name && item.regulation_name.toLowerCase().includes(keyword))
+    item.model_name.toLowerCase().includes(keyword) || 
+    (item.regulation_name && item.regulation_name.toLowerCase().includes(keyword)) ||
+    (item.model_series && item.model_series.toLowerCase().includes(keyword))
   )
 }
 
 const handleAdd = () => {
   isEdit.value = false; dialogTitle.value = '新增型号'
-  form.id = null; form.regulation_id = null; form.model_name = ''; form.model_category = ''; form.is_active = 1
+  form.id = null; form.regulation_id = null; form.model_name = ''; form.model_category = ''; form.model_series = ''; form.is_active = 1
   dialogVisible.value = true
 }
 
 const handleEdit = (row) => {
   isEdit.value = true; dialogTitle.value = '编辑型号'
-  form.id = row.id; form.regulation_id = row.regulation_id; form.model_name = row.model_name; form.model_category = row.model_category; form.is_active = row.is_active
+  form.id = row.id; form.regulation_id = row.regulation_id; form.model_name = row.model_name; form.model_category = row.model_category; form.model_series = row.model_series || ''; form.is_active = row.is_active
   dialogVisible.value = true
 }
 
@@ -225,7 +257,7 @@ const handleSubmit = async () => {
   try {
     if (isEdit.value) { await request.put(`/models/${form.id}`, form); ElMessage.success('更新成功') }
     else { await request.post('/models', form); ElMessage.success('创建成功') }
-    dialogVisible.value = false; fetchModels()
+    dialogVisible.value = false; fetchModels(); fetchSeries()
   } catch (error) { /* 错误已在拦截器处理 */ }
   finally { loading.value = false }
 }
@@ -287,7 +319,7 @@ const handleDownloadTemplate = async () => {
   } catch (error) { ElMessage.error('下载失败') }
 }
 
-onMounted(() => { fetchRegulations(); fetchModels() })
+onMounted(() => { fetchRegulations(); fetchModels(); fetchSeries() })
 </script>
 
 <style scoped>
@@ -321,6 +353,8 @@ onMounted(() => { fetchRegulations(); fetchModels() })
 .status-active { width: 8px; height: 8px; border-radius: 50%; background-color: #67c23a; }
 .status-inactive { width: 8px; height: 8px; border-radius: 50%; background-color: #909399; }
 .bom-info { font-size: 13px; color: #606266; display: flex; align-items: center; }
+.series-tag { font-size: 13px; color: #606266; display: flex; align-items: center; gap: 4px; }
+.series-tag .label { color: #909399; }
 
 .card-actions { display: flex; justify-content: center; gap: 8px; padding: 12px; border-top: 1px solid #ebeef5; background: #fafafa; border-radius: 0 0 8px 8px; }
 .card-actions .el-button { transition: transform 0.2s, box-shadow 0.2s; }

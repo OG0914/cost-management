@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS models (
   regulation_id INTEGER NOT NULL REFERENCES regulations(id),
   model_name VARCHAR(200) NOT NULL,
   model_category VARCHAR(100),
+  model_series VARCHAR(50),
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
@@ -316,6 +317,7 @@ CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 
 -- 型号表索引
 CREATE INDEX IF NOT EXISTS idx_models_regulation_id ON models(regulation_id);
+CREATE INDEX IF NOT EXISTS idx_models_series ON models(model_series);
 
 -- 原料表索引
 CREATE INDEX IF NOT EXISTS idx_materials_item_no ON materials(item_no);

@@ -12,7 +12,7 @@ class ExcelGenerator {
   static async generateMaterialExcel(materials) {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('原料清单');
-    
+
     worksheet.columns = [
       { header: '品号', key: 'item_no', width: 15 },
       { header: '原料名称', key: 'name', width: 20 },
@@ -22,7 +22,7 @@ class ExcelGenerator {
       { header: '厂商', key: 'manufacturer', width: 20 },
       { header: '更新时间', key: 'updated_at', width: 20 }
     ];
-    
+
     materials.forEach(m => {
       worksheet.addRow({
         item_no: m.item_no,
@@ -34,7 +34,7 @@ class ExcelGenerator {
         updated_at: m.updated_at
       });
     });
-    
+
     return workbook;
   }
 
@@ -44,25 +44,27 @@ class ExcelGenerator {
   static async generateModelExcel(models) {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('型号清单');
-    
+
     worksheet.columns = [
       { header: '法规类别', key: 'regulation_name', width: 20 },
       { header: '型号名称', key: 'model_name', width: 25 },
-      { header: '型号分类', key: 'model_category', width: 30 },
+      { header: '型号分类', key: 'model_category', width: 20 },
+      { header: '产品系列', key: 'model_series', width: 15 },
       { header: '状态', key: 'is_active', width: 10 },
       { header: '创建时间', key: 'created_at', width: 20 }
     ];
-    
+
     models.forEach(m => {
       worksheet.addRow({
         regulation_name: m.regulation_name,
         model_name: m.model_name,
         model_category: m.model_category || '',
+        model_series: m.model_series || '',
         is_active: m.is_active ? '激活' : '禁用',
         created_at: m.created_at
       });
     });
-    
+
     return workbook;
   }
 
@@ -73,7 +75,7 @@ class ExcelGenerator {
   static async generateProcessExcel(processes) {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('工序清单');
-    
+
     worksheet.columns = [
       { header: '型号', key: 'model_name', width: 15 },
       { header: '配置', key: 'config_name', width: 20 },
@@ -82,7 +84,7 @@ class ExcelGenerator {
       { header: '工序', key: 'process_name', width: 20 },
       { header: '单价', key: 'unit_price', width: 12 }
     ];
-    
+
     processes.forEach(p => {
       worksheet.addRow({
         model_name: p.model_name,
@@ -93,7 +95,7 @@ class ExcelGenerator {
         unit_price: p.unit_price
       });
     });
-    
+
     return workbook;
   }
 
@@ -104,7 +106,7 @@ class ExcelGenerator {
   static async generatePackagingMaterialExcel(materials) {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('包材清单');
-    
+
     worksheet.columns = [
       { header: '型号', key: 'model_name', width: 15 },
       { header: '配置', key: 'config_name', width: 20 },
@@ -115,7 +117,7 @@ class ExcelGenerator {
       { header: '单价', key: 'unit_price', width: 12 },
       { header: '纸箱体积', key: 'carton_volume', width: 12 }
     ];
-    
+
     materials.forEach(m => {
       worksheet.addRow({
         model_name: m.model_name,
@@ -128,7 +130,7 @@ class ExcelGenerator {
         carton_volume: m.carton_volume || ''
       });
     });
-    
+
     return workbook;
   }
 
@@ -138,7 +140,7 @@ class ExcelGenerator {
   static async generateMaterialTemplate() {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('原料导入模板');
-    
+
     worksheet.columns = [
       { header: '品号', key: 'item_no', width: 15 },
       { header: '原料名称', key: 'name', width: 20 },
@@ -147,7 +149,7 @@ class ExcelGenerator {
       { header: '币别', key: 'currency', width: 10 },
       { header: '厂商', key: 'manufacturer', width: 20 }
     ];
-    
+
     worksheet.addRow({
       item_no: 'MAT001',
       name: '示例原料',
@@ -156,7 +158,7 @@ class ExcelGenerator {
       currency: 'CNY',
       manufacturer: '示例厂商'
     });
-    
+
     return workbook;
   }
 
@@ -166,19 +168,21 @@ class ExcelGenerator {
   static async generateModelTemplate() {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('型号导入模板');
-    
+
     worksheet.columns = [
       { header: '法规类别', key: 'regulation_name', width: 20 },
       { header: '型号名称', key: 'model_name', width: 25 },
-      { header: '型号分类', key: 'model_category', width: 30 }
+      { header: '型号分类', key: 'model_category', width: 20 },
+      { header: '产品系列', key: 'model_series', width: 15 }
     ];
-    
+
     worksheet.addRow({
       regulation_name: 'CE',
-      model_name: 'MODEL-001',
-      model_category: '口罩'
+      model_name: 'MK8151',
+      model_category: '口罩',
+      model_series: 'MK81'
     });
-    
+
     return workbook;
   }
 
@@ -189,7 +193,7 @@ class ExcelGenerator {
   static async generateProcessTemplate() {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('工序导入模板');
-    
+
     worksheet.columns = [
       { header: '型号', key: 'model_name', width: 15 },
       { header: '配置', key: 'config_name', width: 20 },
@@ -198,7 +202,7 @@ class ExcelGenerator {
       { header: '工序', key: 'process_name', width: 20 },
       { header: '单价', key: 'unit_price', width: 12 }
     ];
-    
+
     // 添加示例数据
     worksheet.addRow({
       model_name: 'MODEL-001',
@@ -208,7 +212,7 @@ class ExcelGenerator {
       process_name: '示例工序',
       unit_price: 5.0
     });
-    
+
     // 添加说明工作表
     const instructionSheet = workbook.addWorksheet('填写说明');
     instructionSheet.columns = [
@@ -216,14 +220,14 @@ class ExcelGenerator {
       { header: '说明', key: 'description', width: 50 },
       { header: '有效值', key: 'valid_values', width: 40 }
     ];
-    
+
     instructionSheet.addRow({ field: '型号', description: '产品型号名称', valid_values: '必填' });
     instructionSheet.addRow({ field: '配置', description: '包装配置名称', valid_values: '必填' });
     instructionSheet.addRow({ field: '包装类型', description: '包装结构类型', valid_values: '标准彩盒、无彩盒、泡壳直装、泡壳袋装' });
     instructionSheet.addRow({ field: '包装方式', description: '包装层级数量', valid_values: '如：10pc/袋, 10袋/盒, 24盒/箱' });
     instructionSheet.addRow({ field: '工序', description: '工序名称', valid_values: '必填' });
     instructionSheet.addRow({ field: '单价', description: '工序单价', valid_values: '数字' });
-    
+
     return workbook;
   }
 
@@ -234,7 +238,7 @@ class ExcelGenerator {
   static async generatePackagingMaterialTemplate() {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('包材导入模板');
-    
+
     worksheet.columns = [
       { header: '型号', key: 'model_name', width: 15 },
       { header: '配置', key: 'config_name', width: 20 },
@@ -245,7 +249,7 @@ class ExcelGenerator {
       { header: '单价', key: 'unit_price', width: 12 },
       { header: '纸箱体积', key: 'carton_volume', width: 12 }
     ];
-    
+
     // 添加示例数据
     worksheet.addRow({
       model_name: 'MODEL-001',
@@ -257,7 +261,7 @@ class ExcelGenerator {
       unit_price: 10.5,
       carton_volume: 0.05
     });
-    
+
     // 添加说明工作表
     const instructionSheet = workbook.addWorksheet('填写说明');
     instructionSheet.columns = [
@@ -265,7 +269,7 @@ class ExcelGenerator {
       { header: '说明', key: 'description', width: 50 },
       { header: '有效值', key: 'valid_values', width: 40 }
     ];
-    
+
     instructionSheet.addRow({ field: '型号', description: '产品型号名称', valid_values: '必填' });
     instructionSheet.addRow({ field: '配置', description: '包装配置名称', valid_values: '必填' });
     instructionSheet.addRow({ field: '包装类型', description: '包装结构类型', valid_values: '标准彩盒、无彩盒、泡壳直装、泡壳袋装' });
@@ -274,7 +278,7 @@ class ExcelGenerator {
     instructionSheet.addRow({ field: '基本用量', description: '基本用量', valid_values: '数字' });
     instructionSheet.addRow({ field: '单价', description: '包材单价', valid_values: '数字' });
     instructionSheet.addRow({ field: '纸箱体积', description: '外箱材积（立方米）', valid_values: '数字，可选' });
-    
+
     return workbook;
   }
 
@@ -283,7 +287,7 @@ class ExcelGenerator {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('用户清单');
     const roleMap = { admin: '管理员', purchaser: '采购', producer: '生产', reviewer: '审核', salesperson: '业务', readonly: '只读' };
-    
+
     worksheet.columns = [
       { header: '用户代号', key: 'username', width: 15 },
       { header: '真实姓名', key: 'real_name', width: 15 },
@@ -292,7 +296,7 @@ class ExcelGenerator {
       { header: '状态', key: 'is_active', width: 10 },
       { header: '创建时间', key: 'created_at', width: 20 }
     ];
-    
+
     users.forEach(u => {
       worksheet.addRow({
         username: u.username,
@@ -303,7 +307,7 @@ class ExcelGenerator {
         created_at: u.created_at
       });
     });
-    
+
     return workbook;
   }
 
@@ -311,7 +315,7 @@ class ExcelGenerator {
   static async generateUserTemplate() {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('用户导入模板');
-    
+
     worksheet.columns = [
       { header: '用户代号', key: 'username', width: 15 },
       { header: '真实姓名', key: 'real_name', width: 15 },
@@ -319,9 +323,9 @@ class ExcelGenerator {
       { header: '邮箱', key: 'email', width: 25 },
       { header: '密码', key: 'password', width: 15 }
     ];
-    
+
     worksheet.addRow({ username: 'user001', real_name: '张三', role: '业务', email: 'zhangsan@example.com', password: '123456' });
-    
+
     const instructionSheet = workbook.addWorksheet('填写说明');
     instructionSheet.columns = [
       { header: '字段', key: 'field', width: 15 },
@@ -333,7 +337,7 @@ class ExcelGenerator {
     instructionSheet.addRow({ field: '角色', description: '用户角色，必填', valid_values: '管理员、采购、生产、审核、业务、只读' });
     instructionSheet.addRow({ field: '邮箱', description: '邮箱地址', valid_values: '可选' });
     instructionSheet.addRow({ field: '密码', description: '登录密码', valid_values: '默认123456，至少6位' });
-    
+
     return workbook;
   }
 }

@@ -20,19 +20,19 @@ const PACKAGING_TYPE_NAME_TO_KEY = {
  */
 function parsePackagingType(value) {
   if (!value) return 'standard_box'; // 默认值
-  
+
   const trimmed = String(value).trim();
-  
+
   // 如果是有效的 key，直接返回
   if (isValidPackagingType(trimmed)) {
     return trimmed;
   }
-  
+
   // 尝试从中文名称映射
   if (PACKAGING_TYPE_NAME_TO_KEY[trimmed]) {
     return PACKAGING_TYPE_NAME_TO_KEY[trimmed];
   }
-  
+
   return null; // 无效值
 }
 
@@ -46,11 +46,11 @@ class ExcelParser {
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.readFile(filePath);
       const worksheet = workbook.worksheets[0];
-      
+
       // 转换为 JSON
       const data = [];
       const headers = [];
-      
+
       worksheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) {
           // 读取表头
@@ -71,14 +71,14 @@ class ExcelParser {
           }
         }
       });
-      
+
       // 验证和转换数据
       const materials = [];
       const errors = [];
-      
+
       data.forEach((row, index) => {
         const rowNum = index + 2; // Excel 行号（从 2 开始，因为第 1 行是表头）
-        
+
         // 验证必填字段
         if (!row['品号'] && !row['item_no']) {
           errors.push(`第 ${rowNum} 行：缺少品号`);
@@ -96,7 +96,7 @@ class ExcelParser {
           errors.push(`第 ${rowNum} 行：缺少单价`);
           return;
         }
-        
+
         // 处理富文本对象
         const getValue = (value) => {
           if (value && typeof value === 'object' && value.richText) {
@@ -104,7 +104,7 @@ class ExcelParser {
           }
           return value;
         };
-        
+
         const material = {
           item_no: String(getValue(row['品号']) || getValue(row['item_no']) || '').trim(),
           name: String(getValue(row['原料名称']) || getValue(row['name']) || ''),
@@ -114,16 +114,16 @@ class ExcelParser {
           manufacturer: String(getValue(row['厂商']) || getValue(row['manufacturer']) || '').trim() || null,
           usage_amount: null
         };
-        
+
         // 验证数据类型
         if (isNaN(material.price)) {
           errors.push(`第 ${rowNum} 行：单价必须是数字`);
           return;
         }
-        
+
         materials.push(material);
       });
-      
+
       return {
         success: errors.length === 0,
         data: materials,
@@ -151,10 +151,10 @@ class ExcelParser {
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.readFile(filePath);
       const worksheet = workbook.worksheets[0];
-      
+
       const data = [];
       const headers = [];
-      
+
       worksheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) {
           // 读取表头
@@ -175,13 +175,13 @@ class ExcelParser {
           }
         }
       });
-      
+
       const models = [];
       const errors = [];
-      
+
       data.forEach((row, index) => {
         const rowNum = index + 2;
-        
+
         // 验证必填字段
         if (!row['法规类别'] && !row['regulation_name']) {
           errors.push(`第 ${rowNum} 行：缺少法规类别`);
@@ -191,7 +191,7 @@ class ExcelParser {
           errors.push(`第 ${rowNum} 行：缺少型号名称`);
           return;
         }
-        
+
         // 处理富文本对象
         const getValue = (value) => {
           if (value && typeof value === 'object' && value.richText) {
@@ -199,16 +199,17 @@ class ExcelParser {
           }
           return value;
         };
-        
+
         const model = {
           regulation_name: String(getValue(row['法规类别']) || getValue(row['regulation_name']) || '').trim(),
           model_name: String(getValue(row['型号名称']) || getValue(row['model_name']) || '').trim(),
-          model_category: String(getValue(row['型号分类']) || getValue(row['model_category']) || '').trim() || null
+          model_category: String(getValue(row['型号分类']) || getValue(row['model_category']) || '').trim() || null,
+          model_series: String(getValue(row['产品系列']) || getValue(row['model_series']) || '').trim() || null
         };
-        
+
         models.push(model);
       });
-      
+
       return {
         success: errors.length === 0,
         data: models,
@@ -236,10 +237,10 @@ class ExcelParser {
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.readFile(filePath);
       const worksheet = workbook.worksheets[0];
-      
+
       const data = [];
       const headers = [];
-      
+
       worksheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) {
           // 读取表头
@@ -260,19 +261,19 @@ class ExcelParser {
           }
         }
       });
-      
+
       console.log('工序Excel数据行数:', data.length);
       if (data.length > 0) {
         console.log('第一行数据:', data[0]);
         console.log('列名:', Object.keys(data[0]));
       }
-      
+
       const processes = [];
       const errors = [];
-      
+
       data.forEach((row, index) => {
         const rowNum = index + 2;
-        
+
         if (!row['型号']) {
           errors.push(`第 ${rowNum} 行：缺少型号`);
           return;
@@ -293,22 +294,22 @@ class ExcelParser {
           errors.push(`第 ${rowNum} 行：缺少单价`);
           return;
         }
-        
+
         const unitPrice = parseFloat(row['单价']);
         if (isNaN(unitPrice)) {
           errors.push(`第 ${rowNum} 行：单价必须是数字`);
           return;
         }
-        
+
         // 解析包装类型（支持中文名称和英文 key）
         const packagingTypeValue = row['包装类型'];
         const packagingType = parsePackagingType(packagingTypeValue);
-        
+
         if (packagingTypeValue && packagingType === null) {
           errors.push(`第 ${rowNum} 行：无效的包装类型 "${packagingTypeValue}"。有效值：标准彩盒、无彩盒、泡壳直装、泡壳袋装`);
           return;
         }
-        
+
         processes.push({
           model_name: String(row['型号']).trim(),
           config_name: String(row['配置']).trim(),
@@ -318,7 +319,7 @@ class ExcelParser {
           unit_price: unitPrice
         });
       });
-      
+
       return {
         success: errors.length === 0,
         data: processes,
@@ -346,10 +347,10 @@ class ExcelParser {
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.readFile(filePath);
       const worksheet = workbook.worksheets[0];
-      
+
       const data = [];
       const headers = [];
-      
+
       worksheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) {
           // 读取表头
@@ -370,19 +371,19 @@ class ExcelParser {
           }
         }
       });
-      
+
       console.log('包材Excel数据行数:', data.length);
       if (data.length > 0) {
         console.log('第一行数据:', data[0]);
         console.log('列名:', Object.keys(data[0]));
       }
-      
+
       const materials = [];
       const errors = [];
-      
+
       data.forEach((row, index) => {
         const rowNum = index + 2;
-        
+
         if (!row['型号']) {
           errors.push(`第 ${rowNum} 行：缺少型号`);
           return;
@@ -407,11 +408,11 @@ class ExcelParser {
           errors.push(`第 ${rowNum} 行：缺少单价`);
           return;
         }
-        
+
         const basicUsage = parseFloat(row['基本用量']);
         const unitPrice = parseFloat(row['单价']);
         const cartonVolume = row['纸箱体积'] ? parseFloat(row['纸箱体积']) : null;
-        
+
         if (isNaN(basicUsage)) {
           errors.push(`第 ${rowNum} 行：基本用量必须是数字`);
           return;
@@ -424,16 +425,16 @@ class ExcelParser {
           errors.push(`第 ${rowNum} 行：纸箱体积必须是数字`);
           return;
         }
-        
+
         // 解析包装类型（支持中文名称和英文 key）
         const packagingTypeValue = row['包装类型'];
         const packagingType = parsePackagingType(packagingTypeValue);
-        
+
         if (packagingTypeValue && packagingType === null) {
           errors.push(`第 ${rowNum} 行：无效的包装类型 "${packagingTypeValue}"。有效值：标准彩盒、无彩盒、泡壳直装、泡壳袋装`);
           return;
         }
-        
+
         materials.push({
           model_name: String(row['型号']).trim(),
           config_name: String(row['配置']).trim(),
@@ -445,7 +446,7 @@ class ExcelParser {
           carton_volume: cartonVolume
         });
       });
-      
+
       return {
         success: errors.length === 0,
         data: materials,
@@ -470,7 +471,7 @@ class ExcelParser {
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.readFile(filePath);
       const worksheet = workbook.worksheets[0];
-      
+
       const data = [], headers = [];
       worksheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) {
@@ -481,21 +482,21 @@ class ExcelParser {
           if (Object.keys(rowData).length > 0) data.push(rowData);
         }
       });
-      
+
       const users = [], errors = [];
       const validRoles = ['admin', 'purchaser', 'producer', 'reviewer', 'salesperson', 'readonly'];
       const roleMap = { '管理员': 'admin', '采购': 'purchaser', '生产': 'producer', '审核': 'reviewer', '业务': 'salesperson', '只读': 'readonly' };
       const getValue = (value) => (value && typeof value === 'object' && value.richText) ? value.richText.map(t => t.text).join('') : value;
-      
+
       data.forEach((row, index) => {
         const rowNum = index + 2;
         if (!row['用户代号'] && !row['username']) { errors.push(`第 ${rowNum} 行：缺少用户代号`); return; }
         if (!row['角色'] && !row['role']) { errors.push(`第 ${rowNum} 行：缺少角色`); return; }
-        
+
         let role = String(getValue(row['角色']) || getValue(row['role']) || '').trim();
         if (roleMap[role]) role = roleMap[role];
         if (!validRoles.includes(role)) { errors.push(`第 ${rowNum} 行：无效角色 "${role}"`); return; }
-        
+
         users.push({
           username: String(getValue(row['用户代号']) || getValue(row['username']) || '').trim(),
           real_name: String(getValue(row['真实姓名']) || getValue(row['real_name']) || '').trim() || null,
@@ -504,7 +505,7 @@ class ExcelParser {
           password: String(getValue(row['密码']) || getValue(row['password']) || '123456').trim()
         });
       });
-      
+
       return { success: errors.length === 0, data: users, errors, total: data.length, valid: users.length };
     } catch (error) {
       return { success: false, data: [], errors: [error.message], total: 0, valid: 0 };

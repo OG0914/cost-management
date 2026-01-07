@@ -31,6 +31,9 @@ router.get('/', modelController.getAllModels);
 // 获取所有型号分类
 router.get('/categories', modelController.getModelCategories);
 
+// 获取所有产品系列
+router.get('/series', modelController.getModelSeries);
+
 // 获取所有型号（带BOM数量，用于BOM复制）
 router.get('/with-bom-count', modelController.getModelsWithBomCount);
 

@@ -23,9 +23,10 @@ class PackagingConfig {
              pc.layer1_qty, pc.layer2_qty, pc.layer3_qty,
              pc.pc_per_bag, pc.bags_per_box, pc.boxes_per_carton,
              pc.is_active, pc.created_at, pc.updated_at,
-             m.model_name, m.model_category
+             m.model_name, m.model_category, r.name as regulation_name
       FROM packaging_configs pc
       LEFT JOIN models m ON pc.model_id = m.id
+      LEFT JOIN regulations r ON m.regulation_id = r.id
       WHERE pc.is_active = true
     `;
     const params = [];
@@ -54,9 +55,10 @@ class PackagingConfig {
              pc.layer1_qty, pc.layer2_qty, pc.layer3_qty,
              pc.pc_per_bag, pc.bags_per_box, pc.boxes_per_carton,
              pc.is_active, pc.created_at, pc.updated_at,
-             m.model_name, m.model_category
+             m.model_name, m.model_category, r.name as regulation_name
       FROM packaging_configs pc
       LEFT JOIN models m ON pc.model_id = m.id
+      LEFT JOIN regulations r ON m.regulation_id = r.id
       WHERE pc.model_id = $1 AND pc.is_active = true
     `;
     const params = [modelId];
@@ -84,9 +86,10 @@ class PackagingConfig {
               pc.layer1_qty, pc.layer2_qty, pc.layer3_qty,
               pc.pc_per_bag, pc.bags_per_box, pc.boxes_per_carton,
               pc.is_active, pc.created_at, pc.updated_at,
-              m.model_name, m.model_category
+              m.model_name, m.model_category, r.name as regulation_name
        FROM packaging_configs pc
        LEFT JOIN models m ON pc.model_id = m.id
+       LEFT JOIN regulations r ON m.regulation_id = r.id
        WHERE pc.id = $1`,
       [id]
     );
@@ -108,9 +111,10 @@ class PackagingConfig {
               pc.layer1_qty, pc.layer2_qty, pc.layer3_qty,
               pc.pc_per_bag, pc.bags_per_box, pc.boxes_per_carton,
               pc.is_active, pc.created_at, pc.updated_at,
-              m.model_name, m.model_category
+              m.model_name, m.model_category, r.name as regulation_name
        FROM packaging_configs pc
        LEFT JOIN models m ON pc.model_id = m.id
+       LEFT JOIN regulations r ON m.regulation_id = r.id
        WHERE pc.packaging_type = $1 AND pc.is_active = true
        ORDER BY pc.created_at DESC`,
       [packagingType]
@@ -130,9 +134,10 @@ class PackagingConfig {
              pc.layer1_qty, pc.layer2_qty, pc.layer3_qty,
              pc.pc_per_bag, pc.bags_per_box, pc.boxes_per_carton,
              pc.is_active, pc.created_at, pc.updated_at,
-             m.model_name, m.model_category
+             m.model_name, m.model_category, r.name as regulation_name
       FROM packaging_configs pc
       LEFT JOIN models m ON pc.model_id = m.id
+      LEFT JOIN regulations r ON m.regulation_id = r.id
       WHERE pc.is_active = true
     `;
     const params = [];

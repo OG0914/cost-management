@@ -3,10 +3,32 @@
     <!-- 顶部导航栏 -->
     <div class="page-header">
       <div class="header-left">
-        <el-button text @click="goBack" class="back-btn">
-          <el-icon><ArrowLeft /></el-icon>
-          <span>返回</span>
-        </el-button>
+        <button
+          class="bg-white text-center w-[154px] rounded-xl h-[45px] relative text-black text-base font-semibold group"
+          type="button"
+          @click="goBack"
+        >
+          <div
+            class="bg-[#409EFF] rounded-lg h-[38px] w-1/4 flex items-center justify-center absolute left-[3px] top-[3.5px] group-hover:w-[148px] z-10 duration-500"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 1024 1024"
+              height="20px"
+              width="20px"
+            >
+              <path
+                d="M224 480h640a32 32 0 1 1 0 64H224a32 32 0 0 1 0-64z"
+                fill="#000000"
+              ></path>
+              <path
+                d="m237.248 512 265.408 265.344a32 32 0 0 1-45.312 45.312l-288-288a32 32 0 0 1 0-45.312l288-288a32 32 0 1 1 45.312 45.312L237.248 512z"
+                fill="#000000"
+              ></path>
+            </svg>
+          </div>
+          <p class="translate-x-2">返回</p>
+        </button>
       </div>
       <div class="header-center">
         <h2>报价单详情</h2>
@@ -28,7 +50,6 @@
           设为标准成本
         </el-button>
         <el-button type="primary" @click="goToEdit" v-if="canEdit">编辑</el-button>
-        <el-button @click="copyQuotation">复制</el-button>
       </div>
     </div>
 
@@ -321,9 +342,9 @@
         <template #header>
           <div class="section-header">
             <span class="section-title">成本计算</span>
-            <el-button type="primary" size="small" link @click="showFormula = !showFormula">
-              <el-icon><View v-if="!showFormula" /><Hide v-else /></el-icon>
-              {{ showFormula ? '隐藏公式' : '显示公式' }}
+            <el-button type="primary" size="small" link @click="showCostFormula = !showCostFormula">
+              <el-icon><View v-if="!showCostFormula" /><Hide v-else /></el-icon>
+              {{ showCostFormula ? '隐藏公式' : '显示公式' }}
             </el-button>
           </div>
         </template>
@@ -333,7 +354,7 @@
           <div class="cost-card">
             <div class="cost-card-label">基础成本价</div>
             <div class="cost-card-value">{{ formatNumber(quotation.base_cost) }} CNY</div>
-            <div v-if="showFormula" class="formula-text">
+            <div v-if="showCostFormula" class="formula-text">
               = 原料{{ formatNumber(items.material.total) }} + 工序{{ formatNumber(items.process.total) }}×{{ configStore.config.process_coefficient || 1.56 }} + 包材{{ formatNumber(items.packaging.total) }}{{ quotation.include_freight_in_base ? ' + 运费' + formatNumber(quotation.freight_per_unit) : '' }}
             </div>
           </div>
@@ -344,7 +365,7 @@
           <div class="cost-card">
             <div class="cost-card-label">管销价</div>
             <div class="cost-card-value">{{ formatNumber(quotation.overhead_price) }} CNY</div>
-            <div v-if="showFormula" class="formula-text">
+            <div v-if="showCostFormula" class="formula-text">
               = {{ formatNumber(quotation.base_cost) }} ÷ (1 - {{ ((configStore.config.overhead_rate || 0.2) * 100).toFixed(0) }}%)
             </div>
           </div>
@@ -358,7 +379,7 @@
             <span v-if="quotation.sales_type === 'export'">汇率: {{ formatNumber(calculation?.exchangeRate || 7.2) }} | 保险: 0.3%</span>
             <span v-else>含 {{ ((quotation.vat_rate || 0.13) * 100).toFixed(0) }}% 增值税</span>
           </div>
-          <div v-if="showFormula" class="formula-text" style="margin-top: 8px;">
+          <div v-if="showCostFormula" class="formula-text" style="margin-top: 8px;">
             <template v-if="quotation.sales_type === 'domestic'">
               = {{ formatNumber(quotation.overhead_price) }} × (1 + {{ ((quotation.vat_rate || 0.13) * 100).toFixed(0) }}%)
             </template>
@@ -372,13 +393,22 @@
       <!-- 利润区间 -->
       <el-card class="form-section" shadow="hover" v-if="calculation && calculation.profitTiers">
         <template #header>
-          <span class="section-title">利润区间</span>
+          <div class="section-header">
+            <span class="section-title">利润区间</span>
+            <el-button type="primary" size="small" link @click="showProfitFormula = !showProfitFormula">
+              <el-icon><View v-if="!showProfitFormula" /><Hide v-else /></el-icon>
+              {{ showProfitFormula ? '隐藏公式' : '显示公式' }}
+            </el-button>
+          </div>
         </template>
 
         <div class="profit-tier-cards">
           <div v-for="tier in allProfitTiers" :key="tier.isCustom ? 'custom-' + tier.profitRate : 'system-' + tier.profitRate" class="profit-card" :class="{ custom: tier.isCustom }">
             <div class="profit-label">{{ tier.profitPercentage }} 利润</div>
             <div class="profit-price">{{ formatNumber(tier.price) }} {{ calculation.currency }}</div>
+            <div v-if="showProfitFormula" class="formula-text">
+              = {{ formatNumber(quotation.final_price) }} ÷ (1 - {{ (tier.profitRate * 100).toFixed(0) }}%)
+            </div>
             <div v-if="tier.isCustom" class="custom-tag">自定义</div>
           </div>
         </div>
@@ -420,7 +450,8 @@ const items = ref({
 const calculation = ref(null)
 const loading = ref(false)
 const settingStandardCost = ref(false)
-const showFormula = ref(false)
+const showCostFormula = ref(false)
+const showProfitFormula = ref(false)
 const profitDialogVisible = ref(false)
 
 // 用户权限

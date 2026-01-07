@@ -120,13 +120,13 @@ class Model {
    * @returns {Promise<number>} 新型号的 ID
    */
   static async create(data) {
-    const { regulation_id, model_name, model_category } = data;
+    const { regulation_id, model_name, model_category, model_series } = data;
 
     const result = await dbManager.query(
-      `INSERT INTO models (regulation_id, model_name, model_category)
-       VALUES ($1, $2, $3)
+      `INSERT INTO models (regulation_id, model_name, model_category, model_series)
+       VALUES ($1, $2, $3, $4)
        RETURNING id`,
-      [regulation_id, model_name, model_category || null]
+      [regulation_id, model_name, model_category || null, model_series || null]
     );
 
     return result.rows[0].id;
@@ -140,13 +140,13 @@ class Model {
    * @returns {Promise<Object>} 更新结果
    */
   static async update(id, data) {
-    const { regulation_id, model_name, model_category, is_active } = data;
+    const { regulation_id, model_name, model_category, model_series, is_active } = data;
 
     const result = await dbManager.query(
       `UPDATE models
-       SET regulation_id = $1, model_name = $2, model_category = $3, is_active = $4, updated_at = NOW()
-       WHERE id = $5`,
-      [regulation_id, model_name, model_category, is_active, id]
+       SET regulation_id = $1, model_name = $2, model_category = $3, model_series = $4, is_active = $5, updated_at = NOW()
+       WHERE id = $6`,
+      [regulation_id, model_name, model_category, model_series || null, is_active, id]
     );
 
     return { rowCount: result.rowCount };
@@ -248,6 +248,38 @@ class Model {
       ORDER BY model_category
     `);
     return result.rows.map(row => row.model_category);
+  }
+
+  /**
+   * 获取所有产品系列（去重）
+   * @returns {Promise<Array<string>>} 产品系列列表
+   */
+  static async getAllSeries() {
+    const result = await dbManager.query(`
+      SELECT DISTINCT model_series 
+      FROM models 
+      WHERE model_series IS NOT NULL AND model_series != '' AND is_active = true
+      ORDER BY model_series
+    `);
+    return result.rows.map(row => row.model_series);
+  }
+
+  /**
+   * 根据产品系列获取型号
+   * @param {string} modelSeries - 产品系列
+   * @returns {Promise<Array>} 型号列表
+   */
+  static async findBySeries(modelSeries) {
+    const result = await dbManager.query(
+      `SELECT m.*, r.name as regulation_name, COALESCE(bom.bom_count, 0)::int as bom_count
+       FROM models m
+       LEFT JOIN regulations r ON m.regulation_id = r.id
+       LEFT JOIN (SELECT model_id, COUNT(*) as bom_count FROM model_bom_materials WHERE is_active = true GROUP BY model_id) bom ON m.id = bom.model_id
+       WHERE m.model_series = $1 AND m.is_active = true
+       ORDER BY m.model_name`,
+      [modelSeries]
+    );
+    return result.rows;
   }
 }
 

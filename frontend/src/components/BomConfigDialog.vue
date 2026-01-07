@@ -1,5 +1,14 @@
 <template>
-  <el-dialog v-model="visible" :title="dialogTitle" width="850px" append-to-body :close-on-click-modal="false" @close="handleClose">
+  <el-dialog 
+    v-model="visible" 
+    :title="dialogTitle" 
+    width="850px" 
+    top="5vh" 
+    class="minimal-dialog"
+    append-to-body 
+    :close-on-click-modal="false" 
+    @close="handleClose"
+  >
     <div class="bom-config">
       <!-- 操作区域 -->
       <div class="action-section">
@@ -53,7 +62,14 @@
   </el-dialog>
 
   <!-- 一键复制弹窗 -->
-  <el-dialog v-model="showCopyDialog" title="从其他型号复制BOM" width="500px" append-to-body :close-on-click-modal="false">
+  <el-dialog 
+    v-model="showCopyDialog" 
+    title="从其他型号复制BOM" 
+    width="500px" 
+    class="minimal-dialog-auto"
+    append-to-body 
+    :close-on-click-modal="false"
+  >
     <el-form label-width="100px">
       <el-form-item label="源型号" required>
         <el-select v-model="copySourceId" filterable placeholder="选择要复制的源型号" style="width: 100%" @change="handleSourceChange" :loading="modelsLoading">
