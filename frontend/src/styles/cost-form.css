@@ -1,53 +1,57 @@
-/* 成本表单统一样式系统 - 企业级稳重风格 */
+/* 成本表单统一样式系统 - 简洁高效风格 */
 
 /* ========== 页面容器 ========== */
 .cost-page {
-  @apply p-0;
+  @apply max-w-6xl mx-auto;
 }
 
 /* ========== 页面头部 ========== */
 .cost-page-header {
-  @apply flex justify-between items-center px-5 py-4 bg-white rounded-xl border border-slate-200 mb-5;
-  transition: box-shadow 0.2s ease;
+  @apply flex justify-between items-center px-4 py-3 bg-white border-b border-slate-200 mb-4;
 }
-.cost-page-header:hover {
-  box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.05);
+
+.cost-header-left {
+  @apply flex items-center gap-3;
+}
+
+.cost-header-right {
+  @apply flex items-center gap-2;
 }
 
 .cost-page-title {
-  @apply text-lg font-semibold text-slate-800 m-0;
+  @apply text-base font-semibold text-slate-800 m-0;
 }
 
 .cost-back-btn {
-  @apply flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg;
-  transition: all 0.2s ease;
+  @apply px-3 py-1.5 text-sm text-slate-600 bg-slate-100 rounded-md;
+  transition: all 0.15s ease;
 }
 .cost-back-btn:hover {
   @apply bg-slate-200 text-slate-800;
 }
-.cost-back-btn i {
-  @apply text-base;
+
+.meta-tag {
+  @apply text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded;
 }
 
 /* ========== 表单区块卡片 ========== */
 .cost-section {
-  @apply bg-white rounded-xl border border-slate-200 mb-5 overflow-hidden;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
-}
-.cost-section:hover {
-  @apply border-slate-300;
-  box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.05);
+  @apply bg-white rounded-lg border border-slate-200 mb-4 overflow-hidden;
 }
 
 .cost-section-header {
-  @apply flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/50;
+  @apply flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/80;
 }
 
 .cost-section-title {
-  @apply flex items-center text-base font-semibold text-slate-800;
+  @apply text-sm font-semibold text-slate-700;
 }
-.cost-section-title i {
-  @apply w-7 h-7 rounded-lg flex items-center justify-center mr-2.5 text-white text-sm;
+
+.section-stats {
+  @apply flex items-center gap-2;
+}
+.stat-item {
+  @apply text-xs text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200;
 }
 
 .cost-section-actions {
@@ -55,7 +59,7 @@
 }
 
 .cost-section-body {
-  @apply p-5;
+  @apply p-4;
 }
 
 /* ========== 表单行 ========== */
@@ -89,33 +93,34 @@
 
 /* ========== 销售类型卡片 ========== */
 .sales-type-group {
-  @apply grid grid-cols-2 gap-4 mb-5;
+  @apply grid grid-cols-2 gap-3;
 }
 
 .sales-type-card {
-  @apply relative p-5 rounded-xl border-2 border-slate-200 cursor-pointer text-center;
-  transition: all 0.2s ease;
+  @apply relative p-3 rounded-lg border-2 border-slate-200 cursor-pointer;
+  transition: all 0.15s ease;
 }
 .sales-type-card:hover {
-  @apply border-blue-300 bg-blue-50/30;
+  @apply border-blue-300;
 }
 .sales-type-card.active {
   @apply border-blue-500 bg-blue-50;
 }
-.sales-type-card.active::after {
-  content: '';
-  @apply absolute top-3 right-3 w-5 h-5 bg-blue-500 rounded-full;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
-  background-size: 14px;
-  background-position: center;
-  background-repeat: no-repeat;
-}
 
+.sales-type-header {
+  @apply flex items-center justify-between mb-1;
+}
 .sales-type-title {
-  @apply text-lg font-bold text-slate-800 mb-2;
+  @apply text-sm font-semibold text-slate-800;
+}
+.sales-type-badge {
+  @apply text-xs font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-600;
+}
+.sales-type-card.active .sales-type-badge {
+  @apply bg-blue-100 text-blue-600;
 }
 .sales-type-desc {
-  @apply text-sm text-slate-500 leading-relaxed;
+  @apply text-xs text-slate-500;
 }
 
 /* ========== 运费面板 ========== */
@@ -175,36 +180,31 @@
 
 /* ========== 成本汇总卡片 ========== */
 .cost-summary-grid {
-  @apply grid grid-cols-3 gap-4 mb-5;
+  @apply grid grid-cols-3 gap-3 mb-4;
 }
 
 .cost-summary-card {
-  @apply p-4 rounded-xl bg-slate-50 text-center relative;
-  transition: all 0.2s ease;
-}
-.cost-summary-card:hover {
-  @apply bg-slate-100;
+  @apply p-3 rounded-lg bg-slate-50 text-center relative;
 }
 .cost-summary-label {
-  @apply text-xs text-slate-500 mb-2;
+  @apply text-xs text-slate-500 mb-1;
 }
 .cost-summary-value {
-  @apply text-xl font-bold text-slate-800;
+  @apply text-lg font-semibold text-slate-800;
 }
 .cost-summary-action {
-  @apply absolute bottom-2 right-2;
+  @apply absolute bottom-1 right-1;
 }
 
 /* ========== 最终成本框 ========== */
 .cost-final-box {
-  @apply p-6 rounded-xl text-center text-white;
-  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  @apply p-4 rounded-lg text-center bg-blue-600 text-white;
 }
 .cost-final-label {
-  @apply text-sm opacity-90 mb-2;
+  @apply text-xs opacity-90 mb-1;
 }
 .cost-final-value {
-  @apply text-3xl font-bold mb-2;
+  @apply text-2xl font-bold mb-1;
 }
 .cost-final-info {
   @apply text-xs opacity-80;
@@ -212,29 +212,24 @@
 
 /* ========== 利润区间卡片 ========== */
 .profit-tier-grid {
-  @apply flex gap-3 flex-wrap;
+  @apply flex gap-2 flex-wrap;
 }
 
 .profit-tier-card {
-  @apply flex-1 min-w-[120px] p-4 rounded-xl border border-slate-200 text-center relative;
-  transition: all 0.2s ease;
-}
-.profit-tier-card:hover {
-  @apply border-slate-300;
-  box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.06);
+  @apply flex-1 min-w-[100px] p-3 rounded-lg border border-slate-200 text-center relative;
 }
 .profit-tier-card.custom {
   @apply border-amber-300 bg-amber-50;
 }
 
 .profit-tier-label {
-  @apply text-xs text-slate-500 mb-2;
+  @apply text-xs text-slate-500 mb-1;
 }
 .profit-tier-value {
-  @apply text-lg font-bold text-slate-800;
+  @apply text-base font-semibold text-slate-800;
 }
 .profit-tier-remove {
-  @apply absolute top-1 right-1;
+  @apply absolute top-0.5 right-0.5;
 }
 
 /* ========== 操作栏 ========== */
@@ -247,25 +242,16 @@
 
 /* ========== 智能提示 ========== */
 .cost-tip {
-  @apply flex items-start gap-3 p-4 rounded-xl border my-4;
+  @apply text-xs p-3 rounded-lg my-3;
 }
 .cost-tip.info {
-  @apply bg-blue-50 border-blue-200 text-blue-700;
+  @apply bg-blue-50 text-blue-700;
 }
 .cost-tip.warning {
-  @apply bg-amber-50 border-amber-200 text-amber-700;
+  @apply bg-amber-50 text-amber-700;
 }
 .cost-tip.success {
-  @apply bg-emerald-50 border-emerald-200 text-emerald-700;
-}
-.cost-tip i {
-  @apply text-lg mt-0.5 flex-shrink-0;
-}
-.cost-tip-content {
-  @apply flex-1 text-sm leading-relaxed;
-}
-.cost-tip-title {
-  @apply font-semibold mb-1;
+  @apply bg-emerald-50 text-emerald-700;
 }
 
 /* ========== 自定义费用 ========== */
@@ -340,9 +326,7 @@
 
 /* ========== 粘性底部栏 ========== */
 .cost-sticky-footer {
-  @apply fixed bottom-0 left-0 right-0 flex items-center justify-between px-6 py-4 bg-white border-t border-slate-200 z-50;
-  box-shadow: 0 -4px 20px -4px rgba(0, 0, 0, 0.08);
-  margin-left: var(--sidebar-width, 200px);
+  @apply sticky bottom-0 flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-xl z-40 mt-4;
 }
 
 .sticky-footer-left {
@@ -352,33 +336,25 @@
 .sticky-price-item {
   @apply flex flex-col;
 }
-.sticky-price-item.secondary {
-  @apply opacity-70;
-}
 .sticky-price-item.secondary .sticky-price-value {
-  @apply text-base text-slate-700;
+  @apply text-sm text-slate-600;
 }
 
 .sticky-price-label {
   @apply text-xs text-slate-500;
 }
 .sticky-price-value {
-  @apply text-xl font-bold text-blue-600;
+  @apply text-lg font-semibold text-blue-600;
 }
 
 .sticky-price-divider {
-  @apply w-px h-10 bg-slate-200 mx-2;
+  @apply w-px h-8 bg-slate-200;
 }
 
 .sticky-placeholder {
-  @apply text-sm text-slate-400 italic;
+  @apply text-sm text-slate-400;
 }
 
 .sticky-footer-right {
-  @apply flex items-center gap-3;
-}
-
-/* 为页面底部留出粘性栏空间 */
-.cost-page {
-  @apply pb-24;
+  @apply flex items-center gap-2;
 }

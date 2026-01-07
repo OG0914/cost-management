@@ -2,14 +2,15 @@
   <div class="cost-page">
     <!-- 顶部导航栏 -->
     <div class="cost-page-header">
-      <button class="cost-back-btn" type="button" @click="goBack">
-        <i class="ri-arrow-left-line"></i>
-        <span>返回</span>
-      </button>
-      <h2 class="cost-page-title">{{ pageTitle }}</h2>
-      <el-tag :type="isEditMode ? 'warning' : 'info'" size="large">
-        状态: {{ isEditMode ? '编辑中' : '创建中' }}
-      </el-tag>
+      <div class="cost-header-left">
+        <button class="cost-back-btn" type="button" @click="goBack">返回</button>
+        <h2 class="cost-page-title">{{ pageTitle }}</h2>
+        <el-tag v-if="isEditMode" type="warning" size="small">编辑中</el-tag>
+      </div>
+      <div class="cost-header-right" v-if="form.packaging_config_id || form.customer_name">
+        <span v-if="form.packaging_config_id" class="meta-tag">{{ selectedConfigInfo }}</span>
+        <span v-if="form.customer_name" class="meta-tag">{{ form.customer_name }}</span>
+      </div>
     </div>
 
     <el-form :model="form" :rules="rules" ref="formRef" label-width="100px" class="cost-form">
@@ -132,22 +133,26 @@
         <div class="cost-section-body">
 
         <div class="sales-type-group">
-          <div 
-            class="sales-type-card" 
+          <div
+            class="sales-type-card"
             :class="{ active: form.sales_type === 'domestic' }"
             @click="form.sales_type = 'domestic'; onSalesTypeChange()"
           >
-            <div class="sales-type-title">内销</div>
-            <div class="sales-type-desc">币种: 人民币 (CNY)</div>
+            <div class="sales-type-header">
+              <span class="sales-type-title">内销</span>
+              <span class="sales-type-badge">CNY</span>
+            </div>
             <div class="sales-type-desc">含 {{ ((form.vat_rate || 0.13) * 100).toFixed(0) }}% 增值税</div>
           </div>
-          <div 
-            class="sales-type-card" 
+          <div
+            class="sales-type-card"
             :class="{ active: form.sales_type === 'export' }"
             @click="form.sales_type = 'export'; onSalesTypeChange()"
           >
-            <div class="sales-type-title">外销</div>
-            <div class="sales-type-desc">币种: 美元 (USD)</div>
+            <div class="sales-type-header">
+              <span class="sales-type-title">外销</span>
+              <span class="sales-type-badge">USD</span>
+            </div>
             <div class="sales-type-desc">FOB 条款 / 0% 税率</div>
           </div>
         </div>
@@ -457,11 +462,7 @@
             <!-- 原料明细 Tab -->
             <el-tab-pane name="materials">
               <template #label>
-                <span class="tab-label">
-                  <i class="ri-flask-line"></i>
-                  原料 
-                  <el-badge :value="form.materials.length" :max="99" class="tab-badge" />
-                </span>
+                <span class="tab-label">原料 <el-badge :value="form.materials.length" :max="99" class="tab-badge" /></span>
               </template>
               <div class="tab-pane-content">
                 <div class="tab-pane-actions">
@@ -470,10 +471,10 @@
                   <el-button type="primary" size="small" @click="addMaterialRow">添加原料</el-button>
                 </div>
                 <el-table :data="form.materials" border size="small">
-                  <el-table-column width="50" align="center">
+                  <el-table-column width="60" align="center">
                     <template #header>
                       <el-tooltip content="勾选后，该原料将在管销价计算后再加入成本" placement="top">
-                        <span class="cursor-help text-xs">管销后</span>
+                        <span class="cursor-help text-xs whitespace-nowrap">管销后</span>
                       </el-tooltip>
                     </template>
                     <template #default="{ row }">
@@ -520,11 +521,7 @@
             <!-- 工序明细 Tab -->
             <el-tab-pane name="processes">
               <template #label>
-                <span class="tab-label">
-                  <i class="ri-tools-line"></i>
-                  工序
-                  <el-badge :value="form.processes.length" :max="99" class="tab-badge" />
-                </span>
+                <span class="tab-label">工序 <el-badge :value="form.processes.length" :max="99" class="tab-badge" /></span>
               </template>
               <div class="tab-pane-content">
                 <div class="tab-pane-actions">
@@ -567,11 +564,7 @@
             <!-- 包材明细 Tab -->
             <el-tab-pane name="packaging">
               <template #label>
-                <span class="tab-label">
-                  <i class="ri-box-3-line"></i>
-                  包材
-                  <el-badge :value="form.packaging.length" :max="99" class="tab-badge" />
-                </span>
+                <span class="tab-label">包材 <el-badge :value="form.packaging.length" :max="99" class="tab-badge" /></span>
               </template>
               <div class="tab-pane-content">
                 <div class="tab-pane-actions">
@@ -620,7 +613,7 @@
       </div>
 
       <!-- 成本计算 -->
-      <div class="cost-section" v-if="calculation">
+      <div class="cost-section cost-section-highlight" v-if="calculation">
         <div class="cost-section-header">
           <h3 class="cost-section-title">成本计算</h3>
         </div>
@@ -639,9 +632,7 @@
           <div class="cost-summary-card">
             <div class="cost-summary-label">管销价</div>
             <div class="cost-summary-value">{{ formatNumber(calculation.overheadPrice) }} CNY</div>
-            <el-button size="small" type="primary" link @click="showAddFeeDialog" class="cost-summary-action">
-              <i class="ri-add-line mr-1"></i>添加费用项
-            </el-button>
+            <el-button size="small" type="primary" link @click="showAddFeeDialog" class="cost-summary-action">添加费用项</el-button>
           </div>
         </div>
 
@@ -651,17 +642,14 @@
             <span class="custom-fee-name">{{ fee.name }} ({{ (fee.rate * 100).toFixed(0) }}%)</span>
             <div class="flex items-center gap-3">
               <span class="custom-fee-value">{{ formatNumber(fee.calculatedValue) }}</span>
-              <el-button size="small" type="danger" link @click="removeCustomFee(index)"><i class="ri-delete-bin-line"></i></el-button>
+              <el-button size="small" type="danger" link @click="removeCustomFee(index)">删除</el-button>
             </div>
           </div>
         </div>
 
         <!-- 管销后算原料 -->
         <div v-if="calculation.afterOverheadMaterialTotal > 0" class="cost-tip warning">
-          <i class="ri-information-line"></i>
-          <div class="cost-tip-content">
-            管销后算原料: <strong>{{ formatNumber(calculation.afterOverheadMaterialTotal) }}</strong>
-          </div>
+          管销后算原料: <strong>{{ formatNumber(calculation.afterOverheadMaterialTotal) }}</strong>
         </div>
 
         <!-- 最终成本价 -->
@@ -683,7 +671,7 @@
       <div class="cost-section" v-if="calculation && calculation.profitTiers">
         <div class="cost-section-header">
           <h3 class="cost-section-title">利润区间</h3>
-          <el-button type="primary" size="small" @click="addCustomProfitTier"><i class="ri-add-line mr-1"></i>添加档位</el-button>
+          <el-button type="primary" size="small" @click="addCustomProfitTier">添加档位</el-button>
         </div>
         <div class="cost-section-body">
 
@@ -697,7 +685,7 @@
               </div>
             </div>
             <div class="profit-tier-value">{{ formatNumber(tier.price) }} {{ calculation.currency }}</div>
-            <el-button v-if="tier.isCustom" type="danger" size="small" link @click="removeCustomProfitTier(tier.customIndex)" class="profit-tier-remove"><i class="ri-close-line"></i></el-button>
+            <el-button v-if="tier.isCustom" type="danger" size="small" link @click="removeCustomProfitTier(tier.customIndex)" class="profit-tier-remove">删除</el-button>
           </div>
         </div>
         </div>
@@ -709,7 +697,7 @@
     <div class="cost-sticky-footer">
       <div class="sticky-footer-left">
         <template v-if="calculation">
-          <div class="sticky-price-item">
+          <div class="sticky-price-item primary">
             <span class="sticky-price-label">最终成本价</span>
             <span class="sticky-price-value">
               <template v-if="form.sales_type === 'domestic'">{{ formatNumber(calculation.domesticPrice) }} CNY</template>
@@ -733,9 +721,9 @@
         <span v-else class="sticky-placeholder">请完成表单填写以计算成本</span>
       </div>
       <div class="sticky-footer-right">
-        <el-button @click="goBack">取消</el-button>
-        <el-button type="info" @click="saveDraft" :loading="saving">保存草稿</el-button>
-        <el-button type="primary" @click="submitQuotation" :loading="submitting">提交审核</el-button>
+        <el-button @click="goBack" size="large">取消</el-button>
+        <el-button type="info" @click="saveDraft" :loading="saving" size="large">保存草稿</el-button>
+        <el-button type="primary" @click="submitQuotation" :loading="submitting" size="large">提交审核</el-button>
       </div>
     </div>
 
@@ -866,6 +854,16 @@ const packagingConfigs = ref([])
 const calculation = ref(null)
 const saving = ref(false)
 const submitting = ref(false)
+
+// 选中的配置信息（用于头部显示）
+const selectedConfigInfo = computed(() => {
+  if (!form.packaging_config_id || !packagingConfigs.value.length) return ''
+  const config = packagingConfigs.value.find(c => c.id === form.packaging_config_id)
+  if (config) {
+    return `${config.model_name} - ${config.config_name}`
+  }
+  return ''
+})
 
 // 自定义利润档位
 const customProfitTiers = ref([])
