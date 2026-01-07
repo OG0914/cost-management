@@ -1,122 +1,168 @@
 <template>
-  <div class="system-config-container">
-    <!-- 页面表头 -->
-    <PageHeader title="参数配置管理">
-      <template #actions>
-        <el-button type="primary" @click="handleSave" :loading="saving" v-if="authStore.isAdmin">
-          <el-icon><Check /></el-icon>
-          保存配置
-        </el-button>
-      </template>
-    </PageHeader>
-
-    <div class="card">
-
-      <div class="card-body">
-        <el-form :model="configForm" label-width="230px" :disabled="!authStore.isAdmin">
-          <el-form-item label="管销率">
-            <el-input v-model.number="configForm.overhead_rate" style="width: 200px" />
-          </el-form-item>
-          <el-form-item label="增值税率（默认）">
-            <el-input v-model.number="configForm.vat_rate" style="width: 200px" />
-          </el-form-item>
-          <el-form-item label="增值税率选项">
-            <div class="vat-rate-options-container">
-              <div v-for="(rate, index) in configForm.vat_rate_options" :key="index" class="vat-rate-option-item">
-                <el-input-number 
-                  v-model="configForm.vat_rate_options[index]" 
-                  :min="0" 
-                  :max="1" 
-                  :precision="2" 
-                  :step="0.01"
-                  :controls="false"
-                  style="width: 150px" 
-                />
-                <span class="rate-percentage">{{ (rate * 100).toFixed(0) }}%</span>
-                <el-button type="danger" size="small" :icon="Delete" circle @click="removeVatRateOption(index)" v-if="configForm.vat_rate_options.length > 1 && authStore.isAdmin" />
-              </div>
-              <el-button type="primary" size="small" @click="addVatRateOption" v-if="authStore.isAdmin">
-                <el-icon><Plus /></el-icon>添加税率选项
-              </el-button>
-            </div>
-            <div class="config-description"> </div>
-          </el-form-item>
-          <el-form-item label="保险率">
-            <el-input v-model.number="configForm.insurance_rate" style="width: 200px" />
-          </el-form-item>
-          <el-form-item label="汇率 （CNY/USD）">
-            <el-input v-model.number="configForm.exchange_rate" style="width: 200px" />
-          </el-form-item>
-          <el-form-item label="工价系数">
-            <el-input v-model.number="configForm.process_coefficient" style="width: 200px" />
-          </el-form-item>
-          <el-form-item label="FOB深圳运费汇率（CNY/USD）">
-            <el-input v-model.number="configForm.fob_shenzhen_exchange_rate" style="width: 200px" />
-          </el-form-item>
-
-          <el-divider content-position="left">整柜FCL运费配置</el-divider>
-          <el-form-item label="20尺整柜运费（美金）">
-            <el-input v-model.number="configForm.fcl_20_freight_usd" style="width: 200px" />
-          </el-form-item>
-          <el-form-item label="40尺整柜运费（美金）">
-            <el-input v-model.number="configForm.fcl_40_freight_usd" style="width: 200px" />
-          </el-form-item>
-
-          <el-divider content-position="left">散货LCL运费配置</el-divider>
-          <el-form-item label="散货基础运费 1-3 CBM">
-            <el-input v-model.number="configForm.lcl_base_freight_1_3" style="width: 200px" />
-          </el-form-item>
-          <el-form-item label="散货基础运费 4-10 CBM">
-            <el-input v-model.number="configForm.lcl_base_freight_4_10" style="width: 200px" />
-          </el-form-item>
-          <el-form-item label="散货基础运费 11-15 CBM">
-            <el-input v-model.number="configForm.lcl_base_freight_11_15" style="width: 200px" />
-          </el-form-item>
-          <el-form-item label="散货操作费 Handling charge">
-            <el-input v-model.number="configForm.lcl_handling_charge" style="width: 200px" />
-          </el-form-item>
-          <el-form-item label="散货拼箱费（CFS） 每CBM">
-            <el-input v-model.number="configForm.lcl_cfs_per_cbm" style="width: 200px" />
-          </el-form-item>
-          <el-form-item label="散货文件费">
-            <el-input v-model.number="configForm.lcl_document_fee" style="width: 200px" />
-          </el-form-item>
-
-          <el-divider content-position="left">利润区间配置</el-divider>
-          <el-form-item label="利润区间">
-            <div class="profit-tiers-container">
-              <div v-for="(tier, index) in configForm.profit_tiers" :key="index" class="profit-tier-item">
-                <el-input v-model.number="configForm.profit_tiers[index]" style="width: 150px" />
-                <span class="tier-percentage">{{ (tier * 100).toFixed(0) }}%</span>
-                <el-button type="danger" size="small" :icon="Delete" circle @click="removeProfitTier(index)" v-if="configForm.profit_tiers.length > 1 && authStore.isAdmin" />
-              </div>
-              <el-button type="primary" size="small" @click="addProfitTier" v-if="authStore.isAdmin">
-                <el-icon><Plus /></el-icon>添加利润档位
-              </el-button>
-            </div>
-            <div class="config-description"> </div>
-          </el-form-item>
-          <el-form-item label="最后更新时间">
-            <span class="update-time">{{ lastUpdateTime || '未更新' }}</span>
-          </el-form-item>
-        </el-form>
+  <div class="config-page">
+    <!-- 页面头部 -->
+    <div class="config-header">
+      <div class="config-header-left">
+        <h1 class="config-title">系统配置</h1>
+        <span class="config-update-time" v-if="lastUpdateTime">更新于 {{ lastUpdateTime }}</span>
       </div>
+      <el-button type="primary" @click="handleSave" :loading="saving" v-if="authStore.isAdmin">保存配置</el-button>
     </div>
 
-    <div class="card" style="margin-top: 20px">
-      <div class="card-header"><span>配置说明</span></div>
-      <div class="card-body">
-        <el-alert title="重要提示" type="warning" :closable="false" show-icon>
-          <ul class="config-notes">
-            <li>配置参数的修改将立即生效，影响新创建的报价单</li>
-            <li>已创建的历史报价单将保留创建时的配置参数</li>
-            <li>管销率、增值税率、保险率的取值范围为 0 到 1 之间的小数</li>
-            <li>汇率和工价系数必须为正数，建议定期更新以反映实际成本变化</li>
-            <li>工价系数用于计算工序总价：工序总价 = 工序小计 × 工价系数</li>
-            <li>利润区间可以自定义添加或删除，至少保留一个档位</li>
-          </ul>
-        </el-alert>
-      </div>
+    <el-form :model="configForm" :disabled="!authStore.isAdmin" class="config-form">
+      <!-- 基础费率 -->
+      <section class="config-section">
+        <h2 class="config-section-title">基础费率</h2>
+        <div class="config-grid config-grid-3">
+          <div class="config-item">
+            <label class="config-label">管销率</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.overhead_rate" :min="0" :max="1" :precision="2" :step="0.01" :controls="false" class="config-input" />
+              <span class="config-suffix">{{ (configForm.overhead_rate * 100).toFixed(0) }}%</span>
+            </div>
+          </div>
+          <div class="config-item">
+            <label class="config-label">增值税率（默认）</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.vat_rate" :min="0" :max="1" :precision="2" :step="0.01" :controls="false" class="config-input" />
+              <span class="config-suffix">{{ (configForm.vat_rate * 100).toFixed(0) }}%</span>
+            </div>
+          </div>
+          <div class="config-item">
+            <label class="config-label">保险率</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.insurance_rate" :min="0" :max="1" :precision="3" :step="0.001" :controls="false" class="config-input" />
+              <span class="config-suffix">{{ (configForm.insurance_rate * 100).toFixed(1) }}%</span>
+            </div>
+          </div>
+        </div>
+        <!-- 增值税率选项 -->
+        <div class="config-item config-item-full">
+          <label class="config-label">增值税率选项</label>
+          <div class="config-tags">
+            <div v-for="(rate, index) in configForm.vat_rate_options" :key="index" class="config-tag">
+              <el-input-number v-model="configForm.vat_rate_options[index]" :min="0" :max="1" :precision="2" :step="0.01" :controls="false" class="config-tag-input" />
+              <span class="config-tag-suffix">{{ (rate * 100).toFixed(0) }}%</span>
+              <button type="button" class="config-tag-remove" @click="removeVatRateOption(index)" v-if="configForm.vat_rate_options.length > 1 && authStore.isAdmin">&times;</button>
+            </div>
+            <button type="button" class="config-tag-add" @click="addVatRateOption" v-if="authStore.isAdmin">+ 添加</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 汇率系数 -->
+      <section class="config-section">
+        <h2 class="config-section-title">汇率与系数</h2>
+        <div class="config-grid config-grid-3">
+          <div class="config-item">
+            <label class="config-label">汇率 CNY/USD</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.exchange_rate" :min="0" :precision="2" :controls="false" class="config-input" />
+            </div>
+          </div>
+          <div class="config-item">
+            <label class="config-label">工价系数</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.process_coefficient" :min="0" :precision="2" :controls="false" class="config-input" />
+              <span class="config-hint">工序总价 = 小计 × 系数</span>
+            </div>
+          </div>
+          <div class="config-item">
+            <label class="config-label">FOB深圳汇率</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.fob_shenzhen_exchange_rate" :min="0" :precision="2" :controls="false" class="config-input" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 整柜运费 FCL -->
+      <section class="config-section">
+        <h2 class="config-section-title">整柜运费 FCL</h2>
+        <div class="config-grid config-grid-2">
+          <div class="config-item">
+            <label class="config-label">20尺整柜</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.fcl_20_freight_usd" :min="0" :precision="0" :controls="false" class="config-input" />
+              <span class="config-suffix">USD</span>
+            </div>
+          </div>
+          <div class="config-item">
+            <label class="config-label">40尺整柜</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.fcl_40_freight_usd" :min="0" :precision="0" :controls="false" class="config-input" />
+              <span class="config-suffix">USD</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 散货运费 LCL -->
+      <section class="config-section">
+        <h2 class="config-section-title">散货运费 LCL</h2>
+        <div class="config-grid config-grid-3">
+          <div class="config-item">
+            <label class="config-label">基础运费 1-3 CBM</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.lcl_base_freight_1_3" :min="0" :precision="0" :controls="false" class="config-input" />
+              <span class="config-suffix">USD</span>
+            </div>
+          </div>
+          <div class="config-item">
+            <label class="config-label">基础运费 4-10 CBM</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.lcl_base_freight_4_10" :min="0" :precision="0" :controls="false" class="config-input" />
+              <span class="config-suffix">USD</span>
+            </div>
+          </div>
+          <div class="config-item">
+            <label class="config-label">基础运费 11-15 CBM</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.lcl_base_freight_11_15" :min="0" :precision="0" :controls="false" class="config-input" />
+              <span class="config-suffix">USD</span>
+            </div>
+          </div>
+          <div class="config-item">
+            <label class="config-label">操作费 Handling</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.lcl_handling_charge" :min="0" :precision="0" :controls="false" class="config-input" />
+              <span class="config-suffix">USD</span>
+            </div>
+          </div>
+          <div class="config-item">
+            <label class="config-label">拼箱费 CFS/CBM</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.lcl_cfs_per_cbm" :min="0" :precision="0" :controls="false" class="config-input" />
+              <span class="config-suffix">USD</span>
+            </div>
+          </div>
+          <div class="config-item">
+            <label class="config-label">文件费</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.lcl_document_fee" :min="0" :precision="0" :controls="false" class="config-input" />
+              <span class="config-suffix">USD</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 利润区间 -->
+      <section class="config-section">
+        <h2 class="config-section-title">利润档位</h2>
+        <div class="config-tags">
+          <div v-for="(tier, index) in configForm.profit_tiers" :key="index" class="config-tag">
+            <el-input-number v-model="configForm.profit_tiers[index]" :min="0" :max="1" :precision="2" :step="0.05" :controls="false" class="config-tag-input" />
+            <span class="config-tag-suffix">{{ (tier * 100).toFixed(0) }}%</span>
+            <button type="button" class="config-tag-remove" @click="removeProfitTier(index)" v-if="configForm.profit_tiers.length > 1 && authStore.isAdmin">&times;</button>
+          </div>
+          <button type="button" class="config-tag-add" @click="addProfitTier" v-if="authStore.isAdmin">+ 添加档位</button>
+        </div>
+      </section>
+    </el-form>
+
+    <!-- 底部提示 -->
+    <div class="config-footer-note">
+      配置修改后立即生效，仅影响新报价单，历史报价单保留原配置
     </div>
   </div>
 </template>
@@ -124,13 +170,12 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
-import { Check, Plus, Delete, ArrowLeft } from '@element-plus/icons-vue';
+import { Plus, Delete } from '@element-plus/icons-vue';
 import { useAuthStore } from '../../store/auth';
 import { useConfigStore } from '../../store/config';
 import request from '../../utils/request';
 import logger from '../../utils/logger';
 import { formatDateTime } from '@/utils/format';
-import PageHeader from '../../components/common/PageHeader.vue';
 
 const authStore = useAuthStore();
 const configStore = useConfigStore();
@@ -208,18 +253,54 @@ onMounted(() => { loadConfig(); });
 </script>
 
 <style scoped>
-.system-config-container { /* padding 由 MainLayout 提供 */ }
-.card { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
-.card-header { padding: 16px 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 16px; }
-.card-body { padding: 24px 20px; }
-.config-description { margin-top: 8px; color: #9ca3af; font-size: 13px; line-height: 1.5; }
-.profit-tiers-container { display: flex; flex-direction: column; gap: 12px; }
-.profit-tier-item { display: flex; align-items: center; gap: 12px; }
-.tier-percentage { min-width: 50px; color: #6b7280; font-weight: 500; }
-.vat-rate-options-container { display: flex; flex-direction: column; gap: 12px; }
-.vat-rate-option-item { display: flex; align-items: center; gap: 12px; }
-.rate-percentage { min-width: 50px; color: #6b7280; font-weight: 500; }
-.update-time { color: #6b7280; font-size: 14px; }
-.config-notes { margin: 0; padding-left: 20px; line-height: 1.8; }
-.config-notes li { margin-bottom: 8px; }
+.config-page { max-width: 900px; }
+
+/* 页面头部 */
+.config-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.config-header-left { display: flex; align-items: baseline; gap: 12px; }
+.config-title { font-size: 20px; font-weight: 600; color: #1e293b; margin: 0; }
+.config-update-time { font-size: 12px; color: #94a3b8; }
+
+/* 表单 */
+.config-form { display: flex; flex-direction: column; gap: 20px; }
+
+/* 分组区块 */
+.config-section { background: #fff; border-radius: 8px; padding: 20px; border: 1px solid #e2e8f0; }
+.config-section-title { font-size: 14px; font-weight: 600; color: #475569; margin: 0 0 16px 0; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; }
+
+/* 网格布局 */
+.config-grid { display: grid; gap: 16px; }
+.config-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.config-grid-3 { grid-template-columns: repeat(3, 1fr); }
+
+/* 配置项 */
+.config-item { display: flex; flex-direction: column; gap: 6px; }
+.config-item-full { margin-top: 16px; padding-top: 16px; border-top: 1px solid #f1f5f9; }
+.config-label { font-size: 13px; color: #64748b; font-weight: 500; }
+
+/* 输入框组 */
+.config-input-group { display: flex; align-items: center; gap: 8px; }
+.config-input { width: 100%; }
+.config-input :deep(.el-input__wrapper) { padding: 4px 11px; }
+.config-suffix { font-size: 13px; color: #94a3b8; min-width: 40px; }
+.config-hint { font-size: 11px; color: #94a3b8; white-space: nowrap; }
+
+/* 标签式选择器（增值税率选项、利润档位） */
+.config-tags { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.config-tag { display: flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 10px; }
+.config-tag-input { width: 70px; }
+.config-tag-input :deep(.el-input__wrapper) { padding: 2px 8px; background: #fff; }
+.config-tag-suffix { font-size: 12px; color: #64748b; font-weight: 500; }
+.config-tag-remove { width: 18px; height: 18px; border: none; background: #fee2e2; color: #dc2626; border-radius: 50%; cursor: pointer; font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+.config-tag-remove:hover { background: #fecaca; }
+.config-tag-add { border: 1px dashed #cbd5e1; background: transparent; color: #64748b; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+.config-tag-add:hover { border-color: #3b82f6; color: #3b82f6; }
+
+/* 底部提示 */
+.config-footer-note { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 16px; }
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .config-grid-2, .config-grid-3 { grid-template-columns: 1fr; }
+}
 </style>
