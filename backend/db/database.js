@@ -25,7 +25,7 @@ class DatabaseManager {
     try {
       // 从环境变量获取配置
       const connectionString = process.env.DATABASE_URL;
-      
+
       const poolConfig = {
         min: parseInt(process.env.PG_POOL_MIN) || 2,
         max: parseInt(process.env.PG_POOL_MAX) || 20,
@@ -52,9 +52,17 @@ class DatabaseManager {
         console.error('数据库连接池错误:', err);
       });
 
+      // 为每个新连接设置北京时区
+      this.pool.on('connect', (client) => {
+        client.query("SET TIME ZONE 'Asia/Shanghai'");
+      });
+
       // 测试连接
       const client = await this.pool.connect();
-      console.log('PostgreSQL 连接成功');
+
+      // 设置当前连接的时区为北京时间
+      await client.query("SET TIME ZONE 'Asia/Shanghai'");
+      console.log('PostgreSQL 连接成功，时区设置为北京时间 (Asia/Shanghai)');
       client.release();
 
       this.isInitialized = true;
@@ -77,7 +85,7 @@ class DatabaseManager {
    */
   async initializeTables() {
     const sqlPath = path.join(__dirname, 'schema.sql');
-    
+
     if (fs.existsSync(sqlPath)) {
       const sql = fs.readFileSync(sqlPath, 'utf8');
       await this.pool.query(sql);
@@ -157,10 +165,10 @@ class DatabaseManager {
     if (!this.pool) {
       throw new Error('数据库未初始化');
     }
-    
+
     // 转换占位符：? -> $1, $2, ...
     const convertedSql = this.convertPlaceholders(sql);
-    
+
     return this.pool.query(convertedSql, params);
   }
 
@@ -181,7 +189,7 @@ class DatabaseManager {
    */
   async transaction(fn) {
     const client = await this.pool.connect();
-    
+
     try {
       await client.query('BEGIN');
       const result = await fn(client);
@@ -208,7 +216,7 @@ class DatabaseManager {
   }
 
   // ============ 兼容旧 API 的方法 ============
-  
+
   /**
    * 兼容旧代码：获取数据库实例
    * @deprecated 请使用 getPool() 或 query()
@@ -230,7 +238,7 @@ class DatabaseManager {
             const result = await self.query(sql, params);
             return result.rows[0] || null;
           },
-          
+
           /**
            * 获取所有记录
            */
@@ -238,7 +246,7 @@ class DatabaseManager {
             const result = await self.query(sql, params);
             return result.rows;
           },
-          
+
           /**
            * 执行写操作
            */
@@ -251,14 +259,14 @@ class DatabaseManager {
           }
         };
       },
-      
+
       /**
        * 兼容 better-sqlite3 的 exec 方法
        */
       async exec(sql) {
         return self.pool.query(sql);
       },
-      
+
       /**
        * 兼容 better-sqlite3 的 transaction 方法
        */

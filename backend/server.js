@@ -6,27 +6,64 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const dbManager = require('./db/database');
 const errorHandler = require('./middleware/errorHandler');
+const operationLogger = require('./middleware/operationLogger');
+const logger = require('./utils/logger');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || 'localhost';
 
-// 中间件配置
-app.use(cors()); // 允许跨域
+// CORS 配置 - 白名单模式
+// 默认值与 .env 中 ALLOWED_ORIGINS 保持一致
+const corsOptions = {
+  origin: process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : ['http://192.168.0.58:5173', 'http://localhost:5173'],
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
+
+// 请求限流配置 - 防止暴力破解和 DDoS
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 分钟窗口
+  max: process.env.RATE_LIMIT_MAX || 200, // 每 IP 最多 200 次请求
+  message: { success: false, message: '请求过于频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+app.use('/api/', apiLimiter);
+
+// 登录接口更严格的限流
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10, // 登录每 IP 每 15 分钟最多 10 次
+  message: { success: false, message: '登录尝试过于频繁，请 15 分钟后再试' }
+});
+app.use('/api/auth/login', authLimiter);
+
 app.use(express.json()); // 解析 JSON 请求体
 app.use(express.urlencoded({ extended: true })); // 解析 URL 编码请求体
 
 // 健康检查路由
 app.get('/api/health', (req, res) => {
+  // 格式化为北京时间
+  const now = new Date();
+  const beijingTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
   res.json({
     success: true,
     message: '服务运行正常',
-    timestamp: new Date().toISOString(),
+    timestamp: beijingTime,
     database: dbManager.isInitialized ? 'connected' : 'disconnected'
   });
 });
+
+// 操作日志中间件 - 记录关键操作
+app.use(operationLogger);
 
 // API 路由
 app.use('/api/auth', require('./routes/authRoutes'));
@@ -63,16 +100,16 @@ let server = null;
 async function startServer() {
   try {
     // 异步初始化数据库连接
-    console.log('正在连接 PostgreSQL 数据库...');
+    logger.info('正在连接 PostgreSQL 数据库...');
     await dbManager.initialize();
-    console.log('数据库连接成功');
+    logger.info('数据库连接成功');
 
     // 启动 HTTP 服务
     server = app.listen(PORT, HOST, () => {
       const os = require('os');
       const networkInterfaces = os.networkInterfaces();
       const localIPs = [];
-      
+
       // 获取所有局域网 IP
       Object.keys(networkInterfaces).forEach(interfaceName => {
         networkInterfaces[interfaceName].forEach(iface => {
@@ -82,26 +119,26 @@ async function startServer() {
         });
       });
 
-      console.log(`========================================`);
-      console.log(`成本分析管理系统后端服务已启动`);
-      console.log(`端口: ${PORT}`);
-      console.log(`环境: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`数据库: PostgreSQL`);
-      console.log(`----------------------------------------`);
-      console.log(`本地访问: http://localhost:${PORT}`);
+      logger.info('========================================');
+      logger.info('成本分析管理系统后端服务已启动');
+      logger.info(`端口: ${PORT}`);
+      logger.info(`环境: ${process.env.NODE_ENV || 'development'}`);
+      logger.info('数据库: PostgreSQL');
+      logger.info('----------------------------------------');
+      logger.info(`本地访问: http://localhost:${PORT}`);
       if (localIPs.length > 0) {
-        console.log(`局域网访问:`);
+        logger.info('局域网访问:');
         localIPs.forEach(ip => {
-          console.log(`  http://${ip}:${PORT}`);
+          logger.info(`  http://${ip}:${PORT}`);
         });
       }
-      console.log(`----------------------------------------`);
-      console.log(`健康检查: http://localhost:${PORT}/api/health`);
-      console.log(`========================================`);
+      logger.info('----------------------------------------');
+      logger.info(`健康检查: http://localhost:${PORT}/api/health`);
+      logger.info('========================================');
     });
 
   } catch (error) {
-    console.error('服务器启动失败:', error.message);
+    logger.error('服务器启动失败:', error);
     process.exit(1);
   }
 }
@@ -111,8 +148,8 @@ async function startServer() {
  * 先关闭 HTTP 服务，再关闭数据库连接
  */
 async function gracefulShutdown(signal) {
-  console.log(`\n收到 ${signal} 信号，正在优雅关闭服务器...`);
-  
+  logger.warn(`收到 ${signal} 信号，正在优雅关闭服务器...`);
+
   try {
     // 关闭 HTTP 服务器（停止接受新连接）
     if (server) {
@@ -122,17 +159,17 @@ async function gracefulShutdown(signal) {
           else resolve();
         });
       });
-      console.log('HTTP 服务已关闭');
+      logger.info('HTTP 服务已关闭');
     }
 
     // 关闭数据库连接池
     await dbManager.close();
-    console.log('数据库连接已关闭');
-    
-    console.log('服务器已安全关闭');
+    logger.info('数据库连接已关闭');
+
+    logger.info('服务器已安全关闭');
     process.exit(0);
   } catch (error) {
-    console.error('关闭服务器时发生错误:', error.message);
+    logger.error('关闭服务器时发生错误:', error);
     process.exit(1);
   }
 }
@@ -143,12 +180,12 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
 // 处理未捕获的异常
 process.on('uncaughtException', (error) => {
-  console.error('未捕获的异常:', error);
+  logger.error('未捕获的异常:', error);
   gracefulShutdown('uncaughtException');
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('未处理的 Promise 拒绝:', reason);
+  logger.error('未处理的 Promise 拒绝:', reason);
 });
 
 // 启动服务器

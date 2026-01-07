@@ -7,10 +7,14 @@ import { ElMessage } from 'element-plus'
 import router from '../router'
 import { getToken, clearAuth } from './auth'
 
+// 默认超时时间（毫秒）
+const DEFAULT_TIMEOUT = 30000 // 30秒，适合大部分操作
+const LONG_TIMEOUT = 120000   // 120秒，用于导入/导出等耗时操作
+
 // 创建 axios 实例
 const request = axios.create({
   baseURL: '/api', // 通过 Vite 代理转发到后端
-  timeout: 10000
+  timeout: DEFAULT_TIMEOUT
 })
 
 // 请求拦截器
@@ -21,6 +25,12 @@ request.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+
+    // 导入/导出接口使用更长的超时时间
+    if (config.url?.includes('/import') || config.url?.includes('/export') || config.url?.includes('/template')) {
+      config.timeout = LONG_TIMEOUT
+    }
+
     return config
   },
   error => {
@@ -37,6 +47,12 @@ request.interceptors.response.use(
   },
   error => {
     console.error('响应错误:', error)
+
+    // 超时错误特殊处理
+    if (error.code === 'ECONNABORTED' && error.message?.includes('timeout')) {
+      ElMessage.error('请求超时，请检查网络或稍后重试')
+      return Promise.reject(error)
+    }
 
     if (error.response) {
       const { status, data } = error.response
@@ -57,6 +73,9 @@ request.interceptors.response.use(
         case 404:
           ElMessage.error('请求的资源不存在')
           break
+        case 429:
+          ElMessage.error('请求过于频繁，请稍后再试')
+          break
         case 500:
           ElMessage.error('服务器错误，请稍后重试')
           break
@@ -74,3 +93,6 @@ request.interceptors.response.use(
 )
 
 export default request
+
+// 导出自定义超时配置，供特殊场景使用
+export { DEFAULT_TIMEOUT, LONG_TIMEOUT }

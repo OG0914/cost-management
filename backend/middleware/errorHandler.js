@@ -30,11 +30,21 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
-  // 数据库错误
-  if (err.code && err.code.startsWith('SQLITE')) {
+  // PostgreSQL 数据库错误
+  // PostgreSQL 错误码参考: https://www.postgresql.org/docs/current/errcodes-appendix.html
+  if (err.code && /^[0-9]{5}$/.test(err.code)) {
+    const pgErrorMessages = {
+      '23505': '数据已存在（唯一约束冲突）',
+      '23503': '关联数据不存在（外键约束冲突）',
+      '23502': '必填字段不能为空',
+      '22P02': '数据格式错误',
+      '42P01': '数据表不存在',
+      '42703': '字段不存在'
+    };
     return res.status(500).json({
       success: false,
-      message: '数据库操作失败'
+      message: pgErrorMessages[err.code] || '数据库操作失败',
+      ...(process.env.NODE_ENV === 'development' && { code: err.code, detail: err.detail })
     });
   }
 
