@@ -229,10 +229,11 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Search, Grid, List, Key, EditPen, Delete, Download, Upload, CaretLeft, CaretRight } from '@element-plus/icons-vue';
 import request from '../../utils/request';
-import { formatDateTime } from '@/utils/format';
 import PageHeader from '../../components/common/PageHeader.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue';
 import StatusSwitch from '@/components/common/StatusSwitch.vue';
+
+defineOptions({ name: 'UserManage' })
 
 // 数据
 const users = ref([]);
@@ -570,10 +571,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.user-manage {
-  /* padding 由 MainLayout 提供 */
-}
-
 .view-toggle {
   margin: 0 4px;
 }

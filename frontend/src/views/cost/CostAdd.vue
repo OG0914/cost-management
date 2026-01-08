@@ -1,5 +1,5 @@
 <template>
-  <div class="cost-page">
+  <div class="cost-page-wrapper">
     <!-- 顶部导航栏 -->
     <div class="cost-page-header">
       <div class="cost-header-left">
@@ -13,7 +13,11 @@
       </div>
     </div>
 
-    <el-form :model="form" :rules="rules" ref="formRef" label-width="100px" class="cost-form">
+    <!-- 左右分栏主体 -->
+    <div class="cost-page-body">
+      <!-- 左侧表单区 -->
+      <div class="cost-form-panel">
+        <el-form :model="form" :rules="rules" ref="formRef" label-width="100px" class="cost-form">
       <!-- 基本信息 -->
       <div class="cost-section">
         <div class="cost-section-header">
@@ -72,7 +76,7 @@
 
           <el-col :span="12">
             <el-form-item label="客户地区" prop="customer_region">
-              <el-input v-model="form.customer_region" placeholder="请输入客户地区" :disabled="!isNewCustomer && selectedCustomerId" clearable />
+              <el-input v-model="form.customer_region" placeholder="请输入客户地区" :disabled="!isNewCustomer && !!selectedCustomerId" clearable />
             </el-form-item>
           </el-col>
         </el-row>
@@ -345,7 +349,7 @@
                 <el-table :data="form.materials" border size="small">
                   <el-table-column width="60" align="center">
                     <template #header><el-tooltip content="勾选后，该原料将在管销价计算后再加入成本" placement="top"><span class="cursor-help text-xs whitespace-nowrap">管销后</span></el-tooltip></template>
-                    <template #default="{ row }"><el-checkbox v-model="row.after_overhead" @change="handleCalculateCost" :disabled="row.from_standard && !editMode.materials" /></template>
+                    <template #default="{ row }"><el-checkbox v-model="row.after_overhead" @change="handleCalculateCost" :disabled="!!row.from_standard && !editMode.materials" /></template>
                   </el-table-column>
                   <el-table-column label="原料名称" min-width="200">
                     <template #default="{ row, $index }">
@@ -358,12 +362,12 @@
                     </template>
                   </el-table-column>
                   <el-table-column label="基本用量" width="100">
-                    <template #default="{ row }"><el-input-number v-model="row.usage_amount" :min="0" :precision="4" :controls="false" @change="handleItemSubtotalChange(row)" size="small" style="width: 100%" :disabled="row.from_standard && !editMode.materials" /></template>
+                    <template #default="{ row }"><el-input-number v-model="row.usage_amount" :min="0" :precision="4" :controls="false" @change="handleItemSubtotalChange(row)" size="small" style="width: 100%" :disabled="!!row.from_standard && !editMode.materials" /></template>
                   </el-table-column>
                   <el-table-column label="单价(CNY)" width="100"><template #default="{ row }">{{ formatNumber(row.unit_price) || '-' }}</template></el-table-column>
                   <el-table-column label="小计" width="100"><template #default="{ row }">{{ formatNumber(row.subtotal) || '-' }}</template></el-table-column>
                   <el-table-column label="操作" width="70" fixed="right">
-                    <template #default="{ $index, row }"><el-button type="danger" size="small" link @click="removeMaterialRow($index)" :disabled="row.from_standard && !editMode.materials">删除</el-button></template>
+                    <template #default="{ $index, row }"><el-button type="danger" size="small" link @click="removeMaterialRow($index)" :disabled="!!row.from_standard && !editMode.materials">删除</el-button></template>
                   </el-table-column>
                 </el-table>
                 <div class="tab-pane-footer">
@@ -384,17 +388,17 @@
                 </div>
                 <el-table :data="form.processes" border size="small">
                   <el-table-column label="工序名称" min-width="150">
-                    <template #default="{ row }"><el-input v-model="row.item_name" @change="handleItemSubtotalChange(row)" :disabled="row.from_standard && !editMode.processes" /></template>
+                    <template #default="{ row }"><el-input v-model="row.item_name" @change="handleItemSubtotalChange(row)" :disabled="!!row.from_standard && !editMode.processes" /></template>
                   </el-table-column>
                   <el-table-column label="基本用量" width="100">
-                    <template #default="{ row }"><el-input-number v-model="row.usage_amount" :min="0" :precision="4" :controls="false" @change="handleItemSubtotalChange(row)" size="small" style="width: 100%" :disabled="row.from_standard && !editMode.processes" /></template>
+                    <template #default="{ row }"><el-input-number v-model="row.usage_amount" :min="0" :precision="4" :controls="false" @change="handleItemSubtotalChange(row)" size="small" style="width: 100%" :disabled="!!row.from_standard && !editMode.processes" /></template>
                   </el-table-column>
                   <el-table-column label="工价(CNY)" width="100">
-                    <template #default="{ row }"><el-input-number v-model="row.unit_price" :min="0" :precision="4" :controls="false" @change="handleItemSubtotalChange(row)" size="small" style="width: 100%" :disabled="row.from_standard && !editMode.processes" /></template>
+                    <template #default="{ row }"><el-input-number v-model="row.unit_price" :min="0" :precision="4" :controls="false" @change="handleItemSubtotalChange(row)" size="small" style="width: 100%" :disabled="!!row.from_standard && !editMode.processes" /></template>
                   </el-table-column>
                   <el-table-column label="小计" width="100"><template #default="{ row }">{{ formatNumber(row.subtotal) }}</template></el-table-column>
                   <el-table-column label="操作" width="70" fixed="right">
-                    <template #default="{ $index, row }"><el-button type="danger" size="small" link @click="removeProcessRow($index)" :disabled="row.from_standard && !editMode.processes">删除</el-button></template>
+                    <template #default="{ $index, row }"><el-button type="danger" size="small" link @click="removeProcessRow($index)" :disabled="!!row.from_standard && !editMode.processes">删除</el-button></template>
                   </el-table-column>
                 </el-table>
                 <div class="tab-pane-footer">
@@ -425,12 +429,12 @@
                     </template>
                   </el-table-column>
                   <el-table-column label="基本用量" width="100">
-                    <template #default="{ row }"><el-input-number v-model="row.usage_amount" :min="0" :precision="4" :controls="false" @change="handleItemSubtotalChange(row)" size="small" style="width: 100%" :disabled="row.from_standard && !editMode.packaging" /></template>
+                    <template #default="{ row }"><el-input-number v-model="row.usage_amount" :min="0" :precision="4" :controls="false" @change="handleItemSubtotalChange(row)" size="small" style="width: 100%" :disabled="!!row.from_standard && !editMode.packaging" /></template>
                   </el-table-column>
                   <el-table-column label="单价(CNY)" width="100"><template #default="{ row }">{{ formatNumber(row.unit_price) || '-' }}</template></el-table-column>
                   <el-table-column label="小计" width="100"><template #default="{ row }">{{ formatNumber(row.subtotal) || '-' }}</template></el-table-column>
                   <el-table-column label="操作" width="70" fixed="right">
-                    <template #default="{ $index, row }"><el-button type="danger" size="small" link @click="removePackagingRow($index)" :disabled="row.from_standard && !editMode.packaging">删除</el-button></template>
+                    <template #default="{ $index, row }"><el-button type="danger" size="small" link @click="removePackagingRow($index)" :disabled="!!row.from_standard && !editMode.packaging">删除</el-button></template>
                   </el-table-column>
                 </el-table>
                 <div class="tab-pane-footer"><span>∑ 包材小计: <strong>{{ formatNumber(packagingTotal) }}</strong></span></div>
@@ -440,53 +444,114 @@
         </div>
       </div>
 
-      <!-- 成本计算 -->
-      <div class="cost-section cost-section-highlight" v-if="calculation">
-        <div class="cost-section-header"><h3 class="cost-section-title">成本计算</h3></div>
-        <div class="cost-section-body">
-        <div class="cost-summary-grid">
-          <div class="cost-summary-card"><div class="cost-summary-label">基础成本价</div><div class="cost-summary-value">{{ formatNumber(calculation.baseCost) }} CNY</div></div>
-          <div class="cost-summary-card"><div class="cost-summary-label">运费成本</div><div class="cost-summary-value">{{ formatNumber(calculation.freightCost) }} CNY</div></div>
-          <div class="cost-summary-card"><div class="cost-summary-label">管销价</div><div class="cost-summary-value">{{ formatNumber(calculation.overheadPrice) }} CNY</div><el-button size="small" type="primary" link @click="showAddFeeDialog" class="cost-summary-action">添加费用项</el-button></div>
-        </div>
-        <div v-if="customFeesWithValues.length > 0" class="custom-fee-list">
-          <div v-for="(fee, index) in customFeesWithValues" :key="'fee-' + index" class="custom-fee-item">
-            <span class="custom-fee-name">{{ fee.name }} ({{ (fee.rate * 100).toFixed(0) }}%)</span>
-            <div class="flex items-center gap-3"><span class="custom-fee-value">{{ formatNumber(fee.calculatedValue) }}</span><el-button size="small" type="danger" link @click="handleRemoveCustomFee(index)">删除</el-button></div>
-          </div>
-        </div>
-        <div v-if="calculation.afterOverheadMaterialTotal > 0" class="cost-tip warning">管销后算原料: <strong>{{ formatNumber(calculation.afterOverheadMaterialTotal) }}</strong></div>
-        <div class="cost-final-box">
-          <div class="cost-final-label">最终成本价</div>
-          <div class="cost-final-value"><span v-if="form.sales_type === 'domestic'">{{ formatNumber(calculation.domesticPrice) }} CNY</span><span v-else>{{ formatNumber(calculation.insurancePrice) }} USD</span></div>
-          <div class="cost-final-info"><span v-if="form.sales_type === 'export'">汇率: {{ formatNumber(calculation.exchangeRate) }} | 保险: 0.3%</span><span v-else>含 {{ ((form.vat_rate || 0.13) * 100).toFixed(0) }}% 增值税</span></div>
-        </div>
-        </div>
+        </el-form>
       </div>
 
-      <!-- 利润区间 -->
-      <div class="cost-section" v-if="calculation && calculation.profitTiers">
-        <div class="cost-section-header"><h3 class="cost-section-title">利润区间</h3><el-button type="primary" size="small" @click="handleAddCustomProfitTier">添加档位</el-button></div>
-        <div class="cost-section-body">
-        <div class="profit-tier-grid">
-          <div v-for="tier in allProfitTiers" :key="tier.isCustom ? 'custom-' + tier.customIndex : 'system-' + tier.profitPercentage" class="profit-tier-card" :class="{ custom: tier.isCustom }">
-            <div class="profit-tier-label">
-              <span v-if="!tier.isCustom">{{ tier.profitPercentage }} 利润</span>
-              <div v-else class="flex items-center gap-1">
-                <el-input v-model="tier.originalTier.profitRate" placeholder="如0.35" size="small" style="width: 60px" @input="handleUpdateCustomTierPrice(tier.originalTier)" />
-                <span v-if="tier.originalTier.profitRate" class="text-xs text-blue-600">{{ (parseFloat(tier.originalTier.profitRate) * 100).toFixed(0) }}%</span>
+      <!-- 右侧成本预览面板 -->
+      <div class="cost-preview-panel">
+        <div class="cost-preview-sticky">
+          <!-- 成本计算 -->
+          <div class="preview-section" v-if="calculation">
+            <div class="preview-section-title">成本计算</div>
+            <div class="preview-cost-grid">
+              <div class="preview-cost-item">
+                <el-tooltip content="原料 + 工序×系数 + 包材" placement="top">
+                  <span class="preview-cost-label cursor-help">基础成本 <el-icon class="text-gray-400"><InfoFilled /></el-icon></span>
+                </el-tooltip>
+                <span class="preview-cost-value">{{ formatNumber(calculation.baseCost) }}</span>
+              </div>
+              <div class="preview-cost-item">
+                <el-tooltip content="运费总价 ÷ 数量" placement="top">
+                  <span class="preview-cost-label cursor-help">运费成本 <el-icon class="text-gray-400"><InfoFilled /></el-icon></span>
+                </el-tooltip>
+                <span class="preview-cost-value">{{ calculation.freightCost > 0.001 ? formatNumber(calculation.freightCost) : '-' }}</span>
+              </div>
+              <div class="preview-cost-item">
+                <el-tooltip :content="`(基础成本${form.include_freight_in_base ? '+运费' : ''}) ÷ (1-${((configStore.config.overhead_rate || 0.2) * 100).toFixed(0)}%)`" placement="top">
+                  <span class="preview-cost-label cursor-help">管销价 <span class="text-blue-500">{{ ((configStore.config.overhead_rate || 0.2) * 100).toFixed(0) }}%</span></span>
+                </el-tooltip>
+                <span class="preview-cost-value">{{ formatNumber(calculation.overheadPrice) }}</span>
               </div>
             </div>
-            <div class="profit-tier-value">{{ formatNumber(tier.price) }} {{ calculation.currency }}</div>
-            <el-button v-if="tier.isCustom" type="danger" size="small" link @click="handleRemoveCustomProfitTier(tier.customIndex)" class="profit-tier-remove">删除</el-button>
+            <el-button size="small" type="primary" link @click="showAddFeeDialog" class="mt-2">+ 添加费用项</el-button>
+            <div v-if="customFeesWithValues.length > 0" class="preview-fee-list">
+              <div v-for="(fee, index) in customFeesWithValues" :key="'fee-' + index" class="preview-fee-item">
+                <span>{{ fee.name }} ({{ (fee.rate * 100).toFixed(0) }}%)</span>
+                <div class="flex items-center gap-2"><span class="font-medium">{{ formatNumber(fee.calculatedValue) }}</span><el-button size="small" type="danger" link @click="handleRemoveCustomFee(index)">删除</el-button></div>
+              </div>
+            </div>
+            <div v-if="calculation.afterOverheadMaterialTotal > 0" class="preview-tip">管销后原料: <strong>{{ formatNumber(calculation.afterOverheadMaterialTotal) }}</strong></div>
+          </div>
+
+          <!-- 最终成本价 -->
+          <div class="preview-final-box" v-if="calculation">
+            <div class="preview-final-label">最终成本价</div>
+            <div class="preview-final-value">
+              <span v-if="form.sales_type === 'domestic'">{{ formatNumber(calculation.domesticPrice) }}</span>
+              <span v-else>{{ formatNumber(calculation.insurancePrice) }}</span>
+              <span class="preview-final-currency">{{ form.sales_type === 'domestic' ? 'CNY' : 'USD' }}</span>
+            </div>
+            <div class="preview-final-info">
+              <span v-if="form.sales_type === 'export'">汇率 {{ formatNumber(calculation.exchangeRate) }} | 保险 0.3%</span>
+              <span v-else>含 {{ ((form.vat_rate || 0.13) * 100).toFixed(0) }}% 增值税</span>
+            </div>
+          </div>
+
+          <!-- 利润区间 -->
+          <div class="preview-section" v-if="calculation && calculation.profitTiers">
+            <div class="preview-section-header">
+              <span class="preview-section-title">利润区间</span>
+              <el-button type="primary" size="small" link @click="handleAddCustomProfitTier">+ 添加</el-button>
+            </div>
+            <!-- 滑块 -->
+            <div class="preview-slider">
+              <div class="preview-slider-header">
+                <span class="text-xs text-gray-400">{{ sliderProfitRate }}%</span>
+                <span class="text-sm font-semibold text-blue-600">{{ formatNumber(sliderPrice) }} {{ calculation.currency }}</span>
+              </div>
+              <el-slider v-model="sliderProfitRate" :min="0" :max="100" :step="1" :show-tooltip="false" @input="updateSliderPrice" />
+            </div>
+            <!-- 档位 -->
+            <div class="preview-tier-list">
+              <div v-for="tier in allProfitTiers" :key="tier.isCustom ? 'custom-' + tier.customIndex : 'system-' + tier.profitPercentage" class="preview-tier-item" :class="{ custom: tier.isCustom }" @click="!tier.isCustom && setSliderFromTier(tier)">
+                <div class="preview-tier-left">
+                  <span v-if="!tier.isCustom" class="preview-tier-rate">{{ tier.profitPercentage }}</span>
+                  <el-input v-else v-model="tier.originalTier.profitRate" placeholder="0.35" size="small" style="width: 50px" @input="handleUpdateCustomTierPrice(tier.originalTier)" @click.stop />
+                </div>
+                <div class="preview-tier-right">
+                  <span class="preview-tier-price">{{ formatNumber(tier.price) }}</span>
+                  <span v-if="!tier.isCustom" class="preview-tier-profit">+{{ formatNumber(tier.price - (form.sales_type === 'domestic' ? calculation.domesticPrice : calculation.insurancePrice)) }}</span>
+                  <el-button v-if="tier.isCustom" type="danger" size="small" link @click.stop="handleRemoveCustomProfitTier(tier.customIndex)">删除</el-button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 空状态 -->
+          <div v-if="!calculation" class="preview-empty">
+            <el-icon class="text-4xl text-gray-300 mb-2"><Document /></el-icon>
+            <p class="text-sm text-gray-400">选择型号配置后</p>
+            <p class="text-sm text-gray-400">将实时显示成本计算</p>
+          </div>
+
+          <!-- 操作按钮 -->
+          <div class="preview-actions">
+            <div class="preview-actions-row">
+              <el-button @click="handleSaveDraft" :loading="saving" class="action-draft">
+                <el-icon><FolderAdd /></el-icon>草稿
+              </el-button>
+              <el-button type="primary" @click="handleSubmitQuotation" :loading="submitting" class="action-submit">
+                <el-icon><Promotion /></el-icon>提交审核
+              </el-button>
+            </div>
+            <el-button text @click="handleCancel" class="action-cancel">取消</el-button>
           </div>
         </div>
-        </div>
       </div>
-    </el-form>
+    </div>
 
-    <!-- 粘性底部栏 -->
-    <div class="cost-sticky-footer">
+    <!-- 移动端底部栏 -->
+    <div class="cost-mobile-footer">
       <div class="sticky-footer-left">
         <template v-if="calculation">
           <div class="sticky-price-item primary">
@@ -527,13 +592,15 @@
 <script setup>
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { InfoFilled } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { InfoFilled, Document, FolderAdd, Promotion } from '@element-plus/icons-vue'
 import { formatNumber } from '@/utils/format'
 import { useConfigStore } from '@/store/config'
 import logger from '@/utils/logger'
 import { getPackagingTypeName, formatPackagingMethodFromConfig, calculateTotalFromConfig, PACKAGING_TYPES } from '@/config/packagingTypes'
-import { useFreightCalculation, useCostCalculation, useQuotationData, useCustomerSearch, useMaterialSearch, useCustomFees } from '@/composables'
+import { useFreightCalculation, useCostCalculation, useQuotationData, useCustomerSearch, useMaterialSearch, useCustomFees, useQuotationDraft } from '@/composables'
+
+defineOptions({ name: 'CostAdd' })
 
 const router = useRouter()
 const route = useRoute()
@@ -560,6 +627,7 @@ const { calculation, customProfitTiers, materialCoefficient, materialCoefficient
 const { saving, submitting, isSaved, loadRegulations, loadPackagingConfigs, loadBomMaterials, loadPackagingConfigDetails, loadQuotationData, loadStandardCostData, saveQuotation, submitQuotation } = useQuotationData()
 const { isNewCustomer, selectedCustomerId, customerOptions, customerSearchLoading, customerSelectFocused, onCustomerTypeChange, searchCustomers, onCustomerSelect } = useCustomerSearch()
 const { allMaterials, materialSearchOptions, materialSearchLoading, loadAllMaterials, searchMaterials, onMaterialSelect, onPackagingMaterialSelect } = useMaterialSearch()
+const { hasDraft, getDraftInfo, saveDraft, loadDraft, clearDraft, startAutoSave, stopAutoSave } = useQuotationDraft()
 
 // 数据列表
 const regulations = ref([])
@@ -603,6 +671,19 @@ const processSubtotal = computed(() => form.processes.reduce((sum, item) => sum 
 const packagingTotal = computed(() => form.packaging.reduce((sum, item) => sum + item.subtotal, 0))
 const allProfitTiers = getAllProfitTiers
 const hasFormData = computed(() => form.customer_name || form.model_id || form.materials.length > 0 || form.processes.length > 0 || form.packaging.length > 0)
+
+// 利润滑块
+const sliderProfitRate = ref(25)
+const sliderPrice = computed(() => {
+  if (!calculation.value) return 0
+  const basePrice = form.sales_type === 'domestic' ? calculation.value.domesticPrice : calculation.value.insurancePrice
+  return basePrice / (1 - sliderProfitRate.value / 100)
+})
+const updateSliderPrice = () => {} // 触发computed更新
+const setSliderFromTier = (tier) => {
+  const rate = parseInt(tier.profitPercentage) || 0
+  sliderProfitRate.value = rate
+}
 
 // 自定义费用
 const { addFeeDialogVisible, feeFormRef, newFee, feeRules, customFeeSummary, customFeesWithValues, showAddFeeDialog, confirmAddFee, removeCustomFee } = useCustomFees(form, calculation)
@@ -671,6 +752,9 @@ const onPackagingConfigChange = async () => {
     const pcsPerCarton = calculateTotalFromConfig(config)
     const cartonMaterial = materials.find(m => m.carton_volume && parseFloat(m.carton_volume) > 0)
     setShippingInfoFromConfig(pcsPerCarton, cartonMaterial ? parseFloat(cartonMaterial.carton_volume) : null)
+    if (!cartonMaterial) {
+      ElMessage.warning({ message: '当前配置缺少外箱材积数据，无法自动计算CBM和运费。请前往「包材管理」补充外箱的材积信息', duration: 8000, showClose: true })
+    }
     if (form.quantity) quantityInput.value = quantityUnit.value === 'carton' ? Math.ceil(form.quantity / pcsPerCarton) : form.quantity
     form.materials = await loadBomMaterials(config.model_id, materialCoefficient.value)
     editMode.materials = false
@@ -697,6 +781,32 @@ const removeProcessRow = (index) => { form.processes.splice(index, 1); handleCal
 const removePackagingRow = (index) => { form.packaging.splice(index, 1); handleCalculateCost() }
 const goBack = () => router.back()
 
+const handleCancel = async () => {
+  if (!hasFormData.value) return
+  try {
+    await ElMessageBox.confirm('确定要取消当前报价填写吗？已填写的内容将被清除。', '取消报价', { confirmButtonText: '确定取消', cancelButtonText: '继续填写', type: 'warning' })
+    resetForm()
+    clearDraft()
+    ElMessage.success('已清除填写内容')
+  } catch { /* 用户选择继续填写 */ }
+}
+
+const resetForm = () => {
+  Object.assign(form, {
+    regulation_id: null, model_id: null, packaging_config_id: null,
+    customer_name: '', customer_region: '', sales_type: 'domestic',
+    shipping_method: '', port_type: 'fob_shenzhen', port: '',
+    quantity: null, freight_total: null, include_freight_in_base: true,
+    vat_rate: configStore.config.vat_rate || 0.13,
+    materials: [], processes: [], packaging: [], customFees: []
+  })
+  calculation.value = null
+  customProfitTiers.value = []
+  isNewCustomer.value = true
+  selectedCustomerId.value = null
+  resetShippingInfo()
+}
+
 const prepareData = () => ({
   customer_name: form.customer_name, customer_region: form.customer_region,
   model_id: form.model_id, regulation_id: form.regulation_id, packaging_config_id: form.packaging_config_id,
@@ -712,7 +822,7 @@ const handleSaveDraft = async () => {
     await formRef.value.validate()
     if ([...form.materials, ...form.processes, ...form.packaging].length === 0) { ElMessage.warning('请至少添加一项明细'); return }
     const res = await saveQuotation(route.params.id, prepareData())
-    if (res) router.push('/cost/records')
+    if (res) { clearDraft(); stopAutoSave(); router.push('/cost/records') }
   } catch (error) { logger.error('保存失败:', error); ElMessage.error('保存失败') }
 }
 
@@ -721,7 +831,7 @@ const handleSubmitQuotation = async () => {
     await formRef.value.validate()
     if ([...form.materials, ...form.processes, ...form.packaging].length === 0) { ElMessage.warning('请至少添加一项明细'); return }
     const res = await submitQuotation(route.params.id, prepareData())
-    if (res) router.push('/cost/records')
+    if (res) { clearDraft(); stopAutoSave(); router.push('/cost/records') }
   } catch (error) { logger.error('提交失败:', error); ElMessage.error('提交失败') }
 }
 
@@ -803,6 +913,57 @@ const fillStandardCostData = async (data) => {
   ElMessage.success('标准成本数据已复制，请填写客户信息后保存')
 }
 
+// 草稿功能
+const formatDraftTime = (isoString) => {
+  const date = new Date(isoString)
+  return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+}
+
+const getFormDataForDraft = () => ({
+  form,
+  extras: { modelCategory: currentModelCategory.value, quantityUnit: quantityUnit.value, quantityInput: quantityInput.value, domesticCbmPrice: domesticCbmPrice.value, customProfitTiers: customProfitTiers.value, editMode },
+  hasData: hasFormData.value
+})
+
+const restoreDraft = async () => {
+  const draft = loadDraft()
+  if (!draft) return false
+  try {
+    if (draft.modelCategory) currentModelCategory.value = draft.modelCategory
+    Object.assign(form, draft.form)
+    if (draft.quantityUnit) quantityUnit.value = draft.quantityUnit
+    if (draft.quantityInput) quantityInput.value = draft.quantityInput
+    if (draft.domesticCbmPrice) domesticCbmPrice.value = draft.domesticCbmPrice
+    if (draft.customProfitTiers) customProfitTiers.value = draft.customProfitTiers
+    if (draft.editMode) Object.assign(editMode, draft.editMode)
+    await nextTick()
+    handleCalculateCost()
+    ElMessage.success('草稿已恢复')
+    return true
+  } catch (error) {
+    logger.error('恢复草稿失败:', error)
+    ElMessage.error('恢复草稿失败')
+    return false
+  }
+}
+
+const checkAndRestoreDraft = async () => {
+  if (route.params.id || route.query.copyFrom || route.query.copyFromStandardCost) return false
+  const draftInfo = getDraftInfo()
+  if (!draftInfo || !draftInfo.hasData) return false
+  try {
+    await ElMessageBox.confirm(
+      `保存时间：${formatDraftTime(draftInfo.savedAt)}${draftInfo.modelCategory ? `\n产品类别：${draftInfo.modelCategory}` : ''}${draftInfo.customerName ? `\n客户：${draftInfo.customerName}` : ''}`,
+      '检测到未完成的报价草稿',
+      { distinguishCancelAndClose: true, confirmButtonText: '继续编辑', cancelButtonText: '新建报价', type: 'info' }
+    )
+    return await restoreDraft()
+  } catch (action) {
+    if (action === 'cancel') clearDraft()
+    return false
+  }
+}
+
 onMounted(async () => {
   await configStore.loadConfig()
   await loadSystemConfig()
@@ -815,44 +976,328 @@ onMounted(async () => {
     currentModelCategory.value = route.query.model_category
     if (materialCoefficientsCache.value[route.query.model_category]) materialCoefficient.value = materialCoefficientsCache.value[route.query.model_category]
   }
-  if (route.params.id) { const data = await loadQuotationData(route.params.id); if (data) await fillQuotationData(data, false) }
-  else if (route.query.copyFromStandardCost) { const data = await loadStandardCostData(route.query.copyFromStandardCost); if (data) await fillStandardCostData(data) }
-  else if (route.query.copyFrom) { const data = await loadQuotationData(route.query.copyFrom); if (data) await fillQuotationData(data, true) }
+  if (route.params.id) {
+    const data = await loadQuotationData(route.params.id)
+    if (data) await fillQuotationData(data, false)
+  } else if (route.query.copyFromStandardCost) {
+    const data = await loadStandardCostData(route.query.copyFromStandardCost)
+    if (data) await fillStandardCostData(data)
+  } else if (route.query.copyFrom) {
+    const data = await loadQuotationData(route.query.copyFrom)
+    if (data) await fillQuotationData(data, true)
+  } else {
+    await checkAndRestoreDraft()
+  }
+  if (!route.params.id) startAutoSave(getFormDataForDraft, 30000)
 })
 
-onBeforeRouteLeave((to, from, next) => {
-  if (!isSaved.value && hasFormData.value) { if (window.confirm('您有未保存的数据，确定要离开吗？')) next(); else next(false) }
-  else next()
+onBeforeRouteLeave(async (to, from, next) => {
+  stopAutoSave()
+  if (isSaved.value || !hasFormData.value || route.params.id) { next(); return }
+  try {
+    await ElMessageBox.confirm('是否保存为草稿以便下次继续？', '您有未保存的报价数据', { distinguishCancelAndClose: true, confirmButtonText: '保存草稿', cancelButtonText: '放弃', type: 'warning' })
+    const { form: f, extras } = getFormDataForDraft()
+    saveDraft(f, extras)
+    ElMessage.success('草稿已保存')
+    next()
+  } catch (action) {
+    if (action === 'cancel') { clearDraft(); next() }
+    else next(false)
+  }
 })
 </script>
 
 <style scoped>
-.cost-add-container { padding: 0; }
-.page-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: #fff; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-.page-header .header-left { display: flex; align-items: center; }
-.page-header .header-center h2 { margin: 0; font-size: 20px; color: #303133; }
-.page-header .back-btn { font-size: 14px; color: #606266; }
-.form-section { margin-bottom: 16px; border-radius: 8px; }
-.section-title { font-size: 15px; font-weight: 600; color: #303133; }
-.section-header { display: flex; justify-content: space-between; align-items: center; }
+/* ========== 页面容器 - 左右分栏布局 ========== */
+.cost-page-wrapper { max-width: 1400px; margin: 0 auto; }
+
+.cost-page-body {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+  align-items: start;
+}
+
+/* 左侧表单面板 */
+.cost-form-panel { min-width: 0; }
+
+/* 右侧预览面板 */
+.cost-preview-panel { position: relative; }
+
+.cost-preview-sticky {
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ========== 右侧预览区块 ========== */
+.preview-section {
+  background: #fff;
+  border: 1px solid #e4e7ed;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.preview-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.preview-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #303133;
+}
+
+/* 成本网格 */
+.preview-cost-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preview-cost-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-radius: 6px;
+}
+
+.preview-cost-label {
+  font-size: 12px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.preview-cost-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* 自定义费用 */
+.preview-fee-list { margin-top: 10px; }
+
+.preview-fee-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: #fef3c7;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #92400e;
+  margin-bottom: 6px;
+}
+
+.preview-tip {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #fef3c7;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #92400e;
+}
+
+/* 最终成本框 */
+.preview-final-box {
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+  color: #fff;
+}
+
+.preview-final-label {
+  font-size: 12px;
+  opacity: 0.9;
+  margin-bottom: 4px;
+}
+
+.preview-final-value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.preview-final-currency {
+  font-size: 14px;
+  font-weight: 500;
+  margin-left: 4px;
+  opacity: 0.9;
+}
+
+.preview-final-info {
+  font-size: 11px;
+  opacity: 0.8;
+  margin-top: 6px;
+}
+
+/* 利润滑块 */
+.preview-slider { margin-bottom: 12px; }
+
+.preview-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+/* 利润档位列表 */
+.preview-tier-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.preview-tier-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.preview-tier-item:not(.custom):hover {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.preview-tier-item.custom {
+  background: #fef3c7;
+  border-color: #fbbf24;
+}
+
+.preview-tier-left { display: flex; align-items: center; gap: 6px; }
+
+.preview-tier-rate {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  min-width: 36px;
+}
+
+.preview-tier-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.preview-tier-price {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.preview-tier-profit {
+  font-size: 11px;
+  color: #22c55e;
+  font-weight: 500;
+}
+
+/* 空状态 */
+.preview-empty {
+  background: #fff;
+  border: 1px dashed #e4e7ed;
+  border-radius: 10px;
+  padding: 40px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 操作按钮 */
+.preview-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: #fff;
+  border: 1px solid #e4e7ed;
+  border-radius: 10px;
+}
+
+.preview-actions-row {
+  display: flex;
+  gap: 8px;
+}
+
+.action-draft {
+  flex: 1;
+  height: 40px;
+  border: 1px solid #dcdfe6;
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 500;
+}
+.action-draft:hover {
+  background: #f1f5f9;
+  border-color: #c0c4cc;
+}
+
+.action-submit {
+  flex: 2;
+  height: 40px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+}
+.action-submit:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.action-cancel {
+  color: #94a3b8;
+  font-size: 13px;
+}
+.action-cancel:hover {
+  color: #64748b;
+}
+
+/* ========== 移动端底部栏（仅小屏显示） ========== */
+.cost-mobile-footer {
+  display: none;
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  border-top: 1px solid #e4e7ed;
+  padding: 12px 16px;
+  z-index: 50;
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 1024px) {
+  .cost-page-body {
+    grid-template-columns: 1fr;
+  }
+  .cost-preview-panel { display: none; }
+  .cost-mobile-footer { display: flex; justify-content: space-between; align-items: center; }
+}
+
+/* ========== 原有样式保留 ========== */
 .config-option { display: flex; justify-content: space-between; width: 100%; }
 .config-method { color: #8492a6; font-size: 12px; }
 .customer-region { float: right; color: #8492a6; font-size: 12px; }
-.sales-type-cards { display: flex; gap: 20px; margin-bottom: 20px; }
-.sales-card { flex: 1; padding: 20px; border: 2px solid #e4e7ed; border-radius: 8px; cursor: pointer; transition: all 0.3s; text-align: center; }
-.sales-card:hover { border-color: #409eff; }
-.sales-card.active { border-color: #409eff; background: #ecf5ff; }
-.sales-card-title { font-size: 18px; font-weight: 600; color: #303133; margin-bottom: 8px; }
-.sales-card-desc { font-size: 13px; color: #909399; line-height: 1.6; }
 .vat-rate-section { margin-top: 16px; padding-top: 16px; border-top: 1px dashed #e4e7ed; }
 .export-freight-section { margin-top: 20px; }
 .freight-panel { border: 1px solid #e4e7ed; border-radius: 8px; overflow: hidden; }
 .freight-panel-header { background: #f5f7fa; padding: 12px 16px; font-weight: 600; color: #303133; border-bottom: 1px solid #e4e7ed; }
 .freight-panel-body { padding: 16px; }
 .freight-field { display: flex; align-items: center; margin-bottom: 12px; }
-.freight-field-wide { margin-bottom: 16px; }
 .freight-label { width: 80px; color: #606266; font-size: 14px; flex-shrink: 0; }
-.freight-label-wide { width: 110px; }
 .freight-unit { margin-left: 8px; color: #909399; }
 .freight-value { font-weight: 600; color: #303133; }
 .container-type-btns { display: flex; gap: 10px; }
@@ -862,46 +1307,24 @@ onBeforeRouteLeave((to, from, next) => {
 .tip-title { font-weight: 600; color: #1890ff; margin-bottom: 4px; }
 .tip-content div { color: #606266; font-size: 13px; line-height: 1.6; }
 .domestic-quantity-section { margin-top: 20px; padding-top: 16px; border-top: 1px dashed #e4e7ed; }
-.domestic-freight-row { margin-top: 16px; }
 .quantity-hint { color: #67c23a; font-size: 12px; margin-top: 4px; }
 .freight-hint { color: #909399; font-size: 12px; margin-top: 4px; }
-.cost-detail-section { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #ebeef5; }
-.cost-detail-section:last-child { border-bottom: none; margin-bottom: 0; }
-.detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.detail-title { font-size: 14px; font-weight: 600; color: #606266; }
-.detail-actions { display: flex; gap: 8px; }
-.detail-table { margin-bottom: 8px; }
-.help-cursor { cursor: help; }
 .subtotal-row { display: flex; justify-content: flex-end; gap: 24px; padding: 8px 0; font-size: 14px; color: #606266; }
 .subtotal-row strong { color: #409eff; }
 .subtotal-row .after-overhead strong { color: #e6a23c; }
 .subtotal-row .process-total .highlight { color: #67c23a; }
 .material-option { display: flex; justify-content: space-between; width: 100%; }
 .material-price { color: #8492a6; font-size: 13px; }
-.cost-cards { display: flex; gap: 16px; margin-bottom: 20px; }
-.cost-card { flex: 1; padding: 16px; background: #f5f7fa; border-radius: 8px; text-align: center; position: relative; }
-.cost-card-label { font-size: 13px; color: #909399; margin-bottom: 8px; }
-.cost-card-value { font-size: 18px; font-weight: 600; color: #303133; }
-.add-fee-btn { position: absolute; bottom: 8px; right: 8px; }
-.custom-fees { margin-bottom: 16px; }
-.fee-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #fdf6ec; border-radius: 4px; margin-bottom: 8px; }
-.fee-name { color: #e6a23c; font-size: 13px; }
-.fee-value { font-weight: 600; color: #303133; }
-.after-overhead-material { padding: 8px 12px; background: #fdf6ec; border-radius: 4px; margin-bottom: 16px; color: #e6a23c; }
-.after-overhead-material strong { margin-left: 8px; }
-.final-cost-box { background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%); border-radius: 8px; padding: 20px; text-align: center; color: #fff; }
-.final-cost-label { font-size: 14px; opacity: 0.9; margin-bottom: 8px; }
-.final-cost-value { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
-.final-cost-info { font-size: 12px; opacity: 0.8; }
-.profit-tier-cards { display: flex; gap: 12px; flex-wrap: wrap; }
-.profit-card { flex: 1; min-width: 120px; padding: 16px; border: 1px solid #e4e7ed; border-radius: 8px; text-align: center; position: relative; }
-.profit-card.custom { border-color: #e6a23c; background: #fdf6ec; }
-.profit-label { font-size: 13px; color: #909399; margin-bottom: 8px; }
-.profit-price { font-size: 18px; font-weight: 600; color: #303133; }
-.remove-tier-btn { position: absolute; top: 4px; right: 4px; }
-.custom-rate-input { display: flex; align-items: center; gap: 4px; }
-.rate-display { font-size: 12px; color: #409eff; }
-.action-bar { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: #fff; border-radius: 8px; margin-top: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-.action-right { display: flex; gap: 12px; }
+.help-cursor { cursor: help; }
 :deep(.el-input-number) { width: 100%; }
+
+/* 底部栏样式（移动端） */
+.sticky-footer-left { display: flex; align-items: center; gap: 16px; }
+.sticky-price-item { display: flex; flex-direction: column; }
+.sticky-price-item.secondary .sticky-price-value { font-size: 14px; color: #606266; }
+.sticky-price-label { font-size: 11px; color: #909399; }
+.sticky-price-value { font-size: 16px; font-weight: 600; color: #409eff; }
+.sticky-price-divider { width: 1px; height: 32px; background: #e4e7ed; }
+.sticky-placeholder { font-size: 13px; color: #909399; }
+.sticky-footer-right { display: flex; align-items: center; gap: 8px; }
 </style>

@@ -117,6 +117,8 @@ import { TrendCharts, User, Lock } from '@element-plus/icons-vue'
 import { useAuthStore } from '../store/auth'
 import logoImage from '../images/logo.png'
 
+defineOptions({ name: 'LoginPage' })
+
 const router = useRouter()
 const authStore = useAuthStore()
 

@@ -170,12 +170,13 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
-import { Plus, Delete } from '@element-plus/icons-vue';
 import { useAuthStore } from '../../store/auth';
 import { useConfigStore } from '../../store/config';
 import request from '../../utils/request';
 import logger from '../../utils/logger';
 import { formatDateTime } from '@/utils/format';
+
+defineOptions({ name: 'SystemConfig' })
 
 const authStore = useAuthStore();
 const configStore = useConfigStore();
@@ -253,7 +254,7 @@ onMounted(() => { loadConfig(); });
 </script>
 
 <style scoped>
-.config-page { max-width: 900px; }
+.config-page { max-width: 1200px; }
 
 /* 页面头部 */
 .config-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }

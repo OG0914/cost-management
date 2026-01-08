@@ -13,7 +13,6 @@
               </el-upload>
               <ActionButton type="export" @click="handleExport">导出Excel</ActionButton>
               <ActionButton type="delete" :disabled="selectedConfigs.length === 0" @click="handleBatchDelete">批量删除</ActionButton>
-              <ActionButton type="add" @click="showCreateDialog">新增包装配置</ActionButton>
             </el-space>
           </transition>
         </div>
@@ -206,7 +205,7 @@
     <!-- 创建/编辑包装配置对话框 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="isEdit ? '编辑包装配置' : '新增包装配置'"
+      title="编辑包装配置"
       width="850px"
       top="5vh"
       class="minimal-dialog"
@@ -296,7 +295,7 @@
               <el-icon class="mr-1"><CopyDocument /></el-icon>一键复制
             </el-button>
             <el-button type="primary" plain size="small" @click="addMaterial">
-              <el-icon class="mr-1"><Plus /></el-icon>Add Material
+              <el-icon class="mr-1"><Plus /></el-icon>添加原料
             </el-button>
           </div>
         </div>
@@ -366,7 +365,15 @@
               </template>
             </el-table-column>
             
-            <el-table-column label="材积 (m³)" width="110">
+            <el-table-column width="130">
+              <template #header>
+                <div class="flex items-center gap-1">
+                  <span>材积 (m³)</span>
+                  <el-tooltip content="外箱材积用于计算CBM和运费，请务必填写" placement="top">
+                    <el-icon class="text-blue-400 cursor-help"><InfoFilled /></el-icon>
+                  </el-tooltip>
+                </div>
+              </template>
               <template #default="{ row }">
                 <el-input-number 
                   v-model="row.carton_volume" 
@@ -376,6 +383,7 @@
                   :controls="false"
                   size="small"
                   class="w-full"
+                  placeholder="必填"
                 />
               </template>
             </el-table-column>
@@ -448,9 +456,17 @@
             <span class="subtotal-text">¥{{ formatNumber(row.basic_usage !== 0 ? (row.unit_price / row.basic_usage) : 0) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="carton_volume" label="外箱材积(m³)" width="120">
+        <el-table-column prop="carton_volume" width="140">
+          <template #header>
+            <div class="flex items-center gap-1">
+              <span>外箱材积(m³)</span>
+              <el-tooltip content="用于计算CBM和运费" placement="top">
+                <el-icon class="text-blue-400 cursor-help"><InfoFilled /></el-icon>
+              </el-tooltip>
+            </div>
+          </template>
           <template #default="{ row }">
-            {{ row.carton_volume ? formatNumber(row.carton_volume) : '-' }}
+            <span :class="{ 'text-red-400': !row.carton_volume }">{{ row.carton_volume ? formatNumber(row.carton_volume) : '未设置' }}</span>
           </template>
         </el-table-column>
       </el-table>
@@ -873,13 +889,6 @@ const handleCopyMaterials = () => {
   } finally {
     copyLoading.value = false;
   }
-};
-
-// 显示创建对话框
-const showCreateDialog = () => {
-  isEdit.value = false;
-  resetForm();
-  dialogVisible.value = true;
 };
 
 // 编辑配置

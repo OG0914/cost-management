@@ -438,6 +438,8 @@ import { getUser } from '@/utils/auth'
 import logger from '@/utils/logger'
 import ProfitCalculatorDialog from '@/components/ProfitCalculatorDialog.vue'
 
+defineOptions({ name: 'CostDetail' })
+
 const router = useRouter()
 const route = useRoute()
 const configStore = useConfigStore()

@@ -123,6 +123,8 @@ import {
 import ReviewDetailDialog from '@/components/review/ReviewDetailDialog.vue'
 import ApprovedDetailDialog from '@/components/review/ApprovedDetailDialog.vue'
 
+defineOptions({ name: 'PendingReview' })
+
 const reviewStore = useReviewStore()
 const authStore = useAuthStore()
 

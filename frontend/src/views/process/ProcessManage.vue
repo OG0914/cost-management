@@ -312,7 +312,7 @@
               <el-icon class="mr-1"><CopyDocument /></el-icon>一键复制
             </el-button>
             <el-button type="primary" plain size="small" @click="addProcess">
-              <el-icon class="mr-1"><Plus /></el-icon> Add Process
+              <el-icon class="mr-1"><Plus /></el-icon> 添加工序
             </el-button>
           </div>
         </div>

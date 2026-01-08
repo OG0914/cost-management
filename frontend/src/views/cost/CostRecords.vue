@@ -128,6 +128,8 @@ import CommonPagination from '@/components/common/CommonPagination.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
 import logger from '@/utils/logger'
 
+defineOptions({ name: 'CostRecords' })
+
 const router = useRouter()
 
 // 产品类别选择弹窗
@@ -395,32 +397,6 @@ onUnmounted(() => {
 
 .filter-bar {
   margin-bottom: 16px;
-}
-
-/* 分页样式 */
-.pagination-wrapper {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #ebeef5;
-}
-
-.pagination-total {
-  font-size: 14px;
-  color: #606266;
-}
-
-.pagination-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.pagination-info {
-  font-size: 14px;
-  color: #606266;
 }
 
 /* 操作按钮悬停效果 */
