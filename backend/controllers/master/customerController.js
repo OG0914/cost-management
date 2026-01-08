@@ -25,13 +25,13 @@ const getCustomerById = async (req, res) => {
 
 const createCustomer = async (req, res) => {
     try {
-        const { vc_code, name, region, remark } = req.body;
+        const { vc_code, name, region, remark, user_id } = req.body;
         if (!vc_code || !name) return res.status(400).json(error('VC号和客户名称为必填项', 400));
         
         const existing = await Customer.findByVcCode(vc_code);
         if (existing) return res.status(400).json(error('VC号已存在', 400));
         
-        const id = await Customer.create({ vc_code, name, region, remark });
+        const id = await Customer.create({ vc_code, name, region, remark, user_id });
         const customer = await Customer.findById(id);
         res.status(201).json(success(customer, '创建成功'));
     } catch (err) {
@@ -42,7 +42,7 @@ const createCustomer = async (req, res) => {
 const updateCustomer = async (req, res) => {
     try {
         const { id } = req.params;
-        const { vc_code, name, region, remark } = req.body;
+        const { vc_code, name, region, remark, user_id } = req.body;
         if (!vc_code || !name) return res.status(400).json(error('VC号和客户名称为必填项', 400));
         
         const customer = await Customer.findById(id);
@@ -51,7 +51,7 @@ const updateCustomer = async (req, res) => {
         const existingVc = await Customer.findByVcCode(vc_code);
         if (existingVc && existingVc.id !== parseInt(id)) return res.status(400).json(error('VC号已被其他客户使用', 400));
         
-        await Customer.update(id, { vc_code, name, region, remark });
+        await Customer.update(id, { vc_code, name, region, remark, user_id });
         const updated = await Customer.findById(id);
         res.json(success(updated, '更新成功'));
     } catch (err) {
@@ -85,7 +85,8 @@ const searchCustomers = async (req, res) => {
     try {
         const { keyword } = req.query;
         if (!keyword) return res.json(success([]));
-        const customers = await Customer.search(keyword);
+        const currentUserId = req.user?.id || null;
+        const customers = await Customer.search(keyword, currentUserId);
         res.json(success(customers));
     } catch (err) {
         res.status(500).json(error('搜索客户失败: ' + err.message, 500));

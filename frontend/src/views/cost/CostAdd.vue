@@ -51,32 +51,32 @@
         </el-row>
 
         <el-row :gutter="24">
-          <el-col :span="24">
-            <el-form-item label="是否新客户">
-              <el-radio-group v-model="isNewCustomer" @change="handleCustomerTypeChange">
-                <el-radio :value="true">是</el-radio>
-                <el-radio :value="false">否</el-radio>
-              </el-radio-group>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row :gutter="24">
           <el-col :span="12">
             <el-form-item label="客户名称" prop="customer_name">
-              <el-input v-if="isNewCustomer" v-model="form.customer_name" placeholder="请输入客户名称" clearable />
-              <el-select v-else v-model="selectedCustomerId" filterable remote reserve-keyword clearable :remote-method="searchCustomers" :loading="customerSearchLoading" placeholder="输入关键词搜索客户" style="width: 100%" @change="handleCustomerSelect" @focus="customerSelectFocused = true" @blur="customerSelectFocused = false">
-                <el-option v-for="c in customerOptions" :key="c.id" :label="customerSelectFocused ? `${c.vc_code} - ${c.name}` : c.name" :value="c.id">
-                  <span>{{ c.vc_code }} - {{ c.name }}</span>
-                  <span v-if="c.region" class="customer-region">{{ c.region }}</span>
-                </el-option>
-              </el-select>
+              <el-autocomplete v-model="form.customer_name" :fetch-suggestions="handleCustomerSearch" :loading="customerSearchLoading" placeholder="输入客户名称搜索或新建" clearable value-key="name" style="width: 100%" @select="handleCustomerAutoSelect" @clear="handleCustomerClear">
+                <template #default="{ item }">
+                  <div class="customer-suggestion" :class="{ 'other-salesperson': !item.is_mine && item.user_id }">
+                    <span class="customer-suggestion-name">{{ item.name }}</span>
+                    <span class="customer-suggestion-code">{{ item.vc_code }}</span>
+                    <span v-if="!item.is_mine && item.salesperson_name" class="customer-suggestion-owner">{{ item.salesperson_name }}</span>
+                    <span v-else-if="item.region" class="customer-suggestion-region">{{ item.region }}</span>
+                  </div>
+                </template>
+                <template #append v-if="isNewCustomer && form.customer_name">
+                  <el-tag size="small" type="success">新客户</el-tag>
+                </template>
+                <template #append v-else-if="isOtherSalespersonCustomer">
+                  <el-tag size="small" type="warning">他人客户</el-tag>
+                </template>
+              </el-autocomplete>
             </el-form-item>
           </el-col>
 
           <el-col :span="12">
             <el-form-item label="客户地区" prop="customer_region">
-              <el-input v-model="form.customer_region" placeholder="请输入客户地区" :disabled="!isNewCustomer && !!selectedCustomerId" clearable />
+              <el-autocomplete v-model="form.customer_region" :fetch-suggestions="suggestRegions" placeholder="请输入客户地区" clearable :disabled="!!selectedCustomerId" style="width: 100%">
+                <template #default="{ item }">{{ item.value }}</template>
+              </el-autocomplete>
             </el-form-item>
           </el-col>
         </el-row>
@@ -706,8 +706,48 @@ const handleQuantityInputChange = () => onQuantityInputChange(form, handleCalcul
 const handleDomesticCbmPriceChange = () => onDomesticCbmPriceChange(form, handleCalculateCost)
 const handleShippingMethodChange = () => onShippingMethodChange(form, handleCalculateCost)
 const handlePortTypeChange = () => onPortTypeChange(form, handleCalculateCost)
-const handleCustomerTypeChange = (val) => onCustomerTypeChange(val, form)
-const handleCustomerSelect = (customerId) => onCustomerSelect(customerId, form)
+// 智能客户搜索
+const isOtherSalespersonCustomer = ref(false)
+const selectedCustomerOwner = ref('')
+const handleCustomerSearch = async (queryString, cb) => {
+  if (!queryString || queryString.length < 2) { cb([]); return }
+  await searchCustomers(queryString)
+  cb(customerOptions.value)
+}
+const handleCustomerAutoSelect = async (item) => {
+  // 检查是否为其他业务员的客户
+  if (!item.is_mine && item.user_id) {
+    try {
+      await ElMessageBox.confirm(
+        `该客户「${item.name}」属于业务员「${item.salesperson_name}」，确定要为其创建报价吗？`,
+        '他人客户提示',
+        { confirmButtonText: '继续使用', cancelButtonText: '取消', type: 'warning' }
+      )
+    } catch { return }
+    isOtherSalespersonCustomer.value = true
+    selectedCustomerOwner.value = item.salesperson_name
+  } else {
+    isOtherSalespersonCustomer.value = false
+    selectedCustomerOwner.value = ''
+  }
+  selectedCustomerId.value = item.id
+  form.customer_name = item.name
+  form.customer_region = item.region || ''
+  isNewCustomer.value = false
+}
+const handleCustomerClear = () => {
+  selectedCustomerId.value = null
+  form.customer_region = ''
+  isNewCustomer.value = true
+  isOtherSalespersonCustomer.value = false
+  selectedCustomerOwner.value = ''
+}
+// 常用地区建议
+const commonRegions = ['广东', '浙江', '江苏', '上海', '北京', '福建', '山东', '四川', '湖北', '河南', '美国', '欧洲', '东南亚', '日本', '韩国']
+const suggestRegions = (queryString, cb) => {
+  const results = queryString ? commonRegions.filter(r => r.includes(queryString)).map(v => ({ value: v })) : commonRegions.map(v => ({ value: v }))
+  cb(results)
+}
 const handleMaterialSelect = (row, index) => { onMaterialSelect(row, materialCoefficient.value, (r) => { calculateItemSubtotal(r); handleCalculateCost() }) }
 const handlePackagingMaterialSelect = (row, index) => { onPackagingMaterialSelect(row, (r) => { calculateItemSubtotal(r); handleCalculateCost() }) }
 const handleItemSubtotalChange = (row) => { calculateItemSubtotal(row); handleCalculateCost() }
@@ -1265,6 +1305,38 @@ onBeforeRouteLeave(async (to, from, next) => {
 }
 .action-cancel:hover {
   color: #64748b;
+}
+
+/* ========== 智能客户搜索 ========== */
+.customer-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+.customer-suggestion-name {
+  font-weight: 500;
+  color: #303133;
+}
+.customer-suggestion-code {
+  font-size: 12px;
+  color: #909399;
+}
+.customer-suggestion-region {
+  font-size: 12px;
+  color: #67c23a;
+  margin-left: auto;
+}
+.customer-suggestion-owner {
+  font-size: 12px;
+  color: #e6a23c;
+  margin-left: auto;
+}
+.customer-suggestion.other-salesperson {
+  background: #fef3c7;
+  margin: -4px -8px;
+  padding: 8px;
+  border-radius: 4px;
 }
 
 /* ========== 移动端底部栏（仅小屏显示） ========== */

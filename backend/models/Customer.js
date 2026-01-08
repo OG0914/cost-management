@@ -2,27 +2,36 @@ const dbManager = require('../db/database');
 
 class Customer {
     static async findAll(options = {}) {
-        const { page = 1, pageSize = 12, keyword } = options;
+        const { page = 1, pageSize = 12, keyword, userId } = options;
         const offset = (page - 1) * pageSize;
-        let whereClause = '';
+        const conditions = [];
         const params = [];
+        let paramIndex = 1;
         
         if (keyword) {
             params.push(`%${keyword}%`);
-            whereClause = `WHERE vc_code ILIKE $1 OR name ILIKE $1 OR region ILIKE $1`;
+            conditions.push(`(vc_code ILIKE $${paramIndex} OR name ILIKE $${paramIndex} OR region ILIKE $${paramIndex})`);
+            paramIndex++;
         }
+        if (userId) {
+            params.push(userId);
+            conditions.push(`user_id = $${paramIndex}`);
+            paramIndex++;
+        }
+        
+        const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
         
         const countSql = `SELECT COUNT(*) FROM customers ${whereClause}`;
         const countResult = await dbManager.query(countSql, params);
         const total = parseInt(countResult.rows[0].count);
         
-        const limitParam = keyword ? '$2' : '$1';
-        const offsetParam = keyword ? '$3' : '$2';
-        const dataSql = `SELECT id, vc_code, name, region, remark, created_at, updated_at 
-                         FROM customers ${whereClause} 
-                         ORDER BY created_at DESC 
-                         LIMIT ${limitParam} OFFSET ${offsetParam}`;
-        const dataResult = await dbManager.query(dataSql, [...params, pageSize, offset]);
+        params.push(pageSize, offset);
+        const dataSql = `SELECT c.id, c.vc_code, c.name, c.region, c.remark, c.user_id, u.real_name as salesperson_name, c.created_at, c.updated_at 
+                         FROM customers c LEFT JOIN users u ON c.user_id = u.id
+                         ${whereClause} 
+                         ORDER BY c.created_at DESC 
+                         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+        const dataResult = await dbManager.query(dataSql, params);
         
         return { data: dataResult.rows, total, page, pageSize };
     }
@@ -38,19 +47,19 @@ class Customer {
     }
 
     static async create(data) {
-        const { vc_code, name, region, remark } = data;
+        const { vc_code, name, region, remark, user_id } = data;
         const result = await dbManager.query(
-            `INSERT INTO customers (vc_code, name, region, remark) VALUES ($1, $2, $3, $4) RETURNING id`,
-            [vc_code, name, region || null, remark || null]
+            `INSERT INTO customers (vc_code, name, region, remark, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+            [vc_code, name, region || null, remark || null, user_id || null]
         );
         return result.rows[0].id;
     }
 
     static async update(id, data) {
-        const { vc_code, name, region, remark } = data;
+        const { vc_code, name, region, remark, user_id } = data;
         await dbManager.query(
-            `UPDATE customers SET vc_code = $1, name = $2, region = $3, remark = $4, updated_at = NOW() WHERE id = $5`,
-            [vc_code, name, region || null, remark || null, id]
+            `UPDATE customers SET vc_code = $1, name = $2, region = $3, remark = $4, user_id = $5, updated_at = NOW() WHERE id = $6`,
+            [vc_code, name, region || null, remark || null, user_id !== undefined ? user_id : null, id]
         );
         return true;
     }
@@ -66,12 +75,14 @@ class Customer {
         return result.rowCount;
     }
 
-    static async search(keyword) {
+    static async search(keyword, currentUserId = null) {
         const result = await dbManager.query(
-            `SELECT id, vc_code, name, region FROM customers 
-             WHERE vc_code ILIKE $1 OR name ILIKE $1 
-             ORDER BY name LIMIT 50`,
-            [`%${keyword}%`]
+            `SELECT c.id, c.vc_code, c.name, c.region, c.user_id, u.real_name as salesperson_name,
+                    CASE WHEN c.user_id IS NULL OR c.user_id = $2 THEN true ELSE false END as is_mine
+             FROM customers c LEFT JOIN users u ON c.user_id = u.id
+             WHERE c.vc_code ILIKE $1 OR c.name ILIKE $1 
+             ORDER BY is_mine DESC, c.name LIMIT 50`,
+            [`%${keyword}%`, currentUserId]
         );
         return result.rows;
     }

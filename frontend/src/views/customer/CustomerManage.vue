@@ -29,8 +29,14 @@
       <el-table :data="tableData" border stripe v-loading="loading" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="vc_code" label="VC号" width="120" />
-        <el-table-column prop="name" label="客户名称" width="400" />
-        <el-table-column prop="region" label="地区" width="120" />
+        <el-table-column prop="name" label="客户名称" min-width="200" />
+        <el-table-column prop="region" label="地区" width="100" />
+        <el-table-column prop="salesperson_name" label="负责业务" width="100">
+          <template #default="{ row }">
+            <span v-if="row.salesperson_name">{{ row.salesperson_name }}</span>
+            <span v-else class="text-gray-400">公共</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="remark" label="备注" min-width="100" />
         <el-table-column label="更新时间" width="180">
           <template #default="{ row }">{{ formatDateTime(row.updated_at) }}</template>
@@ -63,6 +69,12 @@
         </el-form-item>
         <el-form-item label="地区">
           <el-input v-model="form.region" placeholder="请输入地区" />
+        </el-form-item>
+        <el-form-item label="负责业务" v-if="canAssignSalesperson">
+          <el-select v-model="form.user_id" placeholder="请选择负责业务员" clearable filterable style="width: 100%">
+            <el-option v-for="u in salespersonList" :key="u.id" :label="u.real_name || u.username" :value="u.id" />
+          </el-select>
+          <div class="text-xs text-gray-400 mt-1">不选择则为公共客户，所有人可用</div>
         </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="form.remark" type="textarea" :rows="3" placeholder="请输入备注" />
@@ -103,13 +115,23 @@ const pageSize = ref(12)
 const total = ref(0)
 let searchTimer = null
 
-const form = reactive({ id: null, vc_code: '', name: '', region: '', remark: '' })
+const form = reactive({ id: null, vc_code: '', name: '', region: '', remark: '', user_id: null })
 const formRef = ref(null)
 const formRules = {
   vc_code: [{ required: true, message: '请输入VC号', trigger: 'blur' }],
   name: [{ required: true, message: '请输入客户名称', trigger: 'blur' }]
 }
 const canEdit = computed(() => authStore.isAdmin || authStore.user?.role === 'reviewer')
+const canAssignSalesperson = computed(() => authStore.isAdmin)
+const salespersonList = ref([])
+
+const fetchSalespersons = async () => {
+  if (!canAssignSalesperson.value) return
+  try {
+    const res = await request.get('/users', { params: { pageSize: 100 } })
+    if (res.success) salespersonList.value = res.data.filter(u => u.role === 'salesperson' || u.role === 'admin')
+  } catch { /* ignore */ }
+}
 
 const fetchCustomers = async () => {
   loading.value = true
@@ -124,8 +146,8 @@ const handleSearch = () => { if (searchTimer) clearTimeout(searchTimer); searchT
 const handleClearSearch = () => { if (searchTimer) clearTimeout(searchTimer); currentPage.value = 1; fetchCustomers() }
 watch([currentPage, pageSize], fetchCustomers)
 
-const handleAdd = () => { isEdit.value = false; dialogTitle.value = '新增客户'; Object.assign(form, { id: null, vc_code: '', name: '', region: '', remark: '' }); dialogVisible.value = true }
-const handleEdit = (row) => { isEdit.value = true; dialogTitle.value = '编辑客户'; Object.assign(form, row); dialogVisible.value = true }
+const handleAdd = () => { isEdit.value = false; dialogTitle.value = '新增客户'; Object.assign(form, { id: null, vc_code: '', name: '', region: '', remark: '', user_id: null }); dialogVisible.value = true }
+const handleEdit = (row) => { isEdit.value = true; dialogTitle.value = '编辑客户'; Object.assign(form, { ...row, user_id: row.user_id || null }); dialogVisible.value = true }
 
 const handleSubmit = async () => {
   const valid = await formRef.value?.validate().catch(() => false)
@@ -185,7 +207,7 @@ const handleDownloadTemplate = async () => {
   } catch (e) { ElMessage.error('下载失败') }
 }
 
-onMounted(fetchCustomers)
+onMounted(() => { fetchCustomers(); fetchSalespersons() })
 onUnmounted(() => clearTimeout(searchTimer))
 </script>
 
