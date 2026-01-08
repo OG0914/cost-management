@@ -511,10 +511,11 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, ArrowLeft, Download, Delete, Upload, Grid, List, View, EditPen, CaretLeft, CaretRight, InfoFilled, CopyDocument } from '@element-plus/icons-vue';
+import { Plus, Delete, Grid, List, View, EditPen, CaretLeft, CaretRight, InfoFilled, CopyDocument } from '@element-plus/icons-vue';
 import request from '../../utils/request';
 import { useAuthStore } from '../../store/auth';
 import { formatNumber, formatDateTime } from '../../utils/format';
+import { getRegulationColor } from '../../utils/color';
 import logger from '../../utils/logger';
 import { 
   getPackagingTypeOptions, 
@@ -528,11 +529,11 @@ import CommonPagination from '../../components/common/CommonPagination.vue';
 import ActionButton from '../../components/common/ActionButton.vue';
 import StatusSwitch from '../../components/common/StatusSwitch.vue';
 
+defineOptions({ name: 'PackagingManage' })
+
 const router = useRouter();
 const authStore = useAuthStore();
 const showToolbar = ref(false);
-
-
 
 // 权限检查 - 只有管理员和采购人员可以编辑包材
 const canEdit = computed(() => authStore.isAdmin || authStore.isPurchaser);
@@ -587,23 +588,13 @@ const paginatedConfigs = computed(() => {
 // 包装类型标签颜色
 const getPackagingTypeTagType = (type) => {
   const typeMap = {
-    standard_box: '',
+    standard_box: 'primary',
     no_box: 'success',
     blister_direct: 'warning',
     blister_bag: 'info'
   };
-  return typeMap[type] || '';
+  return typeMap[type] || 'info';
 };
-
-// 法规颜色映射
-const REGULATION_COLORS = { 
-  'NIOSH': '#409EFF', 
-  'GB': '#67C23A', 
-  'CE': '#E6A23C', 
-  'ASNZS': '#F56C6C', 
-  'KN': '#9B59B6' 
-}
-const getRegulationColor = (name) => REGULATION_COLORS[name] || '#909399'
 
 // 产品类别颜色 - 引用统一配置
 import { getCategoryColor } from '@/config/categoryColors'
@@ -959,48 +950,16 @@ const deleteConfig = async (row) => {
 
 // 批量删除
 const handleBatchDelete = async () => {
-  if (selectedConfigs.value.length === 0) {
-    ElMessage.warning('请先选择要删除的配置');
-    return;
-  }
-
+  if (selectedConfigs.value.length === 0) { ElMessage.warning('请先选择要删除的配置'); return; }
   try {
-    await ElMessageBox.confirm(
-      `确定要删除选中的 ${selectedConfigs.value.length} 条包装配置吗？此操作不可恢复！`, 
-      '批量删除确认', 
-      {
-        confirmButtonText: '确定删除',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    );
-
+    await ElMessageBox.confirm(`确定要删除选中的 ${selectedConfigs.value.length} 条包装配置吗？`, '批量删除确认', { type: 'warning' });
     const ids = selectedConfigs.value.map(item => item.id);
-    
-    // 逐个删除
-    let successCount = 0;
-    let failCount = 0;
-    
-    for (const id of ids) {
-      try {
-        await request.delete(`/processes/packaging-configs/${id}`);
-        successCount++;
-      } catch (error) {
-        failCount++;
-      }
-    }
-    
-    if (successCount > 0) {
-      ElMessage.success(`成功删除 ${successCount} 条配置${failCount > 0 ? `，失败 ${failCount} 条` : ''}`);
-      loadPackagingConfigs();
-    } else {
-      ElMessage.error('删除失败');
-    }
-  } catch (error) {
-    if (error !== 'cancel') {
-      // 错误已在拦截器处理
-    }
-  }
+    const results = await Promise.allSettled(ids.map(id => request.delete(`/processes/packaging-configs/${id}`)));
+    const successCount = results.filter(r => r.status === 'fulfilled').length;
+    const failCount = results.filter(r => r.status === 'rejected').length;
+    if (successCount > 0) { ElMessage.success(`成功删除 ${successCount} 条配置${failCount > 0 ? `，失败 ${failCount} 条` : ''}`); loadPackagingConfigs(); }
+    else ElMessage.error('删除失败');
+  } catch (error) { if (error !== 'cancel') { /* 错误已在拦截器处理 */ } }
 };
 
 // 添加包材
@@ -1186,10 +1145,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.packaging-management {
-  /* padding 由 MainLayout 提供 */
-}
-
 .filter-bar {
   display: flex;
   align-items: center;

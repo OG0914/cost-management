@@ -47,7 +47,7 @@
               <div class="series-tag" v-if="item.model_series">
                 <span class="label">系列:</span> {{ item.model_series }}
               </div>
-              <div class="bom-info cursor-pointer hover:text-blue-600 transition-colors" @click="handleConfigBom(item)">
+              <div class="bom-info bom-link" @click="handleConfigBom(item)">
                 BOM: 共 {{ item.bom_count || 0 }} 项
               </div>
               <div class="status">
@@ -69,13 +69,11 @@
         <el-table-column type="selection" width="55" />
         <el-table-column prop="regulation_name" label="法规类别" width="120" sortable />
         <el-table-column prop="model_name" label="型号名称" sortable />
-        <el-table-column prop="model_series" label="产品系列" width="140" sortable>
-         
-        </el-table-column>
+        <el-table-column prop="model_series" label="产品系列" width="140" sortable />
         <el-table-column prop="model_category" label="型号分类" width="140" sortable />
         <el-table-column label="BOM明细" width="120" align="center">
           <template #default="{ row }">
-            <el-link type="primary" :underline="false" @click="handleConfigBom(row)">
+            <el-link type="primary" underline="never" @click="handleConfigBom(row)">
               <span class="font-bold">共 {{ row.bom_count || 0 }} 项</span>
             </el-link>
           </template>
@@ -110,13 +108,13 @@
       append-to-body
       :close-on-click-modal="false"
     >
-      <el-form :model="form" label-width="100px">
-        <el-form-item label="法规类别" required>
+      <el-form ref="formRef" :model="form" :rules="formRules" label-width="100px">
+        <el-form-item label="法规类别" prop="regulation_id">
           <el-select v-model="form.regulation_id" filterable placeholder="请选择法规类别" style="width: 100%">
             <el-option v-for="reg in regulations" :key="reg.id" :label="reg.name" :value="reg.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="型号名称" required>
+        <el-form-item label="型号名称" prop="model_name">
           <el-input v-model="form.model_name" placeholder="请输入型号名称" />
         </el-form-item>
         <el-form-item label="产品系列">
@@ -149,16 +147,18 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Upload, Download, Delete, EditPen, Grid, List, CaretLeft, CaretRight, Setting } from '@element-plus/icons-vue'
+import { Search, Delete, EditPen, Grid, List, CaretLeft, CaretRight, Setting } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
-import { formatDateTime } from '@/utils/format'
+import { getRegulationColor } from '@/utils/color'
 import logger from '@/utils/logger'
 import PageHeader from '@/components/common/PageHeader.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import BomConfigDialog from '@/components/BomConfigDialog.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
 import StatusSwitch from '@/components/common/StatusSwitch.vue'
+
+defineOptions({ name: 'ModelManage' })
 
 const authStore = useAuthStore()
 const showToolbar = ref(false)
@@ -179,6 +179,7 @@ const searchKeyword = ref('')
 const viewMode = ref('card')
 const currentPage = ref(1)
 const pageSize = ref(12)
+const formRef = ref(null)
 
 const paginatedModels = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
@@ -188,10 +189,10 @@ const paginatedModels = computed(() => {
 watch(viewMode, (newMode) => { if (newMode === 'card') selectedModels.value = [] })
 
 const form = reactive({ id: null, regulation_id: null, model_name: '', model_category: '', model_series: '', is_active: 1 })
-
-// 法规颜色映射（底色关联法规类别）
-const REGULATION_COLORS = { 'NIOSH': '#409EFF', 'GB': '#67C23A', 'CE': '#E6A23C', 'ASNZS': '#F56C6C', 'KN': '#9B59B6' }
-const getRegulationColor = (name) => REGULATION_COLORS[name] || '#909399'
+const formRules = {
+  regulation_id: [{ required: true, message: '请选择法规类别', trigger: 'change' }],
+  model_name: [{ required: true, message: '请输入型号名称', trigger: 'blur' }]
+}
 
 const fetchRegulations = async () => {
   try {
@@ -217,11 +218,16 @@ const querySearchSeries = (queryString, cb) => {
 const fetchModels = async () => {
   try {
     const response = await request.get('/models')
-    if (response.success) { models.value = response.data; handleSearch() }
+    if (response.success) { models.value = response.data; doSearch() }
   } catch (error) { ElMessage.error('获取型号列表失败') }
 }
 
-const handleSearch = () => {
+let searchTimer = null
+const handleSearch = () => { // 防抖搜索
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => { doSearch(); currentPage.value = 1 }, 300)
+}
+const doSearch = () => {
   if (!searchKeyword.value) { filteredModels.value = models.value; return }
   const keyword = searchKeyword.value.toLowerCase()
   filteredModels.value = models.value.filter(item => 
@@ -252,8 +258,8 @@ const handleConfigBom = (row) => {
 }
 
 const handleSubmit = async () => {
-  if (!form.regulation_id) { ElMessage.warning('请选择法规类别'); return }
-  if (!form.model_name) { ElMessage.warning('请输入型号名称'); return }
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
   loading.value = true
   try {
     if (isEdit.value) { await request.put(`/models/${form.id}`, form); ElMessage.success('更新成功') }
@@ -276,8 +282,9 @@ const handleBatchDelete = async () => {
   try {
     await ElMessageBox.confirm(`确定要删除选中的 ${selectedModels.value.length} 条型号吗？`, '批量删除确认', { confirmButtonText: '确定删除', cancelButtonText: '取消', type: 'warning' })
     const ids = selectedModels.value.map(item => item.id)
-    let successCount = 0, failCount = 0
-    for (const id of ids) { try { await request.delete(`/models/${id}`); successCount++ } catch { failCount++ } }
+    const results = await Promise.allSettled(ids.map(id => request.delete(`/models/${id}`)))
+    const successCount = results.filter(r => r.status === 'fulfilled').length
+    const failCount = results.filter(r => r.status === 'rejected').length
     if (successCount > 0) { ElMessage.success(`成功删除 ${successCount} 条型号${failCount > 0 ? `，失败 ${failCount} 条` : ''}`); fetchModels() }
     else ElMessage.error('删除失败')
   } catch (error) { if (error !== 'cancel') { /* 错误已在拦截器处理 */ } }
@@ -354,6 +361,8 @@ onMounted(() => { fetchRegulations(); fetchModels(); fetchSeries() })
 .status-active { width: 8px; height: 8px; border-radius: 50%; background-color: #67c23a; }
 .status-inactive { width: 8px; height: 8px; border-radius: 50%; background-color: #909399; }
 .bom-info { font-size: 13px; color: #606266; display: flex; align-items: center; }
+.bom-link { cursor: pointer; transition: color 0.2s; }
+.bom-link:hover { color: #409EFF; }
 .series-tag { font-size: 13px; color: #606266; display: flex; align-items: center; gap: 4px; }
 .series-tag .label { color: #909399; }
 

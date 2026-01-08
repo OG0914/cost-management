@@ -54,11 +54,11 @@
       append-to-body 
       :close-on-click-modal="false"
     >
-      <el-form :model="form" label-width="100px">
-        <el-form-item label="VC号" required>
+      <el-form ref="formRef" :model="form" :rules="formRules" label-width="100px">
+        <el-form-item label="VC号" prop="vc_code">
           <el-input v-model="form.vc_code" placeholder="请输入VC号" />
         </el-form-item>
-        <el-form-item label="客户名称" required>
+        <el-form-item label="客户名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入客户名称" />
         </el-form-item>
         <el-form-item label="地区">
@@ -79,13 +79,15 @@
 <script setup>
 import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Upload, Download, Delete, Search, EditPen, CaretLeft, CaretRight } from '@element-plus/icons-vue'
+import { Delete, Search, EditPen, CaretLeft, CaretRight } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { useAuthStore } from '@/store/auth'
 import { formatDateTime } from '@/utils/format'
 import PageHeader from '@/components/common/PageHeader.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
+
+defineOptions({ name: 'CustomerManage' })
 
 const authStore = useAuthStore()
 const showToolbar = ref(false)
@@ -102,6 +104,11 @@ const total = ref(0)
 let searchTimer = null
 
 const form = reactive({ id: null, vc_code: '', name: '', region: '', remark: '' })
+const formRef = ref(null)
+const formRules = {
+  vc_code: [{ required: true, message: '请输入VC号', trigger: 'blur' }],
+  name: [{ required: true, message: '请输入客户名称', trigger: 'blur' }]
+}
 const canEdit = computed(() => authStore.isAdmin || authStore.user?.role === 'reviewer')
 
 const fetchCustomers = async () => {
@@ -121,7 +128,8 @@ const handleAdd = () => { isEdit.value = false; dialogTitle.value = '新增客�
 const handleEdit = (row) => { isEdit.value = true; dialogTitle.value = '编辑客户'; Object.assign(form, row); dialogVisible.value = true }
 
 const handleSubmit = async () => {
-  if (!form.vc_code || !form.name) { ElMessage.warning('请填写VC号和客户名称'); return }
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
   loading.value = true
   try {
     if (isEdit.value) { await request.put(`/customers/${form.id}`, form); ElMessage.success('更新成功') }
@@ -178,10 +186,7 @@ const handleDownloadTemplate = async () => {
 }
 
 onMounted(fetchCustomers)
-
-onUnmounted(() => {
-  if (searchTimer) clearTimeout(searchTimer)
-})
+onUnmounted(() => clearTimeout(searchTimer))
 </script>
 
 <style scoped>
