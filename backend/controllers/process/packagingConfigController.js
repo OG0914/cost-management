@@ -233,12 +233,10 @@ exports.deletePackagingConfig = async (req, res) => {
       return res.status(400).json({ success: false, message: '该包装配置已被报价单引用，无法删除' });
     }
     
-    // 检查是否有关联的标准成本
+    // 检查是否有关联的标准成本（阻止删除，保留历史记录）
     const hasStandardCost = await StandardCost.findCurrentByPackagingConfigId(id);
     if (hasStandardCost) {
-      // 删除关联的标准成本记录
-      await StandardCost.deleteByPackagingConfigId(id);
-      logger.info(`已删除包装配置 ${id} 关联的标准成本记录`);
+      return res.status(400).json({ success: false, message: '该包装配置已设置标准成本，请先删除标准成本记录' });
     }
     
     await PackagingConfig.delete(id);
