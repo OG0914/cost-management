@@ -135,6 +135,37 @@ class ModelBom {
       return { copiedCount, skippedCount, totalSource: sourceResult.rows.length };
     });
   }
+
+  /** 从Excel导入BOM */
+  static async importBom(modelId, bomMap, materialMap, mode = 'replace') {
+    return await dbManager.transaction(async (client) => {
+      if (mode === 'replace') {
+        await client.query('DELETE FROM model_bom_materials WHERE model_id = $1', [modelId]);
+      }
+
+      let created = 0, updated = 0, skipped = 0;
+      let sortOrder = 0;
+
+      for (const [itemNo, data] of bomMap) {
+        const material = materialMap.get(itemNo);
+        if (!material) { skipped++; continue; } // 原料不存在，跳过
+
+        if (mode === 'merge') {
+          const exists = await client.query('SELECT id FROM model_bom_materials WHERE model_id = $1 AND material_id = $2', [modelId, material.id]);
+          if (exists.rows.length > 0) {
+            await client.query('UPDATE model_bom_materials SET usage_amount = $1, updated_at = NOW() WHERE id = $2', [data.usageAmount, exists.rows[0].id]);
+            updated++;
+            continue;
+          }
+        }
+
+        await client.query('INSERT INTO model_bom_materials (model_id, material_id, usage_amount, sort_order) VALUES ($1, $2, $3, $4)', [modelId, material.id, data.usageAmount, sortOrder++]);
+        created++;
+      }
+
+      return { created, updated, skipped };
+    });
+  }
 }
 
 module.exports = ModelBom;

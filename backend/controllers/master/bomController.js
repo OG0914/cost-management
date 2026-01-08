@@ -1,5 +1,6 @@
 /** BOM控制器 - 处理产品BOM的CRUD操作 */
 
+const ExcelJS = require('exceljs');
 const ModelBom = require('../../models/ModelBom');
 const Model = require('../../models/Model');
 const Material = require('../../models/Material');
@@ -140,4 +141,133 @@ const copyBom = async (req, res) => {
   }
 };
 
-module.exports = { getBomByModelId, createBomItem, updateBomItem, deleteBomItem, batchUpdateBom, copyBom };
+/** 从Excel导入BOM - POST /api/bom/import */
+const importBom = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json(error('请上传文件', 400));
+
+    const { model_id, mode = 'replace' } = req.body;
+    if (!model_id) return res.status(400).json(error('请指定目标型号', 400));
+
+    const model = await Model.findById(model_id);
+    if (!model) return res.status(404).json(error('型号不存在', 404));
+
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(req.file.buffer);
+    const ws = wb.worksheets[0];
+    if (!ws) return res.status(400).json(error('Excel文件为空', 400));
+
+    // 解析Excel数据：母件品號, 展開用料, 本地品名, 單位用量, 庫存單位, 主要廠商
+    const rows = [];
+    ws.eachRow({ includeEmpty: false }, (row, rowNum) => {
+      if (rowNum === 1) return; // 跳过表头
+      const [parentCode, childCode, childName, usageAmount, unit, vendor] = row.values.slice(1);
+      if (parentCode && childCode && usageAmount) {
+        rows.push({ parentCode: String(parentCode).trim(), childCode: String(childCode).trim(), childName: String(childName || '').trim(), usageAmount: parseFloat(usageAmount) || 0, unit: String(unit || '').trim(), vendor: String(vendor || '').trim() });
+      }
+    });
+
+    if (rows.length === 0) return res.status(400).json(error('未找到有效BOM数据', 400));
+
+    // 构建BOM树，找出顶层型号和最底层原料
+    const childToParent = new Map(); // 子件 -> 父件列表
+    const hasChildren = new Set(); // 有子件的料号
+    rows.forEach(r => {
+      if (!childToParent.has(r.childCode)) childToParent.set(r.childCode, []);
+      childToParent.get(r.childCode).push(r);
+      hasChildren.add(r.parentCode);
+    });
+
+    // 底层原料 = 没有子件的料号
+    const leafMaterials = new Set();
+    rows.forEach(r => { if (!hasChildren.has(r.childCode)) leafMaterials.add(r.childCode); });
+
+    // 递归计算顶层型号到底层原料的用量
+    const bomMap = new Map(); // childCode -> { usageAmount, childName, unit, vendor }
+    const visited = new Set();
+    
+    const calcUsage = (code, multiplier = 1) => {
+      if (visited.has(code)) return; // 防止循环
+      visited.add(code);
+      
+      const children = rows.filter(r => r.parentCode === code);
+      for (const child of children) {
+        const totalUsage = child.usageAmount * multiplier;
+        if (leafMaterials.has(child.childCode)) {
+          // 底层原料，累加用量
+          if (bomMap.has(child.childCode)) {
+            bomMap.get(child.childCode).usageAmount += totalUsage;
+          } else {
+            bomMap.set(child.childCode, { usageAmount: totalUsage, childName: child.childName, unit: child.unit, vendor: child.vendor });
+          }
+        } else {
+          // 中间件，继续展开
+          calcUsage(child.childCode, totalUsage);
+        }
+      }
+      visited.delete(code);
+    };
+
+    // 找到顶层型号（没有父件的料号）
+    const allChildCodes = new Set(rows.map(r => r.childCode));
+    const topLevelCodes = [...new Set(rows.map(r => r.parentCode))].filter(p => !allChildCodes.has(p));
+    
+    if (topLevelCodes.length === 0) return res.status(400).json(error('未找到顶层型号', 400));
+    
+    // 从顶层开始计算
+    topLevelCodes.forEach(code => calcUsage(code, 1));
+
+    // 匹配系统中的原料（按item_no匹配）
+    const materialCodes = [...bomMap.keys()];
+    const materials = await Material.findByItemNos(materialCodes);
+    const materialMap = new Map(materials.map(m => [m.item_no, m]));
+
+    // 执行导入
+    const result = await ModelBom.importBom(model_id, bomMap, materialMap, mode);
+    const bom = await ModelBom.findByModelId(model_id);
+
+    res.json(success({
+      ...result,
+      topLevelCodes,
+      leafCount: leafMaterials.size,
+      bom
+    }, `导入成功：${result.created}项新增，${result.updated}项更新，${result.skipped}项跳过（原料不存在）`));
+  } catch (err) {
+    console.error('导入BOM失败:', err);
+    res.status(500).json(error('导入失败: ' + err.message, 500));
+  }
+};
+
+/** 下载BOM导入模板 - GET /api/bom/template/download */
+const downloadTemplate = async (req, res) => {
+  try {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('BOM模板');
+    
+    ws.columns = [
+      { header: '母件品號', key: 'parentCode', width: 20 },
+      { header: '展開用料', key: 'childCode', width: 20 },
+      { header: '本地品名', key: 'childName', width: 40 },
+      { header: '單位用量', key: 'usageAmount', width: 12 },
+      { header: '庫存單位', key: 'unit', width: 10 },
+      { header: '主要廠商', key: 'vendor', width: 15 }
+    ];
+
+    // 添加示例数据
+    ws.addRow({ parentCode: 'MODEL-001', childCode: 'MAT-001', childName: '原料A', usageAmount: 0.5, unit: 'KG', vendor: '' });
+    ws.addRow({ parentCode: 'MODEL-001', childCode: 'MAT-002', childName: '原料B', usageAmount: 1, unit: 'PCS', vendor: 'VS001' });
+
+    // 设置表头样式
+    ws.getRow(1).font = { bold: true };
+    ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=BOM_Template.xlsx');
+    await wb.xlsx.write(res);
+  } catch (err) {
+    console.error('下载模板失败:', err);
+    res.status(500).json(error('下载失败: ' + err.message, 500));
+  }
+};
+
+module.exports = { getBomByModelId, createBomItem, updateBomItem, deleteBomItem, batchUpdateBom, copyBom, importBom, downloadTemplate };
