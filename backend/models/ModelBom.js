@@ -13,7 +13,7 @@ class ModelBom {
       WHERE b.model_id = $1 AND b.is_active = true
       ORDER BY b.sort_order, b.id
     `, [modelId]);
-    return result.rows;
+    return result.rows.map(row => ({ ...row, usage_amount: parseFloat(row.usage_amount) || 0, unit_price: parseFloat(row.unit_price) || 0 }));
   }
 
   /** 根据ID查找BOM记录 */
