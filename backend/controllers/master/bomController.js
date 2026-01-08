@@ -219,8 +219,25 @@ const importBom = async (req, res) => {
 
     // 匹配系统中的原料（按item_no匹配）
     const materialCodes = [...bomMap.keys()];
-    const materials = await Material.findByItemNos(materialCodes);
-    const materialMap = new Map(materials.map(m => [m.item_no, m]));
+    const existingMaterials = await Material.findByItemNos(materialCodes);
+    const materialMap = new Map(existingMaterials.map(m => [m.item_no, m]));
+
+    // 自动创建不存在的原料
+    let materialsCreated = 0;
+    for (const [itemNo, data] of bomMap) {
+      if (!materialMap.has(itemNo)) {
+        const newMaterial = await Material.create({
+          item_no: itemNo,
+          name: data.childName || itemNo,
+          unit: data.unit || 'PCS',
+          price: 0,
+          currency: 'CNY',
+          manufacturer: data.vendor || null
+        });
+        materialMap.set(itemNo, { id: newMaterial, item_no: itemNo, name: data.childName, unit: data.unit });
+        materialsCreated++;
+      }
+    }
 
     // 执行导入
     const result = await ModelBom.importBom(model_id, bomMap, materialMap, mode);
@@ -228,10 +245,11 @@ const importBom = async (req, res) => {
 
     res.json(success({
       ...result,
+      materialsCreated,
       topLevelCodes,
       leafCount: leafMaterials.size,
       bom
-    }, `导入成功：${result.created}项新增，${result.updated}项更新，${result.skipped}项跳过（原料不存在）`));
+    }, `导入成功：BOM ${result.created}项新增，${result.updated}项更新${materialsCreated > 0 ? `，自动创建原料${materialsCreated}项` : ''}`));
   } catch (err) {
     console.error('导入BOM失败:', err);
     res.status(500).json(error('导入失败: ' + err.message, 500));

@@ -303,8 +303,8 @@ const handleImportFile = async (file) => {
     const res = await request.post('/bom/import', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
     if (res.success) {
       bomList.value = res.data.bom || []
-      const { created, updated, skipped } = res.data
-      ElMessage.success(`导入成功：新增${created}项，更新${updated}项${skipped > 0 ? `，跳过${skipped}项（原料不存在）` : ''}`)
+      const { created, updated, materialsCreated } = res.data
+      ElMessage.success(`导入成功：BOM ${created}项新增，${updated}项更新${materialsCreated > 0 ? `，自动创建原料${materialsCreated}项` : ''}`)
       emit('updated')
     }
   } catch (e) { if (e !== 'cancel') { /* 错误已在拦截器处理 */ } }
