@@ -15,6 +15,7 @@ import { ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Download } from '@element-plus/icons-vue';
 import request from '../utils/request';
+import logger from '../utils/logger';
 
 const props = defineProps({
   // 导出 API 地址
@@ -109,7 +110,7 @@ const handleExport = async () => {
     }
 
   } catch (error) {
-    console.error('导出失败:', error);
+    logger.error('导出失败:', error);
     ElMessage.error('导出失败，请重试');
   } finally {
     loading.value = false;

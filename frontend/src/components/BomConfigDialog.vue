@@ -14,8 +14,18 @@
       <div class="action-section">
         <!-- 添加原料 -->
         <div class="add-section">
-          <el-select v-model="newMaterialId" filterable clearable placeholder="选择原料" style="width: 280px">
-            <el-option v-for="m in availableMaterials" :key="m.id" :label="`${m.name} (${m.item_no})`" :value="m.id">
+          <el-select 
+            v-model="newMaterialId" 
+            filterable 
+            remote 
+            reserve-keyword
+            clearable 
+            :remote-method="searchMaterials"
+            :loading="materialSearchLoading"
+            placeholder="输入名称或料号搜索原料" 
+            style="width: 280px"
+          >
+            <el-option v-for="m in filteredMaterialOptions" :key="m.id" :label="`${m.name} (${m.item_no})`" :value="m.id">
               <div style="display: flex; justify-content: space-between;">
                 <span>{{ m.name }}</span>
                 <span style="color: #909399; font-size: 12px;">¥{{ m.price }}/{{ m.unit }}</span>
@@ -132,7 +142,8 @@ const emit = defineEmits(['update:modelValue', 'updated'])
 const visible = defineModel({ type: Boolean, default: false })
 const loading = ref(false)
 const bomList = ref([])
-const allMaterials = ref([])
+const materialOptions = ref([])
+const materialSearchLoading = ref(false)
 const newMaterialId = ref(null)
 const newUsageAmount = ref(null)
 
@@ -152,10 +163,10 @@ const dialogTitle = computed(() => {
   return parts.join(' ')
 })
 
-// 过滤已添加的原料
-const availableMaterials = computed(() => {
+// 过滤已添加的原料（从搜索结果中排除）
+const filteredMaterialOptions = computed(() => {
   const usedIds = new Set(bomList.value.map(b => b.material_id))
-  return allMaterials.value.filter(m => !usedIds.has(m.id))
+  return materialOptions.value.filter(m => !usedIds.has(m.id))
 })
 
 // 过滤有BOM的型号（排除当前型号）
@@ -164,7 +175,8 @@ const modelsWithBom = computed(() => allModels.value.filter(m => m.id !== props.
 // 监听弹窗打开
 watch(visible, async (val) => {
   if (val && props.modelId) {
-    await Promise.all([fetchBom(), fetchMaterials(), fetchModels()])
+    await Promise.all([fetchBom(), fetchModels()])
+    materialOptions.value = []
   }
 })
 
@@ -178,12 +190,18 @@ const fetchBom = async () => {
   finally { loading.value = false }
 }
 
-// 获取所有原料
-const fetchMaterials = async () => {
+// 远程搜索原料
+const searchMaterials = async (query) => {
+  if (!query || query.length < 1) {
+    materialOptions.value = []
+    return
+  }
+  materialSearchLoading.value = true
   try {
-    const res = await request.get('/materials', { params: { pageSize: 9999 } })
-    if (res.success) allMaterials.value = res.data || []
-  } catch (e) { ElMessage.error('获取原料列表失败') }
+    const res = await request.get('/materials', { params: { keyword: query, pageSize: 50 } })
+    if (res.success) materialOptions.value = res.data || []
+  } catch (e) { materialOptions.value = [] }
+  finally { materialSearchLoading.value = false }
 }
 
 // 获取所有型号（带BOM数量，用于复制选择）

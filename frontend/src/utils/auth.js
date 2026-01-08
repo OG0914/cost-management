@@ -2,6 +2,8 @@
  * Token 管理工具
  */
 
+import logger from './logger'
+
 // 获取 Token
 export function getToken() {
   return sessionStorage.getItem('token')
@@ -60,7 +62,7 @@ export function isTokenExpired() {
     
     return false
   } catch (error) {
-    console.error('Token解析失败:', error)
+    logger.error('Token解析失败:', error)
     return true
   }
 }

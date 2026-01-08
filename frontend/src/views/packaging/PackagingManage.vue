@@ -515,6 +515,7 @@ import { Plus, ArrowLeft, Download, Delete, Upload, Grid, List, View, EditPen, C
 import request from '../../utils/request';
 import { useAuthStore } from '../../store/auth';
 import { formatNumber, formatDateTime } from '../../utils/format';
+import logger from '../../utils/logger';
 import { 
   getPackagingTypeOptions, 
   getPackagingTypeName, 
@@ -733,7 +734,7 @@ const loadMaterials = async () => {
       allMaterials.value = response.data;
     }
   } catch (error) {
-    console.error('加载原料失败:', error);
+    logger.error('加载原料失败:', error);
   }
 };
 
@@ -821,7 +822,7 @@ const loadConfigsForCopy = async () => {
       allConfigsForCopy.value = configsWithCount;
     }
   } catch (error) {
-    console.error('加载配置列表失败:', error);
+    logger.error('加载配置列表失败:', error);
   } finally {
     copyConfigsLoading.value = false;
   }
@@ -924,7 +925,7 @@ const editConfig = async (row) => {
       form.pc_per_bag = data.pc_per_bag;
       form.bags_per_box = data.bags_per_box;
       form.boxes_per_carton = data.boxes_per_carton;
-      form.is_active = data.is_active;
+      form.is_active = data.is_active ? 1 : 0;
       form.materials = data.materials || [];
       
       dialogVisible.value = true;

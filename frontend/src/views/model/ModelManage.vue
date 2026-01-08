@@ -153,6 +153,7 @@ import { Plus, Search, Upload, Download, Delete, EditPen, Grid, List, CaretLeft,
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { formatDateTime } from '@/utils/format'
+import logger from '@/utils/logger'
 import PageHeader from '@/components/common/PageHeader.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import BomConfigDialog from '@/components/BomConfigDialog.vue'
@@ -203,7 +204,7 @@ const fetchSeries = async () => {
   try {
     const response = await request.get('/models/series')
     if (response.success) seriesList.value = response.data.map(item => ({ value: item }))
-  } catch (error) { console.error('获取产品系列失败', error) }
+  } catch (error) { logger.error('获取产品系列失败', error) }
 }
 
 const querySearchSeries = (queryString, cb) => {
@@ -238,7 +239,7 @@ const handleAdd = () => {
 
 const handleEdit = (row) => {
   isEdit.value = true; dialogTitle.value = '编辑型号'
-  form.id = row.id; form.regulation_id = row.regulation_id; form.model_name = row.model_name; form.model_category = row.model_category; form.model_series = row.model_series || ''; form.is_active = row.is_active
+  form.id = row.id; form.regulation_id = row.regulation_id; form.model_name = row.model_name; form.model_category = row.model_category; form.model_series = row.model_series || ''; form.is_active = row.is_active ? 1 : 0
   dialogVisible.value = true
 }
 

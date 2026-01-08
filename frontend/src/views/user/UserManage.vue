@@ -205,7 +205,7 @@
     </el-dialog>
 
     <!-- 重置密码对话框 -->
-    <el-dialog v-model="resetPasswordVisible" title="重置密码" width="400px">
+    <el-dialog v-model="resetPasswordVisible" title="重置密码" width="400px" append-to-body>
       <el-form :model="resetPasswordForm" :rules="resetPasswordRules" ref="resetPasswordFormRef" label-width="80px">
         <el-form-item label="新密码" prop="newPassword">
           <el-input

@@ -115,7 +115,7 @@
 
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, View, EditPen, CopyDocument, Delete } from '@element-plus/icons-vue'
@@ -126,6 +126,7 @@ import { getUser } from '@/utils/auth'
 import ProductCategoryModal from '@/components/ProductCategoryModal.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
+import logger from '@/utils/logger'
 
 const router = useRouter()
 
@@ -183,7 +184,7 @@ const fetchQuotations = async () => {
       total.value = res.total
     }
   } catch (error) {
-    console.error('加载报价单列表失败:', error)
+    logger.error('加载报价单列表失败:', error)
     ElMessage.error('加载报价单列表失败')
   } finally {
     loading.value = false
@@ -296,7 +297,7 @@ const copyQuotation = async (id) => {
     }
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('复制失败:', error)
+      logger.error('复制失败:', error)
       ElMessage.error('复制失败')
     }
   }
@@ -319,7 +320,7 @@ const deleteQuotation = async (id) => {
     }
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('删除失败:', error)
+      logger.error('删除失败:', error)
       ElMessage.error('删除失败')
     }
   }
@@ -356,6 +357,10 @@ const goToCompare = () => {
 
 onMounted(() => {
   fetchQuotations()
+})
+
+onUnmounted(() => {
+  if (searchTimer) clearTimeout(searchTimer)
 })
 </script>
 

@@ -282,6 +282,7 @@ import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useReviewStore } from '@/store/review'
 import request from '@/utils/request'
+import logger from '@/utils/logger'
 import {
   getStatusType,
   getStatusName,
@@ -394,28 +395,25 @@ const profitPricing = computed(() => {
 // 加载详情
 const loadDetail = async () => {
   if (!props.quotationId) {
-    console.error('quotationId is required')
+    logger.error('quotationId is required')
     return
   }
   
   loading.value = true
   try {
-    // 直接调用 API 而不是通过 store，避免 store 状态问题
     const response = await request.get(`/review/${props.quotationId}/detail`)
-    console.log('审核详情API响应:', response)
     
     if (response.success) {
       quotationDetail.value = response.data.quotation
       items.value = response.data.items || []
       standardItems.value = response.data.standardItems || []
-      console.log('加载的明细数据:', items.value)
       
       // 解析自定义利润区间
       if (quotationDetail.value.custom_profit_tiers) {
         try {
           customProfitTiers.value = JSON.parse(quotationDetail.value.custom_profit_tiers)
         } catch (e) {
-          console.error('解析自定义利润档位失败:', e)
+          logger.error('解析自定义利润档位失败:', e)
           customProfitTiers.value = []
         }
       } else {
@@ -425,7 +423,7 @@ const loadDetail = async () => {
       ElMessage.error(response.message || '加载详情失败')
     }
   } catch (error) {
-    console.error('加载审核详情失败:', error)
+    logger.error('加载审核详情失败:', error)
     ElMessage.error('加载详情失败: ' + (error.message || '未知错误'))
   } finally {
     loading.value = false

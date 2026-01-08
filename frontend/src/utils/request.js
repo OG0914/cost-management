@@ -6,6 +6,7 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '../router'
 import { getToken, clearAuth } from './auth'
+import logger from './logger'
 
 // 默认超时时间（毫秒）
 const DEFAULT_TIMEOUT = 30000 // 30秒，适合大部分操作
@@ -34,7 +35,7 @@ request.interceptors.request.use(
     return config
   },
   error => {
-    console.error('请求错误:', error)
+    logger.error('请求错误:', error)
     return Promise.reject(error)
   }
 )
@@ -46,7 +47,7 @@ request.interceptors.response.use(
     return response.data
   },
   error => {
-    console.error('响应错误:', error)
+    logger.error('响应错误:', error)
 
     // 超时错误特殊处理
     if (error.code === 'ECONNABORTED' && error.message?.includes('timeout')) {
