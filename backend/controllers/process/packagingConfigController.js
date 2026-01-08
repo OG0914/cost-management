@@ -8,6 +8,8 @@ const PackagingConfig = require('../../models/PackagingConfig');
 const ProcessConfig = require('../../models/ProcessConfig');
 const PackagingMaterial = require('../../models/PackagingMaterial');
 const SystemConfig = require('../../models/SystemConfig');
+const StandardCost = require('../../models/StandardCost');
+const dbManager = require('../../db/database');
 const { isValidPackagingType, getPackagingTypeName, VALID_PACKAGING_TYPE_KEYS } = require('../../config/packagingTypes');
 
 // 获取所有包装配置（支持 packaging_type 筛选）
@@ -221,6 +223,24 @@ exports.updatePackagingConfig = async (req, res) => {
 exports.deletePackagingConfig = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // 检查是否被报价单引用
+    const quotationCheck = await dbManager.query(
+      'SELECT COUNT(*) as count FROM quotations WHERE packaging_config_id = $1',
+      [id]
+    );
+    if (parseInt(quotationCheck.rows[0].count) > 0) {
+      return res.status(400).json({ success: false, message: '该包装配置已被报价单引用，无法删除' });
+    }
+    
+    // 检查是否有关联的标准成本
+    const hasStandardCost = await StandardCost.findCurrentByPackagingConfigId(id);
+    if (hasStandardCost) {
+      // 删除关联的标准成本记录
+      await StandardCost.deleteByPackagingConfigId(id);
+      logger.info(`已删除包装配置 ${id} 关联的标准成本记录`);
+    }
+    
     await PackagingConfig.delete(id);
     res.json({ success: true, message: '包装配置删除成功' });
   } catch (error) {
@@ -252,5 +272,29 @@ exports.getPackagingConfigsGrouped = async (req, res) => {
   } catch (error) {
     logger.error('获取分组包装配置失败:', error);
     res.status(500).json({ success: false, message: '获取分组包装配置失败' });
+  }
+};
+
+// 获取所有配置及其包材数量（用于一键复制，优化 N+1 查询）
+exports.getPackagingConfigsWithMaterialCount = async (req, res) => {
+  try {
+    const result = await dbManager.query(`
+      SELECT pc.id, pc.model_id, pc.config_name, pc.packaging_type,
+             m.model_name, m.model_category, r.name as regulation_name,
+             COUNT(pm.id)::int as material_count
+      FROM packaging_configs pc
+      LEFT JOIN models m ON pc.model_id = m.id
+      LEFT JOIN regulations r ON m.regulation_id = r.id
+      LEFT JOIN packaging_materials pm ON pc.id = pm.packaging_config_id AND pm.is_active = true
+      WHERE pc.is_active = true
+      GROUP BY pc.id, pc.model_id, pc.config_name, pc.packaging_type,
+               m.model_name, m.model_category, r.name
+      ORDER BY pc.created_at DESC
+    `);
+
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    logger.error('获取配置包材数量失败:', error);
+    res.status(500).json({ success: false, message: '获取配置包材数量失败' });
   }
 };

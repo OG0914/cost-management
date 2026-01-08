@@ -9,6 +9,7 @@ const QuotationCustomFee = require('../../models/QuotationCustomFee');
 const SystemConfig = require('../../models/SystemConfig');
 const Model = require('../../models/Model');
 const CostCalculator = require('../../utils/costCalculator');
+const dbManager = require('../../db/database');
 const { success, error, paginated } = require('../../utils/response');
 const logger = require('../../utils/logger');
 
@@ -84,6 +85,15 @@ exports.createQuotation = async (req, res) => {
       return res.status(400).json(error('数量必须大于0', 400));
     }
 
+    // 验证 model_id 与 regulation_id 的一致性
+    const model = await Model.findById(model_id);
+    if (!model) {
+      return res.status(400).json(error('指定的型号不存在', 400));
+    }
+    if (model.regulation_id !== parseInt(regulation_id)) {
+      return res.status(400).json(error('型号与法规不匹配', 400));
+    }
+
     const materialCoefficient = await getMaterialCoefficient(model_id);
     const freight_per_unit = freight_total / quantity;
     const totals = calculateTotals(items || [], materialCoefficient);
@@ -123,25 +133,50 @@ exports.createQuotation = async (req, res) => {
       customProfitTiersJson = JSON.stringify(req.body.custom_profit_tiers);
     }
 
-    const quotationId = await Quotation.create({
-      quotation_no, customer_name, customer_region, model_id, regulation_id,
-      packaging_config_id: req.body.packaging_config_id || null,
-      quantity, freight_total, freight_per_unit, sales_type,
-      shipping_method: shipping_method || null, port: port || null,
-      base_cost: calculation.baseCost, overhead_price: calculation.overheadPrice,
-      final_price, currency: calculation.currency,
-      include_freight_in_base: req.body.include_freight_in_base !== false,
-      custom_profit_tiers: customProfitTiersJson, vat_rate: vatRateToSave,
-      status: 'draft', created_by: req.user.id
-    });
+    // 使用事务确保报价单和明细的原子性
+    const quotationId = await dbManager.transaction(async (client) => {
+      const insertResult = await client.query(
+        `INSERT INTO quotations (
+          quotation_no, customer_name, customer_region, model_id, regulation_id,
+          quantity, freight_total, freight_per_unit, sales_type, shipping_method, port,
+          base_cost, overhead_price, final_price, currency, status, created_by, 
+          packaging_config_id, include_freight_in_base, custom_profit_tiers, vat_rate
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+        RETURNING id`,
+        [
+          quotation_no, customer_name, customer_region, model_id, regulation_id,
+          quantity, freight_total, freight_per_unit, sales_type,
+          shipping_method || null, port || null,
+          calculation.baseCost, calculation.overheadPrice, final_price, calculation.currency,
+          'draft', req.user.id, req.body.packaging_config_id || null,
+          req.body.include_freight_in_base !== false, customProfitTiersJson, vatRateToSave
+        ]
+      );
+      const newQuotationId = insertResult.rows[0].id;
 
-    if (items && items.length > 0) {
-      const itemsWithQuotationId = items.map(item => ({ ...item, quotation_id: quotationId }));
-      await QuotationItem.batchCreate(itemsWithQuotationId);
-    }
-    if (customFees && customFees.length > 0) {
-      await QuotationCustomFee.replaceByQuotationId(quotationId, customFees);
-    }
+      // 创建明细
+      if (items && items.length > 0) {
+        for (const item of items) {
+          await client.query(
+            `INSERT INTO quotation_items (quotation_id, category, item_name, usage_amount, unit_price, subtotal, is_changed, original_value, material_id, after_overhead)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+            [newQuotationId, item.category, item.item_name, item.usage_amount, item.unit_price, item.subtotal, item.is_changed || false, item.original_value || null, item.material_id || null, item.after_overhead || false]
+          );
+        }
+      }
+
+      // 创建自定义费用
+      if (customFees && customFees.length > 0) {
+        for (const fee of customFees) {
+          await client.query(
+            `INSERT INTO quotation_custom_fees (quotation_id, fee_name, fee_rate, sort_order) VALUES ($1, $2, $3, $4)`,
+            [newQuotationId, fee.name, fee.rate, fee.sortOrder || 0]
+          );
+        }
+      }
+
+      return newQuotationId;
+    });
 
     const quotation = await Quotation.findById(quotationId);
     res.status(201).json(success({ quotation, calculation }, '报价单创建成功'));

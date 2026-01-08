@@ -5,6 +5,7 @@
 const logger = require('../../utils/logger');
 const Material = require('../../models/Material');
 const ModelBom = require('../../models/ModelBom');
+const QuotationItem = require('../../models/QuotationItem');
 const ExcelParser = require('../../utils/excelParser');
 const ExcelGenerator = require('../../utils/excelGenerator');
 const { success, error, paginated } = require('../../utils/response');
@@ -132,11 +133,20 @@ const deleteMaterial = async (req, res, next) => {
     }
     
     // 检查是否被BOM引用
-    const isUsed = await ModelBom.isMaterialUsed(id);
-    if (isUsed) {
+    const isUsedInBom = await ModelBom.isMaterialUsed(id);
+    if (isUsedInBom) {
       const models = await ModelBom.getModelsByMaterial(id);
       const modelNames = models.map(m => m.model_name).join('、');
       return res.status(400).json(error(`该原料已被以下型号BOM引用：${modelNames}，无法删除`, 400));
+    }
+    
+    // 检查是否被报价单明细引用
+    const isUsedInQuotation = await QuotationItem.isMaterialUsed(id);
+    if (isUsedInQuotation) {
+      const quotations = await QuotationItem.getQuotationsByMaterial(id);
+      const quotationNos = quotations.slice(0, 5).map(q => q.quotation_no).join('、');
+      const suffix = quotations.length > 5 ? `等${quotations.length}个报价单` : '';
+      return res.status(400).json(error(`该原料已被报价单引用：${quotationNos}${suffix}，无法删除`, 400));
     }
     
     await Material.delete(id);

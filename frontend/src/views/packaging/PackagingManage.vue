@@ -799,27 +799,13 @@ const loadPackagingConfigs = async () => {
   }
 };
 
-// 加载所有配置及其包材数量（用于一键复制）
+// 加载所有配置及其包材数量（用于一键复制，使用优化后的单次查询接口）
 const loadConfigsForCopy = async () => {
   copyConfigsLoading.value = true;
   try {
-    const response = await request.get('/processes/packaging-configs');
+    const response = await request.get('/processes/packaging-configs/with-material-count');
     if (response.success) {
-      // 获取每个配置的包材数量
-      const configsWithCount = await Promise.all(
-        response.data.map(async (config) => {
-          try {
-            const detailResponse = await request.get(`/processes/packaging-configs/${config.id}/full`);
-            return {
-              ...config,
-              material_count: detailResponse.success ? (detailResponse.data.materials?.length || 0) : 0
-            };
-          } catch {
-            return { ...config, material_count: 0 };
-          }
-        })
-      );
-      allConfigsForCopy.value = configsWithCount;
+      allConfigsForCopy.value = response.data;
     }
   } catch (error) {
     logger.error('加载配置列表失败:', error);

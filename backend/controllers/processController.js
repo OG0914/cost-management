@@ -23,6 +23,7 @@ exports.createPackagingConfig = packagingConfigController.createPackagingConfig;
 exports.updatePackagingConfig = packagingConfigController.updatePackagingConfig;
 exports.deletePackagingConfig = packagingConfigController.deletePackagingConfig;
 exports.getPackagingConfigsGrouped = packagingConfigController.getPackagingConfigsGrouped;
+exports.getPackagingConfigsWithMaterialCount = packagingConfigController.getPackagingConfigsWithMaterialCount;
 
 // 工序配置
 exports.getProcessConfigs = processConfigController.getProcessConfigs;
