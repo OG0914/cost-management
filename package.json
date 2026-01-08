@@ -1,0 +1,22 @@
+{
+  "name": "cost-analysis-system",
+  "version": "1.0.0",
+  "description": "成本分析管理系统",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n backend,frontend -c blue,green \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev:backend": "npm run dev -w backend",
+    "dev:frontend": "npm run dev -w frontend",
+    "build": "npm run build -w frontend",
+    "start": "npm start -w backend",
+    "stop": "taskkill /F /IM node.exe 2>nul || true"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "playwright": "^1.57.0"
+  }
+}
