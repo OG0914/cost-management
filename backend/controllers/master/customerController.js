@@ -5,7 +5,10 @@ const ExcelJS = require('exceljs');
 const getCustomerList = async (req, res) => {
     try {
         const { page = 1, pageSize = 12, keyword } = req.query;
-        const result = await Customer.findAll({ page: parseInt(page), pageSize: parseInt(pageSize), keyword });
+        const currentUser = req.user;
+        // 管理员/审核员看全部，业务员只看自己的客户+公共客户
+        const userId = (currentUser?.role === 'admin' || currentUser?.role === 'reviewer') ? null : currentUser?.id;
+        const result = await Customer.findAll({ page: parseInt(page), pageSize: parseInt(pageSize), keyword, userId, includePublic: true });
         res.json(paginated(result.data, result.total, result.page, result.pageSize));
     } catch (err) {
         console.error('获取客户列表失败:', err);

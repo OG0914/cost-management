@@ -128,7 +128,7 @@ const salespersonList = ref([])
 const fetchSalespersons = async () => {
   if (!canAssignSalesperson.value) return
   try {
-    const res = await request.get('/users', { params: { pageSize: 100 } })
+    const res = await request.get('/auth/users', { params: { pageSize: 100 } })
     if (res.success) salespersonList.value = res.data.filter(u => u.role === 'salesperson' || u.role === 'admin')
   } catch { /* ignore */ }
 }

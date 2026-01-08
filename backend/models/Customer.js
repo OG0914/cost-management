@@ -2,7 +2,7 @@ const dbManager = require('../db/database');
 
 class Customer {
     static async findAll(options = {}) {
-        const { page = 1, pageSize = 12, keyword, userId } = options;
+        const { page = 1, pageSize = 12, keyword, userId, includePublic = false } = options;
         const offset = (page - 1) * pageSize;
         const conditions = [];
         const params = [];
@@ -10,18 +10,22 @@ class Customer {
         
         if (keyword) {
             params.push(`%${keyword}%`);
-            conditions.push(`(vc_code ILIKE $${paramIndex} OR name ILIKE $${paramIndex} OR region ILIKE $${paramIndex})`);
+            conditions.push(`(c.vc_code ILIKE $${paramIndex} OR c.name ILIKE $${paramIndex} OR c.region ILIKE $${paramIndex})`);
             paramIndex++;
         }
         if (userId) {
             params.push(userId);
-            conditions.push(`user_id = $${paramIndex}`);
+            if (includePublic) {
+                conditions.push(`(c.user_id = $${paramIndex} OR c.user_id IS NULL)`);
+            } else {
+                conditions.push(`c.user_id = $${paramIndex}`);
+            }
             paramIndex++;
         }
         
         const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
         
-        const countSql = `SELECT COUNT(*) FROM customers ${whereClause}`;
+        const countSql = `SELECT COUNT(*) FROM customers c ${whereClause}`;
         const countResult = await dbManager.query(countSql, params);
         const total = parseInt(countResult.rows[0].count);
         
