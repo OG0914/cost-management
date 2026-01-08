@@ -1,0 +1,256 @@
+/**
+ * 包装配置控制器
+ * 处理包装配置的 CRUD 操作
+ */
+
+const logger = require('../../utils/logger');
+const PackagingConfig = require('../../models/PackagingConfig');
+const ProcessConfig = require('../../models/ProcessConfig');
+const PackagingMaterial = require('../../models/PackagingMaterial');
+const SystemConfig = require('../../models/SystemConfig');
+const { isValidPackagingType, getPackagingTypeName, VALID_PACKAGING_TYPE_KEYS } = require('../../config/packagingTypes');
+
+// 获取所有包装配置（支持 packaging_type 筛选）
+exports.getAllPackagingConfigs = async (req, res) => {
+  try {
+    const { packaging_type } = req.query;
+
+    if (packaging_type && !isValidPackagingType(packaging_type)) {
+      return res.status(400).json({
+        success: false,
+        message: `无效的包装类型: ${packaging_type}。有效值: ${VALID_PACKAGING_TYPE_KEYS.join(', ')}`
+      });
+    }
+
+    const configs = await PackagingConfig.findAll({ packaging_type });
+    const processCoefficient = parseFloat(await SystemConfig.getValue('process_coefficient')) || 1.56;
+
+    const configsWithPrice = await Promise.all(configs.map(async config => {
+      const processes = await ProcessConfig.findByPackagingConfigId(config.id);
+      const processSum = processes.reduce((sum, p) => sum + parseFloat(p.unit_price), 0);
+      const processTotalPrice = processSum * processCoefficient;
+
+      const materials = await PackagingMaterial.findByPackagingConfigId(config.id);
+      const materialTotalPrice = materials.reduce((sum, m) => {
+        return sum + (m.basic_usage !== 0 ? parseFloat(m.unit_price) / parseFloat(m.basic_usage) : 0);
+      }, 0);
+
+      return {
+        ...config,
+        packaging_type_name: getPackagingTypeName(config.packaging_type),
+        process_total_price: processTotalPrice,
+        material_total_price: materialTotalPrice
+      };
+    }));
+
+    res.json({ success: true, data: configsWithPrice });
+  } catch (error) {
+    logger.error('获取包装配置失败:', error);
+    res.status(500).json({ success: false, message: '获取包装配置失败' });
+  }
+};
+
+// 根据型号获取包装配置
+exports.getPackagingConfigsByModel = async (req, res) => {
+  try {
+    const { modelId } = req.params;
+    const configs = await PackagingConfig.findByModelId(modelId);
+    const processCoefficient = parseFloat(await SystemConfig.getValue('process_coefficient')) || 1.56;
+
+    const configsWithPrice = await Promise.all(configs.map(async config => {
+      const processes = await ProcessConfig.findByPackagingConfigId(config.id);
+      const processSum = processes.reduce((sum, p) => sum + parseFloat(p.unit_price), 0);
+      const processTotalPrice = processSum * processCoefficient;
+
+      const materials = await PackagingMaterial.findByPackagingConfigId(config.id);
+      const materialTotalPrice = materials.reduce((sum, m) => {
+        return sum + (m.basic_usage !== 0 ? parseFloat(m.unit_price) / parseFloat(m.basic_usage) : 0);
+      }, 0);
+
+      return {
+        ...config,
+        process_total_price: processTotalPrice,
+        material_total_price: materialTotalPrice
+      };
+    }));
+
+    res.json({ success: true, data: configsWithPrice });
+  } catch (error) {
+    logger.error('获取包装配置失败:', error);
+    res.status(500).json({ success: false, message: '获取包装配置失败' });
+  }
+};
+
+// 获取包装配置详情（含工序列表）
+exports.getPackagingConfigDetail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const config = await PackagingConfig.findWithProcesses(id);
+
+    if (!config) {
+      return res.status(404).json({ success: false, message: '包装配置不存在' });
+    }
+
+    res.json({ success: true, data: config });
+  } catch (error) {
+    logger.error('获取包装配置详情失败:', error);
+    res.status(500).json({ success: false, message: '获取包装配置详情失败' });
+  }
+};
+
+// 获取包装配置完整详情（含工序和包材列表）
+exports.getPackagingConfigFullDetail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const config = await PackagingConfig.findWithDetails(id);
+
+    if (!config) {
+      return res.status(404).json({ success: false, message: '包装配置不存在' });
+    }
+
+    res.json({ success: true, data: config });
+  } catch (error) {
+    logger.error('获取包装配置完整详情失败:', error);
+    res.status(500).json({ success: false, message: '获取包装配置完整详情失败' });
+  }
+};
+
+// 创建包装配置
+exports.createPackagingConfig = async (req, res) => {
+  try {
+    const {
+      model_id, config_name, packaging_type = 'standard_box',
+      layer1_qty, layer2_qty, layer3_qty,
+      pc_per_bag, bags_per_box, boxes_per_carton, // 兼容旧字段
+      processes, materials
+    } = req.body;
+
+    if (!isValidPackagingType(packaging_type)) {
+      return res.status(400).json({
+        success: false,
+        message: `无效的包装类型: ${packaging_type}。有效值: ${VALID_PACKAGING_TYPE_KEYS.join(', ')}`
+      });
+    }
+
+    const l1 = layer1_qty !== undefined ? layer1_qty : pc_per_bag;
+    const l2 = layer2_qty !== undefined ? layer2_qty : bags_per_box;
+    const l3 = layer3_qty !== undefined ? layer3_qty : boxes_per_carton;
+
+    if (!model_id || !config_name || !l1 || !l2) {
+      return res.status(400).json({ success: false, message: '请填写完整的包装配置信息' });
+    }
+
+    if (await PackagingConfig.existsByModelAndName(model_id, config_name)) {
+      return res.status(400).json({ success: false, message: '该型号下已存在同名的配置，请修改配置名称' });
+    }
+
+    const configId = await PackagingConfig.create({
+      model_id, config_name, packaging_type, layer1_qty: l1, layer2_qty: l2, layer3_qty: l3
+    });
+
+    if (processes && processes.length > 0) {
+      await ProcessConfig.createBatch(configId, processes);
+    }
+    if (materials && materials.length > 0) {
+      await PackagingMaterial.createBatch(configId, materials);
+    }
+
+    res.json({ success: true, data: { id: configId }, message: '包装配置创建成功' });
+  } catch (error) {
+    logger.error('创建包装配置失败:', error);
+
+    if (error.message && error.message.includes('无效的包装类型')) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    if (error.code === '23505' || (error.message && error.message.includes('duplicate key'))) {
+      return res.status(400).json({ success: false, message: '该型号下已存在同名的配置，请修改配置名称' });
+    }
+
+    res.status(500).json({ success: false, message: error.message || '创建包装配置失败' });
+  }
+};
+
+// 更新包装配置
+exports.updatePackagingConfig = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      config_name, packaging_type, layer1_qty, layer2_qty, layer3_qty,
+      pc_per_bag, bags_per_box, boxes_per_carton, // 兼容旧字段
+      is_active, processes, materials
+    } = req.body;
+
+    if (packaging_type !== undefined && !isValidPackagingType(packaging_type)) {
+      return res.status(400).json({
+        success: false,
+        message: `无效的包装类型: ${packaging_type}。有效值: ${VALID_PACKAGING_TYPE_KEYS.join(', ')}`
+      });
+    }
+
+    const l1 = layer1_qty !== undefined ? layer1_qty : pc_per_bag;
+    const l2 = layer2_qty !== undefined ? layer2_qty : bags_per_box;
+    const l3 = layer3_qty !== undefined ? layer3_qty : boxes_per_carton;
+
+    await PackagingConfig.update(id, {
+      config_name, packaging_type, layer1_qty: l1, layer2_qty: l2, layer3_qty: l3,
+      is_active: is_active !== undefined ? is_active : true
+    });
+
+    if (processes) {
+      await ProcessConfig.deleteByPackagingConfigId(id);
+      if (processes.length > 0) await ProcessConfig.createBatch(id, processes);
+    }
+    if (materials) {
+      await PackagingMaterial.deleteByPackagingConfigId(id);
+      if (materials.length > 0) await PackagingMaterial.createBatch(id, materials);
+    }
+
+    res.json({ success: true, message: '包装配置更新成功' });
+  } catch (error) {
+    logger.error('更新包装配置失败:', error);
+
+    if (error.message && error.message.includes('无效的包装类型')) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+
+    res.status(500).json({ success: false, message: '更新包装配置失败' });
+  }
+};
+
+// 删除包装配置
+exports.deletePackagingConfig = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await PackagingConfig.delete(id);
+    res.json({ success: true, message: '包装配置删除成功' });
+  } catch (error) {
+    logger.error('删除包装配置失败:', error);
+    res.status(500).json({ success: false, message: '删除包装配置失败' });
+  }
+};
+
+// 按包装类型分组获取配置
+exports.getPackagingConfigsGrouped = async (req, res) => {
+  try {
+    const { model_id } = req.query;
+    const options = model_id ? { model_id: parseInt(model_id) } : {};
+
+    const grouped = await PackagingConfig.findGroupedByType(options);
+
+    const result = {};
+    for (const [type, configs] of Object.entries(grouped)) {
+      result[type] = {
+        type_name: getPackagingTypeName(type),
+        configs: configs.map(config => ({
+          ...config,
+          packaging_type_name: getPackagingTypeName(config.packaging_type)
+        }))
+      };
+    }
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('获取分组包装配置失败:', error);
+    res.status(500).json({ success: false, message: '获取分组包装配置失败' });
+  }
+};

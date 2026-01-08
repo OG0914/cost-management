@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const reviewController = require('../controllers/reviewController');
+const reviewController = require('../controllers/review/reviewController');
 const { verifyToken, requireRole } = require('../middleware/auth');
 
 // 所有审核接口都需要认证

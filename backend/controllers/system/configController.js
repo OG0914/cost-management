@@ -2,9 +2,9 @@
  * 系统配置控制器
  */
 
-const SystemConfig = require('../models/SystemConfig');
-const { success, error } = require('../utils/response');
-const { getAllPackagingTypes, PACKAGING_TYPES } = require('../config/packagingTypes');
+const SystemConfig = require('../../models/SystemConfig');
+const { success, error } = require('../../utils/response');
+const { getAllPackagingTypes, PACKAGING_TYPES } = require('../../config/packagingTypes');
 
 /**
  * 获取所有配置

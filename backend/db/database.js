@@ -84,6 +84,16 @@ class DatabaseManager {
    * 初始化数据表
    */
   async initializeTables() {
+    // 检查核心表是否已存在，避免重复执行 schema.sql
+    const result = await this.pool.query(
+      "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users')"
+    );
+    
+    if (result.rows[0].exists) {
+      console.log('数据表已存在，跳过初始化');
+      return;
+    }
+
     const sqlPath = path.join(__dirname, 'schema.sql');
 
     if (fs.existsSync(sqlPath)) {

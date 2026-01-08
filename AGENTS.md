@@ -243,6 +243,7 @@
 | **创建 git commit 时** | `version-management` | 自动判断变更类型并更新版本号 |
 | **开始需要与当前工作区隔离的功能开发时** | `superpowers-git-worktrees` | 创建隔离的 Git 工作树 |
 | **在 Windows 系统执行 git 操作时** | `git-windows` | 使用 `git -C` 格式避免 PowerShell 解析问题 |
+| **Fork仓库操作时** - 克隆fork、设置上游、同步代码、创建PR | `git-fork-workflow` | Fork仓库与上游仓库的完整工作流程 |
 
 ### 代码审查 Skills
 

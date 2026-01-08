@@ -2,13 +2,14 @@
  * 原料控制器
  */
 
-const Material = require('../models/Material');
-const ModelBom = require('../models/ModelBom');
-const ExcelParser = require('../utils/excelParser');
-const ExcelGenerator = require('../utils/excelGenerator');
-const { success, error, paginated } = require('../utils/response');
-const QueryBuilder = require('../utils/queryBuilder');
-const dbManager = require('../db/database');
+const logger = require('../../utils/logger');
+const Material = require('../../models/Material');
+const ModelBom = require('../../models/ModelBom');
+const ExcelParser = require('../../utils/excelParser');
+const ExcelGenerator = require('../../utils/excelGenerator');
+const { success, error, paginated } = require('../../utils/response');
+const QueryBuilder = require('../../utils/queryBuilder');
+const dbManager = require('../../db/database');
 const path = require('path');
 const fs = require('fs');
 
@@ -168,7 +169,7 @@ const importMaterials = async (req, res, next) => {
     
     for (let index = 0; index < result.data.length; index++) {
       const material = result.data[index];
-      console.log(`处理第 ${index + 1} 条数据:`, JSON.stringify(material));
+      logger.debug(`处理第 ${index + 1} 条数据:`, JSON.stringify(material));
       const existing = await Material.findByItemNo(material.item_no);
       if (existing) {
         await Material.update(existing.id, material);

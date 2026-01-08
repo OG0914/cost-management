@@ -4,10 +4,10 @@
  * PostgreSQL 异步版本
  */
 
-const StandardCost = require('../models/StandardCost');
-const Quotation = require('../models/Quotation');
-const QuotationItem = require('../models/QuotationItem');
-const { success, error, paginated } = require('../utils/response');
+const StandardCost = require('../../models/StandardCost');
+const Quotation = require('../../models/Quotation');
+const QuotationItem = require('../../models/QuotationItem');
+const { success, error, paginated } = require('../../utils/response');
 
 /** 获取所有当前标准成本（支持分页） GET /api/standard-costs */
 const getAllStandardCosts = async (req, res, next) => {

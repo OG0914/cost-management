@@ -4,10 +4,10 @@
 
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const ExcelParser = require('../utils/excelParser');
-const ExcelGenerator = require('../utils/excelGenerator');
-const { success, error } = require('../utils/response');
+const User = require('../../models/User');
+const ExcelParser = require('../../utils/excelParser');
+const ExcelGenerator = require('../../utils/excelGenerator');
+const { success, error } = require('../../utils/response');
 const path = require('path');
 const fs = require('fs');
 

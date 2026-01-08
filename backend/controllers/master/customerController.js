@@ -1,5 +1,5 @@
-const Customer = require('../models/Customer');
-const { success, error, paginated } = require('../utils/response');
+const Customer = require('../../models/Customer');
+const { success, error, paginated } = require('../../utils/response');
 const ExcelJS = require('exceljs');
 
 const getCustomerList = async (req, res) => {

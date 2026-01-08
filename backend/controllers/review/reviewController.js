@@ -2,12 +2,13 @@
  * 审核控制器 - 处理报价单审核相关操作
  */
 
-const Quotation = require('../models/Quotation');
-const QuotationItem = require('../models/QuotationItem');
-const Comment = require('../models/Comment');
-const { success, error, paginated } = require('../utils/response');
-const dbManager = require('../db/database');
-const { formatPackagingMethod } = require('../config/packagingTypes');
+const logger = require('../../utils/logger');
+const Quotation = require('../../models/Quotation');
+const QuotationItem = require('../../models/QuotationItem');
+const Comment = require('../../models/Comment');
+const { success, error, paginated } = require('../../utils/response');
+const dbManager = require('../../db/database');
+const { formatPackagingMethod } = require('../../config/packagingTypes');
 
 /**
  * 获取待审核列表（支持分页和搜索）
@@ -89,7 +90,7 @@ const getPendingList = async (req, res) => {
     
     res.json(paginated(rows, total, pageNum, pageSizeNum));
   } catch (err) {
-    console.error('获取待审核列表失败:', err);
+    logger.error('获取待审核列表失败:', err);
     res.status(500).json(error('获取待审核列表失败', 500));
   }
 };
@@ -184,7 +185,7 @@ const getApprovedList = async (req, res) => {
     
     res.json(paginated(rows, total, pageNum, pageSizeNum));
   } catch (err) {
-    console.error('获取已审核列表失败:', err);
+    logger.error('获取已审核列表失败:', err);
     res.status(500).json(error('获取已审核列表失败', 500));
   }
 };
@@ -239,11 +240,11 @@ const getReviewDetail = async (req, res) => {
       const historySql = `SELECT rh.*, u.real_name as operator_name FROM review_history rh LEFT JOIN users u ON rh.operator_id = u.id WHERE rh.quotation_id = $1 ORDER BY rh.created_at ASC`;
       const historyResult = await dbManager.query(historySql, [id]);
       history = historyResult.rows;
-    } catch (e) { console.log('审核历史表不存在，跳过'); }
+    } catch (e) { logger.debug('审核历史表不存在，跳过'); }
     
     res.json(success({ quotation, items, standardItems, comments, history }));
   } catch (err) {
-    console.error('获取审核详情失败:', err);
+    logger.error('获取审核详情失败:', err);
     res.status(500).json(error('获取审核详情失败', 500));
   }
 };
@@ -264,11 +265,11 @@ const approveQuotation = async (req, res) => {
     
     if (comment) await Comment.create({ quotation_id: id, user_id: reviewerId, content: comment });
     
-    try { await dbManager.query(`INSERT INTO review_history (quotation_id, action, operator_id, comment) VALUES ($1, 'approved', $2, $3)`, [id, reviewerId, comment || null]); } catch (e) { console.log('记录审核历史失败:', e.message); }
+    try { await dbManager.query(`INSERT INTO review_history (quotation_id, action, operator_id, comment) VALUES ($1, 'approved', $2, $3)`, [id, reviewerId, comment || null]); } catch (e) { logger.debug('记录审核历史失败:', e.message); }
     
     res.json(success({ message: '审核通过成功' }));
   } catch (err) {
-    console.error('审核通过失败:', err);
+    logger.error('审核通过失败:', err);
     res.status(500).json(error('审核通过失败', 500));
   }
 };
@@ -289,11 +290,11 @@ const rejectQuotation = async (req, res) => {
     await dbManager.query(`UPDATE quotations SET status = 'rejected', reviewed_by = $1, reviewed_at = NOW(), updated_at = NOW() WHERE id = $2`, [reviewerId, id]);
     await Comment.create({ quotation_id: id, user_id: reviewerId, content: `【退回原因】${reason}` });
     
-    try { await dbManager.query(`INSERT INTO review_history (quotation_id, action, operator_id, comment) VALUES ($1, 'rejected', $2, $3)`, [id, reviewerId, reason]); } catch (e) { console.log('记录审核历史失败:', e.message); }
+    try { await dbManager.query(`INSERT INTO review_history (quotation_id, action, operator_id, comment) VALUES ($1, 'rejected', $2, $3)`, [id, reviewerId, reason]); } catch (e) { logger.debug('记录审核历史失败:', e.message); }
     
     res.json(success({ message: '退回成功' }));
   } catch (err) {
-    console.error('审核退回失败:', err);
+    logger.error('审核退回失败:', err);
     res.status(500).json(error('审核退回失败', 500));
   }
 };
@@ -311,11 +312,11 @@ const resubmitQuotation = async (req, res) => {
     
     await dbManager.query(`UPDATE quotations SET status = 'submitted', submitted_at = NOW(), updated_at = NOW() WHERE id = $1`, [id]);
     
-    try { await dbManager.query(`INSERT INTO review_history (quotation_id, action, operator_id) VALUES ($1, 'resubmitted', $2)`, [id, userId]); } catch (e) { console.log('记录审核历史失败:', e.message); }
+    try { await dbManager.query(`INSERT INTO review_history (quotation_id, action, operator_id) VALUES ($1, 'resubmitted', $2)`, [id, userId]); } catch (e) { logger.debug('记录审核历史失败:', e.message); }
     
     res.json(success({ message: '重新提交成功' }));
   } catch (err) {
-    console.error('重新提交失败:', err);
+    logger.error('重新提交失败:', err);
     res.status(500).json(error('重新提交失败', 500));
   }
 };
@@ -333,7 +334,7 @@ const deleteQuotation = async (req, res) => {
     await dbManager.query('DELETE FROM quotations WHERE id = $1', [id]);
     res.json(success({ message: '删除成功' }));
   } catch (err) {
-    console.error('删除报价单失败:', err);
+    logger.error('删除报价单失败:', err);
     res.status(500).json(error('删除报价单失败', 500));
   }
 };

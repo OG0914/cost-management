@@ -2,7 +2,7 @@
 
 const express = require('express');
 const router = express.Router();
-const bomController = require('../controllers/bomController');
+const bomController = require('../controllers/master/bomController');
 const { verifyToken } = require('../middleware/auth');
 const { isAdmin } = require('../middleware/roleCheck');
 

@@ -4,7 +4,7 @@
 
 const express = require('express');
 const router = express.Router();
-const configController = require('../controllers/configController');
+const configController = require('../controllers/system/configController');
 const { verifyToken } = require('../middleware/auth');
 const { checkRole } = require('../middleware/roleCheck');
 

@@ -1,9 +1,9 @@
 /** BOM控制器 - 处理产品BOM的CRUD操作 */
 
-const ModelBom = require('../models/ModelBom');
-const Model = require('../models/Model');
-const Material = require('../models/Material');
-const { success, error } = require('../utils/response');
+const ModelBom = require('../../models/ModelBom');
+const Model = require('../../models/Model');
+const Material = require('../../models/Material');
+const { success, error } = require('../../utils/response');
 
 /** 获取型号BOM清单 - GET /api/bom/:modelId */
 const getBomByModelId = async (req, res) => {

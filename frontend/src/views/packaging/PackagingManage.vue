@@ -244,10 +244,10 @@
           <div class="mb-4">
             <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">包装类型</span>
             <el-radio-group v-model="form.packaging_type" size="small">
-              <el-radio-button label="standard_box">标准彩盒</el-radio-button>
-              <el-radio-button label="no_box">无彩盒</el-radio-button>
-              <el-radio-button label="blister_direct">吸塑直出</el-radio-button>
-              <el-radio-button label="blister_bag">袋装吸塑</el-radio-button>
+              <el-radio-button value="standard_box">标准彩盒</el-radio-button>
+              <el-radio-button value="no_box">无彩盒</el-radio-button>
+              <el-radio-button value="blister_direct">吸塑直出</el-radio-button>
+              <el-radio-button value="blister_bag">袋装吸塑</el-radio-button>
             </el-radio-group>
           </div>
 

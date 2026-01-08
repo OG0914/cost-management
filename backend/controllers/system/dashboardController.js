@@ -3,8 +3,8 @@
  * 提供仪表盘统计数据 API
  */
 
-const dbManager = require('../db/database');
-const { success, error } = require('../utils/response');
+const dbManager = require('../../db/database');
+const { success, error } = require('../../utils/response');
 
 /**
  * 获取仪表盘统计数据
