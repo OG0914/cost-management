@@ -12,10 +12,12 @@ class Model {
    */
   static async findAll() {
     const result = await dbManager.query(`
-      SELECT m.*, r.name as regulation_name, COALESCE(bom.bom_count, 0)::int as bom_count
+      SELECT m.*, r.name as regulation_name, COALESCE(bom.bom_count, 0)::int as bom_count,
+             img.file_path as primary_image
       FROM models m
       LEFT JOIN regulations r ON m.regulation_id = r.id
       LEFT JOIN (SELECT model_id, COUNT(*) as bom_count FROM model_bom_materials WHERE is_active = true GROUP BY model_id) bom ON m.id = bom.model_id
+      LEFT JOIN (SELECT DISTINCT ON (model_id) model_id, file_path FROM model_images WHERE is_primary = true) img ON m.id = img.model_id
       ORDER BY m.created_at DESC
     `);
     return result.rows;
@@ -25,10 +27,12 @@ class Model {
   static async findAllWithBomCount() {
     const result = await dbManager.query(`
       SELECT m.*, r.name as regulation_name, 
-             COALESCE(bom.bom_count, 0)::int as bom_count
+             COALESCE(bom.bom_count, 0)::int as bom_count,
+             img.file_path as primary_image
       FROM models m
       LEFT JOIN regulations r ON m.regulation_id = r.id
       LEFT JOIN (SELECT model_id, COUNT(*) as bom_count FROM model_bom_materials WHERE is_active = true GROUP BY model_id) bom ON m.id = bom.model_id
+      LEFT JOIN (SELECT DISTINCT ON (model_id) model_id, file_path FROM model_images WHERE is_primary = true) img ON m.id = img.model_id
       WHERE m.is_active = true
       ORDER BY bom.bom_count DESC NULLS LAST, m.model_name
     `);

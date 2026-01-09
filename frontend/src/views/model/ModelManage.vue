@@ -35,17 +35,17 @@
         <div v-for="item in paginatedModels" :key="item.id" class="item-card">
           <div class="card-body">
             <div class="item-header">
-              <div class="avatar" :style="{ backgroundColor: getRegulationColor(item.regulation_name) }">
-                {{ item.model_category || item.model_series || '?' }}
-              </div>
+              <el-image v-if="item.primary_image" :src="item.primary_image" :preview-src-list="[item.primary_image]" fit="cover" class="card-image" />
+              <div v-else class="card-image-placeholder"><el-icon :size="28" color="#c0c4cc"><Picture /></el-icon></div>
               <div class="item-info">
                 <div class="item-name">{{ item.model_name }}</div>
                 <div class="item-sub">{{ item.regulation_name }}</div>
               </div>
             </div>
             <div class="item-details">
-              <div class="series-tag" v-if="item.model_series">
-                <span class="label">系列:</span> {{ item.model_series }}
+              <div class="detail-row">
+                <span v-if="item.model_series" class="series-tag"><span class="label">系列:</span> {{ item.model_series }}</span>
+                <span class="category-tag"><span class="label">分类:</span> {{ item.model_category || '暂无' }}</span>
               </div>
               <div class="bom-info bom-link" @click="handleConfigBom(item)">
                 BOM: 共 {{ item.bom_count || 0 }} 项
@@ -67,6 +67,12 @@
       <!-- 列表视图 -->
       <el-table v-if="viewMode === 'list'" :data="paginatedModels" border stripe @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" />
+        <el-table-column label="产品图" width="80" align="center">
+          <template #default="{ row }">
+            <el-image v-if="row.primary_image" :src="row.primary_image" :preview-src-list="[row.primary_image]" fit="cover" style="width: 50px; height: 50px; border-radius: 4px;" />
+            <el-icon v-else :size="24" color="#c0c4cc"><Picture /></el-icon>
+          </template>
+        </el-table-column>
         <el-table-column prop="regulation_name" label="法规类别" width="120" sortable />
         <el-table-column prop="model_name" label="型号名称" sortable />
         <el-table-column prop="model_series" label="产品系列" width="140" sortable />
@@ -132,6 +138,34 @@
         <el-form-item label="状态" v-if="isEdit">
           <StatusSwitch v-model="form.is_active" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="禁用" />
         </el-form-item>
+        <el-form-item label="产品图片" v-if="isEdit">
+          <el-upload
+            :action="`/api/models/${form.id}/images`"
+            :headers="{ Authorization: `Bearer ${authStore.token}` }"
+            :on-success="handleImageUploadSuccess"
+            :on-error="handleImageUploadError"
+            :before-upload="beforeImageUpload"
+            list-type="picture-card"
+            accept=".jpg,.jpeg,.png,.webp"
+            multiple
+            name="images"
+            :file-list="imageList"
+            :on-remove="handleImageRemove"
+          >
+            <el-icon><Plus /></el-icon>
+          </el-upload>
+          <div class="upload-tip">支持 JPG/PNG/WEBP，单张最大 5MB</div>
+          <div class="image-list" v-if="modelImages.length > 0">
+            <div v-for="img in modelImages" :key="img.id" class="image-item">
+              <el-image :src="img.file_path" fit="cover" style="width: 100px; height: 100px;" :preview-src-list="modelImages.map(i => i.file_path)" />
+              <div class="image-actions">
+                <el-tag v-if="img.is_primary" type="success" size="small">主图</el-tag>
+                <el-button v-else size="small" link @click="setAsPrimary(img.id)">设为主图</el-button>
+                <el-button size="small" link type="danger" @click="removeImage(img.id)">删除</el-button>
+              </div>
+            </div>
+          </div>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -147,7 +181,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Delete, EditPen, Grid, List, CaretLeft, CaretRight, Setting } from '@element-plus/icons-vue'
+import { Search, Delete, EditPen, Grid, List, CaretLeft, CaretRight, Setting, Plus, Picture } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { getRegulationColor } from '@/utils/color'
@@ -180,6 +214,8 @@ const viewMode = ref('card')
 const currentPage = ref(1)
 const pageSize = ref(12)
 const formRef = ref(null)
+const modelImages = ref([])
+const imageList = ref([])
 
 const paginatedModels = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
@@ -243,10 +279,51 @@ const handleAdd = () => {
   dialogVisible.value = true
 }
 
-const handleEdit = (row) => {
+const handleEdit = async (row) => {
   isEdit.value = true; dialogTitle.value = '编辑型号'
   form.id = row.id; form.regulation_id = row.regulation_id; form.model_name = row.model_name; form.model_category = row.model_category; form.model_series = row.model_series || ''; form.is_active = row.is_active ? 1 : 0
+  imageList.value = []
+  await fetchModelImages(row.id)
   dialogVisible.value = true
+}
+
+const fetchModelImages = async (modelId) => {
+  try {
+    const response = await request.get(`/models/${modelId}/images`)
+    if (response.success) modelImages.value = response.data
+  } catch (error) { logger.error('获取图片失败', error) }
+}
+
+const beforeImageUpload = (file) => {
+  const isAllowed = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
+  const isLt5M = file.size / 1024 / 1024 < 5
+  if (!isAllowed) { ElMessage.error('只支持 JPG/PNG/WEBP 格式'); return false }
+  if (!isLt5M) { ElMessage.error('图片大小不能超过 5MB'); return false }
+  return true
+}
+
+const handleImageUploadSuccess = (response) => {
+  if (response.success) { ElMessage.success('上传成功'); fetchModelImages(form.id) }
+  else ElMessage.error(response.message || '上传失败')
+}
+
+const handleImageUploadError = () => { ElMessage.error('上传失败') }
+
+const handleImageRemove = () => { /* el-upload 自带删除，此处留空 */ }
+
+const setAsPrimary = async (imageId) => {
+  try {
+    const response = await request.put(`/models/${form.id}/images/${imageId}/primary`)
+    if (response.success) { ElMessage.success('设置成功'); fetchModelImages(form.id); fetchModels() }
+  } catch (error) { /* 错误已在拦截器处理 */ }
+}
+
+const removeImage = async (imageId) => {
+  try {
+    await ElMessageBox.confirm('确定要删除这张图片吗？', '提示', { type: 'warning' })
+    const response = await request.delete(`/models/${form.id}/images/${imageId}`)
+    if (response.success) { ElMessage.success('删除成功'); fetchModelImages(form.id); fetchModels() }
+  } catch (error) { if (error !== 'cancel') { /* 错误已在拦截器处理 */ } }
 }
 
 // 配置BOM
@@ -341,13 +418,13 @@ onMounted(() => { fetchRegulations(); fetchModels(); fetchSeries() })
 @media (max-width: 767px) { .item-cards { grid-template-columns: 1fr; } }
 
 .empty-tip { grid-column: 1 / -1; text-align: center; color: #909399; padding: 40px 0; }
-.item-card { border: 1px solid #ebeef5; border-radius: 8px; background: #fff; transition: box-shadow 0.3s, border-color 0.3s; }
+.item-card { border: 1px solid #ebeef5; border-radius: 8px; background: #fff; transition: box-shadow 0.3s, border-color 0.3s; display: flex; flex-direction: column; }
 .item-card:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
-.item-card .card-body { padding: 16px; }
+.item-card .card-body { padding: 16px; flex: 1; }
 
 .item-header { display: flex; gap: 12px; margin-bottom: 16px; }
-.avatar { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 600; flex-shrink: 0; transition: transform 0.2s; }
-.item-card:hover .avatar { transform: scale(1.05); }
+.card-image { width: 56px; height: 56px; border-radius: 6px; flex-shrink: 0; }
+.card-image-placeholder { width: 56px; height: 56px; border-radius: 6px; background: #f5f7fa; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
 .item-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .item-name { font-size: 16px; font-weight: 600; color: #303133; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -363,14 +440,23 @@ onMounted(() => { fetchRegulations(); fetchModels(); fetchSeries() })
 .bom-info { font-size: 13px; color: #606266; display: flex; align-items: center; }
 .bom-link { cursor: pointer; transition: color 0.2s; }
 .bom-link:hover { color: #409EFF; }
-.series-tag { font-size: 13px; color: #606266; display: flex; align-items: center; gap: 4px; }
-.series-tag .label { color: #909399; }
+.detail-row { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: #606266; }
+.series-tag, .category-tag { display: flex; align-items: center; gap: 4px; }
+.series-tag .label, .category-tag .label { color: #909399; }
 
 .card-actions { display: flex; justify-content: center; gap: 8px; padding: 12px; border-top: 1px solid #ebeef5; background: #fafafa; border-radius: 0 0 8px 8px; }
 .card-actions .el-button { transition: transform 0.2s, box-shadow 0.2s; }
 .card-actions .el-button:hover:not(:disabled) { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
 
 .delete-btn { color: #F56C6C; }
+
+/* 图片上传样式 */
+.upload-tip { color: #909399; font-size: 12px; margin-top: 8px; }
+.image-list { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+.image-item { position: relative; border: 1px solid #ebeef5; border-radius: 4px; overflow: hidden; }
+.image-actions { display: flex; gap: 8px; padding: 4px; background: rgba(0,0,0,0.6); position: absolute; bottom: 0; left: 0; right: 0; justify-content: center; }
+.image-actions .el-button { color: #fff; }
+.image-actions .el-tag { margin: 0; }
 .delete-btn:hover:not(:disabled) { color: #f78989; border-color: #f78989; }
 
 /* 工具栏折叠 */

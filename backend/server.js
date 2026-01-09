@@ -48,6 +48,10 @@ app.use('/api/auth/login', authLimiter);
 app.use(express.json()); // 解析 JSON 请求体
 app.use(express.urlencoded({ extended: true })); // 解析 URL 编码请求体
 
+// 静态文件服务 - 图片上传目录
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // 健康检查路由
 app.get('/api/health', (req, res) => {
   // 格式化为北京时间
