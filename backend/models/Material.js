@@ -52,11 +52,11 @@ class Material {
    * @returns {Promise<number>} 新原料的 ID
    */
   static async create(data) {
-    const { item_no, name, unit, price, currency, manufacturer, usage_amount } = data;
+    const { item_no, name, unit, price, currency, manufacturer, usage_amount, category } = data;
     
     const result = await dbManager.query(
-      `INSERT INTO materials (item_no, name, unit, price, currency, manufacturer, usage_amount)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO materials (item_no, name, unit, price, currency, manufacturer, usage_amount, category)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id`,
       [
         item_no,
@@ -65,7 +65,8 @@ class Material {
         price,
         currency || 'CNY',
         manufacturer || null,
-        usage_amount || null
+        usage_amount || null,
+        category || null
       ]
     );
     
@@ -83,8 +84,8 @@ class Material {
       
       for (const item of materials) {
         await client.query(
-          `INSERT INTO materials (item_no, name, unit, price, currency, manufacturer, usage_amount)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          `INSERT INTO materials (item_no, name, unit, price, currency, manufacturer, usage_amount, category)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
           [
             item.item_no,
             item.name,
@@ -92,7 +93,8 @@ class Material {
             item.price,
             item.currency || 'CNY',
             item.manufacturer || null,
-            item.usage_amount || null
+            item.usage_amount || null,
+            item.category || null
           ]
         );
         insertedCount++;
@@ -110,7 +112,7 @@ class Material {
    * @returns {Promise<Object>} 更新结果 { rowCount }
    */
   static async update(id, data, userId = null) {
-    const { item_no, name, unit, price, currency, manufacturer, usage_amount } = data;
+    const { item_no, name, unit, price, currency, manufacturer, usage_amount, category } = data;
     
     // 记录价格历史
     const oldMaterial = await this.findById(id);
@@ -121,9 +123,9 @@ class Material {
     const result = await dbManager.query(
       `UPDATE materials
        SET item_no = $1, name = $2, unit = $3, price = $4, currency = $5, 
-           manufacturer = $6, usage_amount = $7, updated_at = NOW()
-       WHERE id = $8`,
-      [item_no, name, unit, price, currency, manufacturer, usage_amount, id]
+           manufacturer = $6, usage_amount = $7, category = $8, updated_at = NOW()
+       WHERE id = $9`,
+      [item_no, name, unit, price, currency, manufacturer, usage_amount, category || null, id]
     );
     
     return { rowCount: result.rowCount };

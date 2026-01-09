@@ -108,6 +108,7 @@ class ExcelParser {
         const material = {
           item_no: String(getValue(row['品号']) || getValue(row['item_no']) || '').trim(),
           name: String(getValue(row['原料名称']) || getValue(row['name']) || ''),
+          category: String(getValue(row['类别']) || getValue(row['category']) || '').trim() || null,
           unit: String(getValue(row['单位']) || getValue(row['unit']) || ''),
           price: parseFloat(getValue(row['单价']) || getValue(row['price']) || 0),
           currency: String(getValue(row['币别']) || getValue(row['currency']) || 'CNY'),

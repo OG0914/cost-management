@@ -5,6 +5,7 @@ const ModelBom = require('../../models/ModelBom');
 const Model = require('../../models/Model');
 const Material = require('../../models/Material');
 const { success, error } = require('../../utils/response');
+const { matchCategoryFromDB } = require('../../utils/categoryMatcher');
 
 /** 获取型号BOM清单 - GET /api/bom/:modelId */
 const getBomByModelId = async (req, res) => {
@@ -222,19 +223,22 @@ const importBom = async (req, res) => {
     const existingMaterials = await Material.findByItemNos(materialCodes);
     const materialMap = new Map(existingMaterials.map(m => [m.item_no, m]));
 
-    // 自动创建不存在的原料
+    // 自动创建不存在的原料（含类别识别）
     let materialsCreated = 0;
     for (const [itemNo, data] of bomMap) {
       if (!materialMap.has(itemNo)) {
+        const materialName = data.childName || itemNo;
+        const category = await matchCategoryFromDB(materialName); // 自动识别类别
         const newMaterial = await Material.create({
           item_no: itemNo,
-          name: data.childName || itemNo,
+          name: materialName,
           unit: data.unit || 'PCS',
           price: 0,
           currency: 'CNY',
-          manufacturer: data.vendor || null
+          manufacturer: data.vendor || null,
+          category
         });
-        materialMap.set(itemNo, { id: newMaterial, item_no: itemNo, name: data.childName, unit: data.unit });
+        materialMap.set(itemNo, { id: newMaterial, item_no: itemNo, name: materialName, unit: data.unit, category });
         materialsCreated++;
       }
     }

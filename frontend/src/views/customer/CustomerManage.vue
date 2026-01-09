@@ -26,7 +26,7 @@
         </el-input>
       </div>
 
-      <el-table :data="tableData" border stripe v-loading="loading" @selection-change="handleSelectionChange">
+      <el-table :data="tableData" border stripe v-loading="loading" @selection-change="handleSelectionChange" empty-text="暂无客户数据">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="vc_code" label="VC号" width="120" />
         <el-table-column prop="name" label="客户名称" min-width="200" />
@@ -94,7 +94,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete, Search, EditPen, CaretLeft, CaretRight } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { useAuthStore } from '@/store/auth'
-import { formatDateTime } from '@/utils/format'
+import { formatDateTime, downloadBlob } from '@/utils/format'
 import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
@@ -113,7 +113,7 @@ const searchKeyword = ref('')
 const currentPage = ref(1)
 const pageSize = ref(12)
 const total = ref(0)
-let searchTimer = null
+const searchTimer = ref(null)
 
 const form = reactive({ id: null, vc_code: '', name: '', region: '', remark: '', user_id: null })
 const formRef = ref(null)
@@ -142,8 +142,8 @@ const fetchCustomers = async () => {
   finally { loading.value = false }
 }
 
-const handleSearch = () => { if (searchTimer) clearTimeout(searchTimer); searchTimer = setTimeout(() => { currentPage.value = 1; fetchCustomers() }, 300) }
-const handleClearSearch = () => { if (searchTimer) clearTimeout(searchTimer); currentPage.value = 1; fetchCustomers() }
+const handleSearch = () => { if (searchTimer.value) clearTimeout(searchTimer.value); searchTimer.value = setTimeout(() => { currentPage.value = 1; fetchCustomers() }, 300) }
+const handleClearSearch = () => { if (searchTimer.value) clearTimeout(searchTimer.value); currentPage.value = 1; fetchCustomers() }
 watch([currentPage, pageSize], fetchCustomers)
 
 const handleAdd = () => { isEdit.value = false; dialogTitle.value = '新增客户'; Object.assign(form, { id: null, vc_code: '', name: '', region: '', remark: '', user_id: null }); dialogVisible.value = true }
@@ -192,23 +192,19 @@ const handleExport = async () => {
   try {
     const ids = selectedCustomers.value.map(c => c.id)
     const res = await request.post('/customers/export/excel', { ids }, { responseType: 'blob' })
-    const url = window.URL.createObjectURL(new Blob([res]))
-    const link = document.createElement('a'); link.href = url; link.setAttribute('download', `客户列表_${Date.now()}.xlsx`)
-    document.body.appendChild(link); link.click(); document.body.removeChild(link); ElMessage.success('导出成功')
+    downloadBlob(res, `客户列表_${Date.now()}.xlsx`); ElMessage.success('导出成功')
   } catch (e) { ElMessage.error('导出失败') }
 }
 
 const handleDownloadTemplate = async () => {
   try {
     const res = await request.get('/customers/template/download', { responseType: 'blob' })
-    const url = window.URL.createObjectURL(new Blob([res]))
-    const link = document.createElement('a'); link.href = url; link.setAttribute('download', '客户导入模板.xlsx')
-    document.body.appendChild(link); link.click(); document.body.removeChild(link); ElMessage.success('下载成功')
+    downloadBlob(res, '客户导入模板.xlsx'); ElMessage.success('下载成功')
   } catch (e) { ElMessage.error('下载失败') }
 }
 
 onMounted(() => { fetchCustomers(); fetchSalespersons() })
-onUnmounted(() => clearTimeout(searchTimer))
+onUnmounted(() => { if (searchTimer.value) clearTimeout(searchTimer.value) })
 </script>
 
 <style scoped>

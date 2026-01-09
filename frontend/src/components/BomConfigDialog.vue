@@ -36,6 +36,9 @@
           <el-button type="primary" @click="handleAdd" :disabled="!newMaterialId || !newUsageAmount" style="margin-left: 10px">
             <el-icon><Plus /></el-icon>添加
           </el-button>
+          <el-button type="success" plain @click="showNewMaterialDialog = true" style="margin-left: 10px">
+            <el-icon><Plus /></el-icon>新建原料
+          </el-button>
         </div>
         <!-- 批量操作 -->
         <el-space>
@@ -126,6 +129,33 @@
       <el-button type="primary" @click="handleCopy" :loading="copyLoading" :disabled="!copySourceId">确认复制</el-button>
     </template>
   </el-dialog>
+
+  <!-- 新建原料弹窗 -->
+  <el-dialog v-model="showNewMaterialDialog" title="新建原料并添加到BOM" width="500px" append-to-body :close-on-click-modal="false">
+    <el-form :model="newMaterialForm" label-width="80px">
+      <el-form-item label="品号" required>
+        <el-input v-model="newMaterialForm.item_no" placeholder="请输入品号" @blur="checkItemNo" />
+        <div v-if="itemNoExists" class="item-no-hint warning">该品号已存在，将直接使用已有原料</div>
+      </el-form-item>
+      <el-form-item label="原料名称" required>
+        <el-input v-model="newMaterialForm.name" placeholder="请输入原料名称（如：纸箱：xxx）" :disabled="itemNoExists" />
+        <div v-if="autoCategory" class="item-no-hint success">自动识别类别：{{ autoCategory }}</div>
+      </el-form-item>
+      <el-form-item label="单位" required>
+        <el-input v-model="newMaterialForm.unit" placeholder="如 PCS、KG" style="width: 120px" :disabled="itemNoExists" />
+      </el-form-item>
+      <el-form-item label="单价">
+        <el-input-number v-model="newMaterialForm.price" :min="0" :precision="4" :controls="false" style="width: 150px" :disabled="itemNoExists" />
+      </el-form-item>
+      <el-form-item label="用量" required>
+        <el-input-number v-model="newMaterialForm.usage_amount" :min="0.0001" :precision="4" :controls="false" style="width: 150px" />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="showNewMaterialDialog = false">取消</el-button>
+      <el-button type="primary" @click="handleCreateAndAdd" :loading="createLoading">{{ itemNoExists ? '添加到BOM' : '创建并添加' }}</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -158,6 +188,13 @@ const allModels = ref([])
 const modelsLoading = ref(false)
 const sourceBomPreview = ref([])
 
+// 新建原料
+const showNewMaterialDialog = ref(false)
+const createLoading = ref(false)
+const itemNoExists = ref(false)
+const existingMaterial = ref(null)
+const newMaterialForm = ref({ item_no: '', name: '', unit: 'PCS', price: 0, usage_amount: null })
+
 // 弹窗标题（显示型号和法规）
 const dialogTitle = computed(() => {
   const parts = ['配置产品BOM']
@@ -174,6 +211,16 @@ const filteredMaterialOptions = computed(() => {
 
 // 过滤有BOM的型号（排除当前型号）
 const modelsWithBom = computed(() => allModels.value.filter(m => m.id !== props.modelId && m.bom_count > 0))
+
+// 自动识别类别（前端预览）
+const autoCategory = computed(() => {
+  const name = newMaterialForm.value.name
+  if (!name || itemNoExists.value) return null
+  let colonIndex = name.indexOf('：')
+  if (colonIndex === -1) colonIndex = name.indexOf(':')
+  if (colonIndex === -1) return null
+  return name.substring(0, colonIndex).trim() || null
+})
 
 // 监听弹窗打开
 watch(visible, async (val) => {
@@ -312,6 +359,82 @@ const handleImportFile = async (file) => {
 }
 
 const handleClose = () => { bomList.value = []; newMaterialId.value = null; newUsageAmount.value = null; copySourceId.value = null; sourceBomPreview.value = [] }
+
+// 检查品号是否存在
+const checkItemNo = async () => {
+  const item_no = newMaterialForm.value.item_no?.trim()
+  if (!item_no) { itemNoExists.value = false; existingMaterial.value = null; return }
+  
+  try {
+    const res = await request.post('/materials/check-or-create', { item_no })
+    if (res.success && res.data.exists) {
+      itemNoExists.value = true
+      existingMaterial.value = res.data.material
+      // 填充已有原料信息
+      newMaterialForm.value.name = res.data.material.name
+      newMaterialForm.value.unit = res.data.material.unit
+      newMaterialForm.value.price = parseFloat(res.data.material.price) || 0
+    } else {
+      itemNoExists.value = false
+      existingMaterial.value = null
+    }
+  } catch (e) { itemNoExists.value = false; existingMaterial.value = null }
+}
+
+// 创建原料并添加到BOM
+const handleCreateAndAdd = async () => {
+  const { item_no, name, unit, price, usage_amount } = newMaterialForm.value
+  if (!item_no?.trim()) { ElMessage.warning('请输入品号'); return }
+  if (!usage_amount || usage_amount <= 0) { ElMessage.warning('请输入用量'); return }
+  
+  createLoading.value = true
+  try {
+    let materialId
+    
+    if (itemNoExists.value && existingMaterial.value) {
+      // 使用已有原料
+      materialId = existingMaterial.value.id
+    } else {
+      // 创建新原料
+      if (!name?.trim()) { ElMessage.warning('请输入原料名称'); return }
+      if (!unit?.trim()) { ElMessage.warning('请输入单位'); return }
+      
+      const createRes = await request.post('/materials/check-or-create', {
+        item_no: item_no.trim(), name: name.trim(), unit: unit.trim(), price: price || 0, currency: 'CNY'
+      })
+      
+      if (!createRes.success || !createRes.data.material) {
+        ElMessage.error('创建原料失败')
+        return
+      }
+      materialId = createRes.data.material.id
+      if (createRes.data.created) ElMessage.success('原料创建成功')
+    }
+    
+    // 添加到BOM
+    const bomRes = await request.post('/bom', { model_id: props.modelId, material_id: materialId, usage_amount })
+    if (bomRes.success) {
+      bomList.value = bomRes.data || []
+      ElMessage.success('已添加到BOM')
+      emit('updated')
+      // 重置表单
+      showNewMaterialDialog.value = false
+      newMaterialForm.value = { item_no: '', name: '', unit: 'PCS', price: 0, usage_amount: null }
+      itemNoExists.value = false
+      existingMaterial.value = null
+    }
+  } catch (e) { /* 错误已在拦截器处理 */ }
+  finally { createLoading.value = false }
+}
+
+// 监听新建原料弹窗关闭
+watch(showNewMaterialDialog, (val) => {
+  if (!val) {
+    newMaterialForm.value = { item_no: '', name: '', unit: 'PCS', price: 0, usage_amount: null }
+    itemNoExists.value = false
+    existingMaterial.value = null
+  }
+})
 </script>
 
 <style scoped>
@@ -320,4 +443,7 @@ const handleClose = () => { bomList.value = []; newMaterialId.value = null; newU
 .add-section { display: flex; align-items: center; }
 .empty-tip { text-align: center; color: #909399; padding: 40px 0; }
 .source-preview { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; background: #f5f7fa; border-radius: 4px; }
+.item-no-hint { font-size: 12px; margin-top: 4px; }
+.item-no-hint.warning { color: #e6a23c; }
+.item-no-hint.success { color: #67c23a; }
 </style>
