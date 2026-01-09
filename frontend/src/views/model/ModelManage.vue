@@ -1,6 +1,6 @@
 <template>
   <div class="model-manage">
-    <PageHeader title="型号管理">
+    <CostPageHeader title="型号管理" :show-back="false">
       <template #actions>
         <div class="toolbar-wrapper">
           <el-button class="toolbar-toggle" :icon="showToolbar ? CaretRight : CaretLeft" circle @click="showToolbar = !showToolbar" :title="showToolbar ? '收起工具栏' : '展开工具栏'" />
@@ -17,7 +17,7 @@
           </transition>
         </div>
       </template>
-    </PageHeader>
+    </CostPageHeader>
 
     <el-card>
       <!-- 筛选区域 -->
@@ -186,7 +186,7 @@ import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { getRegulationColor } from '@/utils/color'
 import logger from '@/utils/logger'
-import PageHeader from '@/components/common/PageHeader.vue'
+import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import BomConfigDialog from '@/components/BomConfigDialog.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
