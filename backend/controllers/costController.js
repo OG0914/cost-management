@@ -11,6 +11,7 @@ const Model = require('../models/Model');
 const CostCalculator = require('../utils/costCalculator');
 const { success, error, paginated } = require('../utils/response');
 const dbManager = require('../db/database');
+const ExcelGenerator = require('../utils/excel');
 
 /**
  * 创建报价单
@@ -98,7 +99,7 @@ const createQuotation = async (req, res) => {
 
         // 获取系统配置并计算报价
         const calculatorConfig = await SystemConfig.getCalculatorConfig();
-        
+
         // 如果请求中包含 vat_rate，验证并覆盖全局配置
         let vatRateToSave = null;
         if (req.body.vat_rate !== undefined && req.body.vat_rate !== null) {
@@ -109,7 +110,7 @@ const createQuotation = async (req, res) => {
             calculatorConfig.vatRate = vatRate;
             vatRateToSave = vatRate;
         }
-        
+
         const calculator = new CostCalculator(calculatorConfig);
 
         // 处理自定义费用
@@ -126,7 +127,7 @@ const createQuotation = async (req, res) => {
             afterOverheadMaterialTotal,
             customFees
         });
-        
+
         // 在计算结果中包含实际使用的增值税率
         calculation.vatRate = calculatorConfig.vatRate;
 
@@ -136,8 +137,8 @@ const createQuotation = async (req, res) => {
         // 确定最终成本价（不含利润）
         // 内销：domesticPrice（含13%增值税）
         // 外销：insurancePrice（保险价，即管销价/汇率×1.003）
-        const final_price = sales_type === 'domestic' 
-            ? calculation.domesticPrice 
+        const final_price = sales_type === 'domestic'
+            ? calculation.domesticPrice
             : calculation.insurancePrice;
 
         // 处理自定义利润档位
@@ -315,7 +316,7 @@ const calculateQuotation = async (req, res) => {
 
         // 获取系统配置并计算报价
         const calculatorConfig = await SystemConfig.getCalculatorConfig();
-        
+
         // 如果请求中包含 vat_rate，验证并覆盖全局配置
         if (req.body.vat_rate !== undefined && req.body.vat_rate !== null) {
             const vatRate = parseFloat(req.body.vat_rate);
@@ -323,7 +324,7 @@ const calculateQuotation = async (req, res) => {
                 calculatorConfig.vatRate = vatRate;
             }
         }
-        
+
         const calculator = new CostCalculator(calculatorConfig);
 
         // 处理自定义费用
@@ -439,7 +440,7 @@ const updateQuotation = async (req, res) => {
 
         // 获取系统配置并计算报价
         const calculatorConfig = await SystemConfig.getCalculatorConfig();
-        
+
         // 如果请求中包含 vat_rate，验证并覆盖全局配置
         let vatRateToSave = null;
         if (req.body.vat_rate !== undefined && req.body.vat_rate !== null) {
@@ -450,7 +451,7 @@ const updateQuotation = async (req, res) => {
             calculatorConfig.vatRate = vatRate;
             vatRateToSave = vatRate;
         }
-        
+
         const calculator = new CostCalculator(calculatorConfig);
 
         // 处理自定义费用
@@ -467,7 +468,7 @@ const updateQuotation = async (req, res) => {
             afterOverheadMaterialTotal,
             customFees
         });
-        
+
         // 在计算结果中包含实际使用的增值税率
         calculation.vatRate = calculatorConfig.vatRate;
 
@@ -482,8 +483,8 @@ const updateQuotation = async (req, res) => {
         // 确定最终成本价（不含利润）
         // 内销：domesticPrice（含13%增值税）
         // 外销：insurancePrice（保险价，即管销价/汇率×1.003）
-        const final_price = sales_type === 'domestic' 
-            ? calculation.domesticPrice 
+        const final_price = sales_type === 'domestic'
+            ? calculation.domesticPrice
             : calculation.insurancePrice;
 
         if (!final_price) {
@@ -637,7 +638,7 @@ const getQuotationDetail = async (req, res) => {
         // 如果报价单已被设为标准成本，所有用户都可以查看（用于标准成本对比）
         const StandardCost = require('../models/StandardCost');
         const isStandardCost = await StandardCost.findByQuotationId(quotation.id);
-        
+
         if (
             quotation.created_by !== req.user.id &&
             !['admin', 'reviewer', 'readonly'].includes(req.user.role) &&
@@ -660,12 +661,12 @@ const getQuotationDetail = async (req, res) => {
         // 重新计算以获取利润区间
         // 注意：工序总计传入原始值，计算器内部会自动乘以工价系数
         const calculatorConfig = await SystemConfig.getCalculatorConfig();
-        
+
         // 如果报价单保存了自定义增值税率，使用该值
         if (quotation.vat_rate !== null && quotation.vat_rate !== undefined) {
             calculatorConfig.vatRate = parseFloat(quotation.vat_rate); // PostgreSQL DECIMAL返回字符串
         }
-        
+
         const calculator = new CostCalculator(calculatorConfig);
 
         // 计算原料总计（不含管销后算的原料）
@@ -798,7 +799,7 @@ const getPackagingConfigs = async (req, res) => {
             WHERE pc.is_active = true
             ORDER BY m.model_name, pc.config_name
         `);
-        
+
         const configs = result.rows;
         console.log(`找到 ${configs.length} 个包装配置`);
 
@@ -896,6 +897,108 @@ const getMaterialCoefficients = async (req, res) => {
     }
 };
 
+/**
+ * 导出报价单 Excel
+ * POST /api/cost/quotations/:id/export
+ */
+const exportQuotation = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // 查询报价单
+        const quotation = await Quotation.findById(id);
+        if (!quotation) {
+            return res.status(404).json(error('报价单不存在', 404));
+        }
+
+        // 检查权限
+        const StandardCost = require('../models/StandardCost');
+        const isStandardCost = await StandardCost.findByQuotationId(quotation.id);
+
+        if (
+            quotation.created_by !== req.user.id &&
+            !['admin', 'reviewer', 'readonly'].includes(req.user.role) &&
+            !isStandardCost
+        ) {
+            return res.status(403).json(error('无权限导出此报价单', 403));
+        }
+
+        // 查询报价单明细
+        const items = await QuotationItem.getGroupedByCategory(id);
+
+        // 重新计算以获取利润区间
+        const calculatorConfig = await SystemConfig.getCalculatorConfig();
+        if (quotation.vat_rate !== null && quotation.vat_rate !== undefined) {
+            calculatorConfig.vatRate = parseFloat(quotation.vat_rate);
+        }
+
+        const calculator = new CostCalculator(calculatorConfig);
+
+        const materialTotal = items.material.items
+            .filter(item => !item.after_overhead)
+            .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
+
+        const afterOverheadMaterialTotal = items.material.items
+            .filter(item => item.after_overhead)
+            .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
+
+        const customFeesFromDb = await QuotationCustomFee.findByQuotationId(id);
+        const customFees = customFeesFromDb.map(fee => ({
+            name: fee.fee_name,
+            rate: fee.fee_rate,
+            sortOrder: fee.sort_order
+        }));
+
+        const calculation = calculator.calculateQuotation({
+            materialTotal,
+            processTotal: parseFloat(items.process.total || 0),
+            packagingTotal: parseFloat(items.packaging.total || 0),
+            freightTotal: parseFloat(quotation.freight_total || 0),
+            quantity: parseFloat(quotation.quantity || 1),
+            salesType: quotation.sales_type,
+            includeFreightInBase: quotation.include_freight_in_base !== false,
+            afterOverheadMaterialTotal,
+            customFees
+        });
+
+        // 准备导出数据
+        // 需要计算箱数和CBM
+        if (quotation.quantity && quotation.pc_per_bag && quotation.bags_per_box && quotation.boxes_per_carton) {
+            const pcsPerCarton = quotation.pc_per_bag * quotation.bags_per_box * quotation.boxes_per_carton;
+            if (pcsPerCarton > 0) {
+                calculation.shipping = calculation.shipping || {};
+                calculation.shipping.cartons = Math.ceil(quotation.quantity / pcsPerCarton);
+
+                const cartonMaterial = items.packaging.items.find(item => item.carton_volume && item.carton_volume > 0);
+                if (cartonMaterial && cartonMaterial.carton_volume > 0) {
+                    const totalVolume = cartonMaterial.carton_volume * calculation.shipping.cartons;
+                    calculation.shipping.cbm = (totalVolume / 35.32).toFixed(1); // 假设是材积转换? 这里保持 Web 端逻辑
+                }
+            }
+        }
+
+        // 生成Excel
+        // 生成Excel
+        const workbook = await ExcelGenerator.generateQuotationExcel({
+            quotation,
+            items,
+            calculation,
+            processCoefficient: calculatorConfig.processCoefficient || 1.56
+        });
+
+        // 设置响应头
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=Quot_${quotation.quotation_no}.xlsx`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+
+    } catch (err) {
+        console.error('导出报价单失败:', err);
+        res.status(500).json(error('导出报价单失败: ' + err.message, 500));
+    }
+};
+
 module.exports = {
     createQuotation,
     getModelStandardData,
@@ -907,5 +1010,6 @@ module.exports = {
     getQuotationList,
     getQuotationDetail,
     deleteQuotation,
-    getMaterialCoefficients
+    getMaterialCoefficients,
+    exportQuotation
 };

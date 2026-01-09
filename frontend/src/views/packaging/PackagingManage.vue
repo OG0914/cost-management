@@ -1,7 +1,7 @@
 <template>
   <div class="packaging-management">
     <!-- 页面表头 -->
-    <PageHeader title="包材管理">
+    <CostPageHeader title="包材管理" :show-back="false">
       <template #actions>
         <div class="toolbar-wrapper">
           <el-button class="toolbar-toggle" :icon="showToolbar ? CaretRight : CaretLeft" circle @click="showToolbar = !showToolbar" :title="showToolbar ? '收起工具栏' : '展开工具栏'" />
@@ -13,12 +13,11 @@
               </el-upload>
               <ActionButton type="export" @click="handleExport">导出Excel</ActionButton>
               <ActionButton type="delete" :disabled="selectedConfigs.length === 0" @click="handleBatchDelete">批量删除</ActionButton>
-              <ActionButton type="add" @click="showCreateDialog">新增包装配置</ActionButton>
             </el-space>
           </transition>
         </div>
       </template>
-    </PageHeader>
+    </CostPageHeader>
 
     <el-card>
 
@@ -511,22 +510,22 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, ArrowLeft, Download, Delete, Upload, Grid, List, View, EditPen, CaretLeft, CaretRight, InfoFilled, CopyDocument } from '@element-plus/icons-vue';
-import request from '../../utils/request';
-import { useAuthStore } from '../../store/auth';
-import { formatNumber, formatDateTime } from '../../utils/format';
-import logger from '../../utils/logger';
+import { Plus, Delete, Grid, List, View, EditPen, CaretLeft, CaretRight, InfoFilled, CopyDocument } from '@element-plus/icons-vue';
+import request from '@/utils/request';
+import { useAuthStore } from '@/store/auth';
+import { formatNumber, formatDateTime } from '@/utils/format';
+import logger from '@/utils/logger';
 import { 
   getPackagingTypeOptions, 
   getPackagingTypeName, 
   getPackagingTypeByKey,
   formatPackagingMethodFromConfig,
   calculateTotalFromConfig
-} from '../../config/packagingTypes';
-import PageHeader from '../../components/common/PageHeader.vue';
-import CommonPagination from '../../components/common/CommonPagination.vue';
-import ActionButton from '../../components/common/ActionButton.vue';
-import StatusSwitch from '../../components/common/StatusSwitch.vue';
+} from '@/config/packagingTypes';
+import CostPageHeader from '@/components/cost/CostPageHeader.vue';
+import CommonPagination from '@/components/common/CommonPagination.vue';
+import ActionButton from '@/components/common/ActionButton.vue';
+import StatusSwitch from '@/components/common/StatusSwitch.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();

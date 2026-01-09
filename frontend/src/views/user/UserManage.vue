@@ -1,35 +1,31 @@
 <template>
   <div class="user-manage">
     <!-- 页面表头 -->
-    <PageHeader title="用户管理">
+    <CostPageHeader title="用户管理" :show-back="false">
       <template #actions>
         <div class="toolbar-wrapper">
           <el-button class="toolbar-toggle" :icon="showToolbar ? CaretRight : CaretLeft" circle @click="showToolbar = !showToolbar" :title="showToolbar ? '收起工具栏' : '展开工具栏'" />
           <transition name="toolbar-fade">
             <el-space v-if="showToolbar">
-              <el-button type="success" @click="handleDownloadTemplate">
-                <el-icon><Download /></el-icon>
+              <ActionButton type="download" @click="handleDownloadTemplate">
                 下载模板
-              </el-button>
+              </ActionButton>
               <el-upload action="#" :auto-upload="false" :on-change="handleFileChange" :show-file-list="false" accept=".xlsx,.xls">
-                <el-button type="warning">
-                  <el-icon><Upload /></el-icon>
+                <ActionButton type="import">
                   导入Excel
-                </el-button>
+                </ActionButton>
               </el-upload>
-              <el-button type="info" @click="handleExport" :disabled="selectedUsers.length === 0">
-                <el-icon><Download /></el-icon>
+              <ActionButton type="export" @click="handleExport" :disabled="selectedUsers.length === 0">
                 导出Excel
-              </el-button>
-              <el-button type="primary" @click="showCreateDialog">
-                <el-icon><Plus /></el-icon>
+              </ActionButton>
+              <ActionButton type="add" @click="showCreateDialog">
                 新增用户
-              </el-button>
+              </ActionButton>
             </el-space>
           </transition>
         </div>
       </template>
-    </PageHeader>
+    </CostPageHeader>
 
     <el-card>
 
@@ -227,11 +223,12 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, Search, Grid, List, Key, EditPen, Delete, Download, Upload, CaretLeft, CaretRight } from '@element-plus/icons-vue';
+import { Search, Grid, List, Key, EditPen, Delete, CaretLeft, CaretRight } from '@element-plus/icons-vue';
 import request from '../../utils/request';
 import { formatDateTime } from '@/utils/format';
-import PageHeader from '../../components/common/PageHeader.vue'
+import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue';
+import ActionButton from '@/components/common/ActionButton.vue';
 import StatusSwitch from '@/components/common/StatusSwitch.vue';
 
 // 数据
@@ -570,9 +567,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.user-manage {
-  /* padding 由 MainLayout 提供 */
-}
+
 
 .view-toggle {
   margin: 0 4px;

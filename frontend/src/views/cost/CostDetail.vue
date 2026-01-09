@@ -1,55 +1,28 @@
 <template>
   <div class="cost-detail-container">
     <!-- 顶部导航栏 -->
-    <div class="page-header">
-      <div class="header-left">
-        <button
-          class="bg-white text-center w-[154px] rounded-xl h-[45px] relative text-black text-base font-semibold group"
-          type="button"
-          @click="goBack"
-        >
-          <div
-            class="bg-[#409EFF] rounded-lg h-[38px] w-1/4 flex items-center justify-center absolute left-[3px] top-[3.5px] group-hover:w-[148px] z-10 duration-500"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 1024 1024"
-              height="20px"
-              width="20px"
-            >
-              <path
-                d="M224 480h640a32 32 0 1 1 0 64H224a32 32 0 0 1 0-64z"
-                fill="#000000"
-              ></path>
-              <path
-                d="m237.248 512 265.408 265.344a32 32 0 0 1-45.312 45.312l-288-288a32 32 0 0 1 0-45.312l288-288a32 32 0 1 1 45.312 45.312L237.248 512z"
-                fill="#000000"
-              ></path>
-            </svg>
-          </div>
-          <p class="translate-x-2">返回</p>
-        </button>
+    <div class="cost-page-header">
+      <div class="cost-header-left">
+        <button class="cost-back-btn" type="button" @click="goBack">← 返回</button>
+        <h2 class="cost-page-title">报价单详情</h2>
+        <el-tag :type="getStatusType(quotation.status)" size="large">{{ getStatusText(quotation.status) }}</el-tag>
       </div>
-      <div class="header-center">
-        <h2>报价单详情</h2>
-        <el-tag :type="getStatusType(quotation.status)" size="large" style="margin-left: 12px;">
-          {{ getStatusText(quotation.status) }}
-        </el-tag>
-      </div>
-      <div class="header-right">
-        <el-button type="warning" @click="profitDialogVisible = true">
-          <el-icon><TrendCharts /></el-icon>
+      <div class="cost-header-right">
+        <ActionButton type="export" @click="handleExport" :disabled="exporting">
+          导出 Excel
+        </ActionButton>
+        <ActionButton type="profit" @click="profitDialogVisible = true">
           利润落点
-        </el-button>
-        <el-button 
+        </ActionButton>
+        <ActionButton 
           v-if="isAdminOrReviewer && quotation.packaging_config_id && quotation.status === 'approved'" 
-          type="success" 
+          type="add"
           @click="setAsStandardCost"
-          :loading="settingStandardCost"
+          :disabled="settingStandardCost"
         >
           设为标准成本
-        </el-button>
-        <el-button type="primary" @click="goToEdit" v-if="canEdit">编辑</el-button>
+        </ActionButton>
+        <ActionButton type="edit" @click="goToEdit" v-if="canEdit">编辑</ActionButton>
       </div>
     </div>
 
@@ -429,7 +402,8 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, InfoFilled, View, Hide, TrendCharts } from '@element-plus/icons-vue'
+import { ArrowLeft, InfoFilled, View, Hide, TrendCharts, Download } from '@element-plus/icons-vue'
+import ActionButton from '@/components/common/ActionButton.vue'
 import request from '@/utils/request'
 import { formatNumber } from '@/utils/format'
 import { formatQuantity } from '@/utils/review'
@@ -454,6 +428,7 @@ const settingStandardCost = ref(false)
 const showCostFormula = ref(false)
 const showProfitFormula = ref(false)
 const profitDialogVisible = ref(false)
+const exporting = ref(false)
 
 // 用户权限
 const user = getUser()
@@ -625,6 +600,35 @@ const setAsStandardCost = async () => {
   }
 }
 
+
+
+// 导出报价单
+const handleExport = async () => {
+  exporting.value = true
+  try {
+    const res = await request.post(
+      `/cost/quotations/${quotation.value.id}/export`,
+      {},
+      { responseType: 'blob' }
+    )
+    
+    // 创建下载链接
+    const blob = new Blob([res], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const link = document.createElement('a')
+    link.href = window.URL.createObjectURL(blob)
+    link.download = `Quot_${quotation.value.quotation_no}.xlsx`
+    link.click()
+    window.URL.revokeObjectURL(link.href)
+    
+    ElMessage.success('导出成功')
+  } catch (error) {
+    logger.error('导出失败:', error)
+    ElMessage.error('导出失败')
+  } finally {
+    exporting.value = false
+  }
+}
+
 onMounted(async () => {
   await configStore.loadConfig()
   loadDetail()
@@ -633,14 +637,6 @@ onMounted(async () => {
 
 <style scoped>
 .cost-detail-container { padding: 0; }
-
-/* 顶部导航栏 */
-.page-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: #fff; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-.page-header .header-left { display: flex; align-items: center; }
-.page-header .header-center { display: flex; align-items: center; }
-.page-header .header-center h2 { margin: 0; font-size: 20px; color: #303133; }
-.page-header .header-right { display: flex; align-items: center; gap: 12px; }
-.page-header .back-btn { font-size: 14px; color: #606266; }
 
 /* 表单区块 */
 .form-section { margin-bottom: 16px; border-radius: 8px; }

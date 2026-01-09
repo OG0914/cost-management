@@ -19,13 +19,14 @@
 }
 
 .cost-page-title {
-  @apply text-base font-semibold text-slate-800 m-0;
+  @apply text-xl font-semibold text-slate-800 m-0;
 }
 
 .cost-back-btn {
   @apply px-3 py-1.5 text-sm text-slate-600 bg-slate-100 rounded-md;
   transition: all 0.15s ease;
 }
+
 .cost-back-btn:hover {
   @apply bg-slate-200 text-slate-800;
 }
@@ -50,6 +51,7 @@
 .section-stats {
   @apply flex items-center gap-2;
 }
+
 .stat-item {
   @apply text-xs text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200;
 }
@@ -66,15 +68,19 @@
 .cost-form-row {
   @apply grid gap-5 mb-4;
 }
+
 .cost-form-row:last-child {
   @apply mb-0;
 }
+
 .cost-form-row-2 {
   @apply grid-cols-1 md:grid-cols-2;
 }
+
 .cost-form-row-3 {
   @apply grid-cols-1 md:grid-cols-3;
 }
+
 .cost-form-row-4 {
   @apply grid-cols-2 md:grid-cols-4;
 }
@@ -83,9 +89,11 @@
 .cost-form-item {
   @apply flex flex-col;
 }
+
 .cost-form-label {
   @apply text-sm font-medium text-slate-600 mb-1.5;
 }
+
 .cost-form-label.required::after {
   content: '*';
   @apply text-red-500 ml-0.5;
@@ -100,9 +108,11 @@
   @apply relative p-3 rounded-lg border-2 border-slate-200 cursor-pointer;
   transition: all 0.15s ease;
 }
+
 .sales-type-card:hover {
   @apply border-blue-300;
 }
+
 .sales-type-card.active {
   @apply border-blue-500 bg-blue-50;
 }
@@ -110,15 +120,19 @@
 .sales-type-header {
   @apply flex items-center justify-between mb-1;
 }
+
 .sales-type-title {
   @apply text-sm font-semibold text-slate-800;
 }
+
 .sales-type-badge {
   @apply text-xs font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-600;
 }
+
 .sales-type-card.active .sales-type-badge {
   @apply bg-blue-100 text-blue-600;
 }
+
 .sales-type-desc {
   @apply text-xs text-slate-500;
 }
@@ -127,9 +141,11 @@
 .freight-panel {
   @apply mt-5 p-5 rounded-xl border border-slate-200 bg-slate-50/50;
 }
+
 .freight-panel-header {
   @apply flex items-center text-sm font-semibold text-slate-700 mb-4 pb-3 border-b border-slate-200;
 }
+
 .freight-panel-header i {
   @apply mr-2 text-slate-400;
 }
@@ -137,15 +153,19 @@
 .freight-field {
   @apply flex items-center mb-3;
 }
+
 .freight-field:last-child {
   @apply mb-0;
 }
+
 .freight-label {
   @apply w-20 text-sm text-slate-600 flex-shrink-0;
 }
+
 .freight-value {
   @apply font-semibold text-slate-800;
 }
+
 .freight-unit {
   @apply ml-2 text-sm text-slate-400;
 }
@@ -154,6 +174,7 @@
 .cost-detail-block {
   @apply mb-6 pb-6 border-b border-slate-100;
 }
+
 .cost-detail-block:last-child {
   @apply mb-0 pb-0 border-b-0;
 }
@@ -161,6 +182,7 @@
 .cost-detail-header {
   @apply flex items-center justify-between mb-4;
 }
+
 .cost-detail-title {
   @apply text-sm font-semibold text-slate-700;
 }
@@ -168,12 +190,15 @@
 .cost-detail-subtotal {
   @apply flex justify-end gap-6 mt-3 pt-3 border-t border-slate-100 text-sm text-slate-600;
 }
+
 .cost-detail-subtotal strong {
   @apply text-blue-600 font-semibold;
 }
+
 .cost-detail-subtotal .highlight {
   @apply text-emerald-600;
 }
+
 .cost-detail-subtotal .warning {
   @apply text-amber-600;
 }
@@ -186,12 +211,15 @@
 .cost-summary-card {
   @apply p-3 rounded-lg bg-slate-50 text-center relative;
 }
+
 .cost-summary-label {
   @apply text-xs text-slate-500 mb-1;
 }
+
 .cost-summary-value {
   @apply text-lg font-semibold text-slate-800;
 }
+
 .cost-summary-action {
   @apply absolute bottom-1 right-1;
 }
@@ -200,12 +228,15 @@
 .cost-final-box {
   @apply p-4 rounded-lg text-center bg-blue-600 text-white;
 }
+
 .cost-final-label {
   @apply text-xs opacity-90 mb-1;
 }
+
 .cost-final-value {
   @apply text-2xl font-bold mb-1;
 }
+
 .cost-final-info {
   @apply text-xs opacity-80;
 }
@@ -218,6 +249,7 @@
 .profit-tier-card {
   @apply flex-1 min-w-[100px] p-3 rounded-lg border border-slate-200 text-center relative;
 }
+
 .profit-tier-card.custom {
   @apply border-amber-300 bg-amber-50;
 }
@@ -225,9 +257,11 @@
 .profit-tier-label {
   @apply text-xs text-slate-500 mb-1;
 }
+
 .profit-tier-value {
   @apply text-base font-semibold text-slate-800;
 }
+
 .profit-tier-remove {
   @apply absolute top-0.5 right-0.5;
 }
@@ -236,6 +270,7 @@
 .cost-action-bar {
   @apply flex justify-between items-center px-5 py-4 bg-white rounded-xl border border-slate-200 mt-5;
 }
+
 .cost-action-right {
   @apply flex gap-3;
 }
@@ -244,12 +279,15 @@
 .cost-tip {
   @apply text-xs p-3 rounded-lg my-3;
 }
+
 .cost-tip.info {
   @apply bg-blue-50 text-blue-700;
 }
+
 .cost-tip.warning {
   @apply bg-amber-50 text-amber-700;
 }
+
 .cost-tip.success {
   @apply bg-emerald-50 text-emerald-700;
 }
@@ -258,15 +296,19 @@
 .custom-fee-list {
   @apply mb-4;
 }
+
 .custom-fee-item {
   @apply flex items-center justify-between p-3 rounded-lg bg-amber-50 border border-amber-200 mb-2;
 }
+
 .custom-fee-item:last-child {
   @apply mb-0;
 }
+
 .custom-fee-name {
   @apply text-sm text-amber-700;
 }
+
 .custom-fee-value {
   @apply font-semibold text-slate-800;
 }
@@ -275,22 +317,28 @@
 .cost-detail-tabs {
   --el-tabs-header-height: 48px;
 }
+
 .cost-detail-tabs .el-tabs__header {
   @apply m-0 px-4 bg-slate-50/80 border-b border-slate-200;
 }
+
 .cost-detail-tabs .el-tabs__nav-wrap::after {
   @apply hidden;
 }
+
 .cost-detail-tabs .el-tabs__item {
   @apply text-sm text-slate-500 font-medium;
   transition: all 0.2s ease;
 }
+
 .cost-detail-tabs .el-tabs__item:hover {
   @apply text-blue-500;
 }
+
 .cost-detail-tabs .el-tabs__item.is-active {
   @apply text-blue-600 font-semibold;
 }
+
 .cost-detail-tabs .el-tabs__active-bar {
   @apply bg-blue-500;
 }
@@ -298,15 +346,19 @@
 .tab-label {
   @apply flex items-center gap-2;
 }
+
 .tab-label i {
   @apply text-base;
 }
+
 .tab-badge {
   @apply ml-1;
 }
+
 .tab-badge .el-badge__content {
   @apply bg-slate-200 text-slate-600 text-xs px-1.5 min-w-[18px] h-[18px] leading-[18px] border-0;
 }
+
 .el-tabs__item.is-active .tab-badge .el-badge__content {
   @apply bg-blue-500 text-white;
 }
@@ -314,12 +366,15 @@
 .tab-pane-content {
   @apply p-4;
 }
+
 .tab-pane-actions {
   @apply flex justify-end gap-2 mb-3;
 }
+
 .tab-pane-footer {
   @apply flex justify-end gap-6 mt-3 pt-3 border-t border-slate-100 text-sm text-slate-600;
 }
+
 .tab-pane-footer strong {
   @apply font-semibold;
 }
@@ -336,6 +391,7 @@
 .sticky-price-item {
   @apply flex flex-col;
 }
+
 .sticky-price-item.secondary .sticky-price-value {
   @apply text-sm text-slate-600;
 }
@@ -343,6 +399,7 @@
 .sticky-price-label {
   @apply text-xs text-slate-500;
 }
+
 .sticky-price-value {
   @apply text-lg font-semibold text-blue-600;
 }

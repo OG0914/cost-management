@@ -44,6 +44,10 @@ router.delete('/quotations/:id', checkRole('admin', 'reviewer', 'salesperson'), 
 // 权限：管理员、审核人、业务员（创建者）
 router.post('/quotations/:id/submit', checkRole('admin', 'reviewer', 'salesperson'), costController.submitQuotation);
 
+// 导出报价单
+// 权限：管理员、审核人、业务员
+router.post('/quotations/:id/export', checkRole('admin', 'reviewer', 'salesperson'), costController.exportQuotation);
+
 /**
  * 辅助功能路由
  */

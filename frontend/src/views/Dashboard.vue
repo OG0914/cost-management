@@ -110,7 +110,7 @@
           </div>
           <h2 class="section-title">系统通知</h2>
         </div>
-        <div class="space-y-3 h-[180px] overflow-y-auto pr-2 custom-scrollbar">
+        <div class="space-y-3 h-[140px] overflow-y-auto pr-2 custom-scrollbar">
           <div v-if="recentActivities.length === 0" class="text-center text-slate-400 py-6 h-full flex flex-col justify-center items-center">
             <i class="ri-inbox-line text-3xl mb-2"></i>
             <p class="text-sm">暂无通知</p>
@@ -124,7 +124,7 @@
               <i :class="[activity.icon, 'text-blue-600 text-sm']"></i>
             </div>
             <div class="flex-1 min-w-0">
-              <p class="text-sm text-slate-700 whitespace-normal break-words leading-relaxed">{{ activity.content }}</p>
+              <p class="text-xs text-slate-700 whitespace-normal break-words leading-relaxed">{{ activity.content }}</p>
               <p class="text-xs text-slate-400 mt-1">{{ activity.time }}</p>
             </div>
           </div>

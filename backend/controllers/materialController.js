@@ -5,7 +5,7 @@
 const Material = require('../models/Material');
 const ModelBom = require('../models/ModelBom');
 const ExcelParser = require('../utils/excelParser');
-const ExcelGenerator = require('../utils/excelGenerator');
+const ExcelGenerator = require('../utils/excel');
 const { success, error, paginated } = require('../utils/response');
 const QueryBuilder = require('../utils/queryBuilder');
 const dbManager = require('../db/database');
@@ -22,7 +22,7 @@ const fs = require('fs');
 const getAllMaterials = async (req, res, next) => {
   try {
     const { page = 1, pageSize = 20, keyword } = req.query;
-    
+
     // 参数校验和规范化
     const pageNum = Math.max(1, parseInt(page) || 1);
     const pageSizeNum = Math.min(100, Math.max(1, parseInt(pageSize) || 20));
@@ -30,20 +30,20 @@ const getAllMaterials = async (req, res, next) => {
 
     // 构建查询
     const query = new QueryBuilder('materials');
-    
+
     // 关键词搜索（品号或原料名称）
     if (keyword && keyword.trim()) {
       query.whereLikeOr(['item_no', 'name'], keyword);
     }
-    
+
     // 排序
     query.orderByDesc('updated_at');
-    
+
     // 获取总数
     const countResult = query.clone().buildCount();
     const countData = await dbManager.query(countResult.sql, countResult.params);
     const total = parseInt(countData.rows[0].total);
-    
+
     // 分页查询
     query.limit(pageSizeNum).offset(offset);
     const selectResult = query.buildSelect();
@@ -71,11 +71,11 @@ const getMaterialById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const material = await Material.findById(id);
-    
+
     if (!material) {
       return res.status(404).json(error('原料不存在', 404));
     }
-    
+
     res.json(success(material));
   } catch (err) {
     next(err);
@@ -86,11 +86,11 @@ const getMaterialById = async (req, res, next) => {
 const createMaterial = async (req, res, next) => {
   try {
     const { item_no, name, unit, price, currency, manufacturer, usage_amount } = req.body;
-    
+
     if (!item_no || !name || !unit || !price) {
       return res.status(400).json(error('品号、原料名称、单位和单价不能为空', 400));
     }
-    
+
     const id = await Material.create({ item_no, name, unit, price, currency, manufacturer, usage_amount });
     res.status(201).json(success({ id }, '创建成功'));
   } catch (err) {
@@ -103,16 +103,16 @@ const updateMaterial = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { item_no, name, unit, price, currency, manufacturer, usage_amount } = req.body;
-    
+
     const material = await Material.findById(id);
     if (!material) {
       return res.status(404).json(error('原料不存在', 404));
     }
-    
+
     if (!item_no || !name || !unit || !price) {
       return res.status(400).json(error('品号、原料名称、单位和单价不能为空', 400));
     }
-    
+
     await Material.update(id, { item_no, name, unit, price, currency, manufacturer, usage_amount }, req.user?.id);
     res.json(success(null, '更新成功'));
   } catch (err) {
@@ -124,12 +124,12 @@ const updateMaterial = async (req, res, next) => {
 const deleteMaterial = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
+
     const material = await Material.findById(id);
     if (!material) {
       return res.status(404).json(error('原料不存在', 404));
     }
-    
+
     // 检查是否被BOM引用
     const isUsed = await ModelBom.isMaterialUsed(id);
     if (isUsed) {
@@ -137,7 +137,7 @@ const deleteMaterial = async (req, res, next) => {
       const modelNames = models.map(m => m.model_name).join('、');
       return res.status(400).json(error(`该原料已被以下型号BOM引用：${modelNames}，无法删除`, 400));
     }
-    
+
     await Material.delete(id);
     res.json(success(null, '删除成功'));
   } catch (err) {
@@ -151,21 +151,21 @@ const importMaterials = async (req, res, next) => {
     if (!req.file) {
       return res.status(400).json(error('请上传文件', 400));
     }
-    
+
     const filePath = req.file.path;
     const result = await ExcelParser.parseMaterialExcel(filePath);
-    
+
     // 删除临时文件
     fs.unlinkSync(filePath);
-    
+
     if (!result.success) {
       return res.status(400).json(error('文件解析失败', 400, result.errors));
     }
-    
+
     // 导入数据（根据品号更新已存在的，创建新的）
     let created = 0;
     let updated = 0;
-    
+
     for (let index = 0; index < result.data.length; index++) {
       const material = result.data[index];
       console.log(`处理第 ${index + 1} 条数据:`, JSON.stringify(material));
@@ -178,7 +178,7 @@ const importMaterials = async (req, res, next) => {
         created++;
       }
     }
-    
+
     res.json(success({
       total: result.total,
       valid: result.valid,
@@ -198,7 +198,7 @@ const importMaterials = async (req, res, next) => {
 const exportMaterials = async (req, res, next) => {
   try {
     const { ids } = req.body;
-    
+
     let materials;
     if (ids && ids.length > 0) {
       // 导出选中的数据
@@ -208,25 +208,25 @@ const exportMaterials = async (req, res, next) => {
       // 如果没有指定ID，导出所有数据
       materials = await Material.findAll();
     }
-    
+
     if (materials.length === 0) {
       return res.status(400).json(error('没有可导出的数据', 400));
     }
-    
+
     const workbook = await ExcelGenerator.generateMaterialExcel(materials);
-    
+
     // 生成文件
     const fileName = `原料清单_${Date.now()}.xlsx`;
     const filePath = path.join(__dirname, '../temp', fileName);
-    
+
     // 确保 temp 目录存在
     const tempDir = path.join(__dirname, '../temp');
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
-    
+
     await workbook.xlsx.writeFile(filePath);
-    
+
     // 发送文件
     res.download(filePath, fileName, (err) => {
       // 删除临时文件
@@ -246,17 +246,17 @@ const exportMaterials = async (req, res, next) => {
 const downloadTemplate = async (req, res, next) => {
   try {
     const workbook = await ExcelGenerator.generateMaterialTemplate();
-    
+
     const fileName = '原料导入模板.xlsx';
     const filePath = path.join(__dirname, '../temp', fileName);
-    
+
     const tempDir = path.join(__dirname, '../temp');
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
-    
+
     await workbook.xlsx.writeFile(filePath);
-    
+
     res.download(filePath, fileName, (err) => {
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);

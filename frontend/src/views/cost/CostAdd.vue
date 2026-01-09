@@ -1,17 +1,16 @@
 <template>
   <div class="cost-page">
     <!-- 顶部导航栏 -->
-    <div class="cost-page-header">
-      <div class="cost-header-left">
-        <button class="cost-back-btn" type="button" @click="goBack">返回</button>
-        <h2 class="cost-page-title">{{ pageTitle }}</h2>
+    <!-- 顶部导航栏 -->
+    <CostPageHeader :title="pageTitle" :show-back="true" @back="goBack">
+      <template #after-title>
         <el-tag v-if="isEditMode" type="warning" size="small">编辑中</el-tag>
-      </div>
-      <div class="cost-header-right" v-if="form.packaging_config_id || form.customer_name">
+      </template>
+      <template #actions>
         <span v-if="form.packaging_config_id" class="meta-tag">{{ selectedConfigInfo }}</span>
         <span v-if="form.customer_name" class="meta-tag">{{ form.customer_name }}</span>
-      </div>
-    </div>
+      </template>
+    </CostPageHeader>
 
     <el-form :model="form" :rules="rules" ref="formRef" label-width="100px" class="cost-form">
       <!-- 基本信息 -->
@@ -755,6 +754,7 @@ import request from '@/utils/request'
 import { formatNumber } from '@/utils/format'
 import { useConfigStore } from '@/store/config'
 import logger from '@/utils/logger'
+import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import { 
   getPackagingTypeName, 
   formatPackagingMethodFromConfig,

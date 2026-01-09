@@ -17,7 +17,7 @@ const props = defineProps({
   type: { 
     type: String, 
     default: 'default', 
-    validator: v => ['download', 'import', 'export', 'delete', 'add', 'compare', 'default'].includes(v) 
+    validator: v => ['download', 'import', 'export', 'delete', 'add', 'compare', 'profit', 'edit', 'default'].includes(v) 
   },
   disabled: { type: Boolean, default: false }
 })
@@ -68,6 +68,17 @@ const ICONS = {
   compare: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M7 16V4M7 4L3 8M7 4L11 8"/>
     <path d="M17 8V20M17 20L21 16M17 20L13 16"/>
+  </svg>`,
+
+  // 利润落点 (金黄色) - 趋势图表图标
+  profit: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+  </svg>`,
+
+  // 编辑 (蓝色) - 铅笔图标
+  edit: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
   </svg>`,
   
   default: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -193,6 +204,18 @@ const iconSvg = computed(() => ICONS[props.type] || ICONS.default)
 .action-btn--delete {
   --btn-color: #ef4444;
   --btn-glow: rgba(239, 68, 68, 0.4);
+}
+
+/* 利润落点 - 金黄色 (#f59e0b) */
+.action-btn--profit {
+  --btn-color: #f59e0b;
+  --btn-glow: rgba(245, 158, 11, 0.4);
+}
+
+/* 编辑 - 蓝色 (#3b82f6) */
+.action-btn--edit {
+  --btn-color: #3b82f6;
+  --btn-glow: rgba(59, 130, 246, 0.4);
 }
 
 /* 默认灰色 */

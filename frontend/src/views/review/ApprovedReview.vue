@@ -1,6 +1,6 @@
 <template>
   <div class="approved-review-container">
-    <PageHeader title="已审核记录" />
+    <CostPageHeader title="已审核记录" :show-back="false" />
 
     <el-card>
       <!-- 搜索框 -->
@@ -99,7 +99,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, View, Delete } from '@element-plus/icons-vue'
 import { useReviewStore } from '@/store/review'
 import { useAuthStore } from '@/store/auth'
-import PageHeader from '@/components/common/PageHeader.vue'
+import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import { 
   getStatusType, 

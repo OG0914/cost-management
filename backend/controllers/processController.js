@@ -597,7 +597,7 @@ exports.deletePackagingMaterial = async (req, res) => {
 // ==================== Excel 导入导出 ====================
 
 const ExcelParser = require('../utils/excelParser');
-const ExcelGenerator = require('../utils/excelGenerator');
+const ExcelGenerator = require('../utils/excel');
 const Model = require('../models/Model');
 const fs = require('fs');
 const path = require('path');

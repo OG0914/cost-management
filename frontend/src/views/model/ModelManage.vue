@@ -1,6 +1,6 @@
 <template>
   <div class="model-manage">
-    <PageHeader title="型号管理">
+    <CostPageHeader title="型号管理" :show-back="false">
       <template #actions>
         <div class="toolbar-wrapper">
           <el-button class="toolbar-toggle" :icon="showToolbar ? CaretRight : CaretLeft" circle @click="showToolbar = !showToolbar" :title="showToolbar ? '收起工具栏' : '展开工具栏'" />
@@ -17,12 +17,18 @@
           </transition>
         </div>
       </template>
-    </PageHeader>
+    </CostPageHeader>
 
     <el-card>
       <!-- 筛选区域 -->
       <div class="filter-section">
-        <el-input v-model="searchKeyword" placeholder="搜索型号名称、法规类别..." :prefix-icon="Search" clearable @input="handleSearch" style="width: 250px" />
+        <el-input v-model="searchKeyword" placeholder="搜索型号名称..." :prefix-icon="Search" clearable @input="handleSearch" style="width: 200px" />
+        <el-select v-model="filterSeries" placeholder="按系列筛选" clearable @change="handleSearch" style="width: 140px">
+          <el-option v-for="s in seriesList" :key="s.value" :label="s.value" :value="s.value" />
+        </el-select>
+        <el-select v-model="filterRegulation" placeholder="按法规筛选" clearable @change="handleSearch" style="width: 140px">
+          <el-option v-for="reg in regulations" :key="reg.id" :label="reg.name" :value="reg.name" />
+        </el-select>
         <el-button-group class="view-toggle">
           <el-button :type="viewMode === 'card' ? 'primary' : 'default'" :icon="Grid" @click="viewMode = 'card'" />
           <el-button :type="viewMode === 'list' ? 'primary' : 'default'" :icon="List" @click="viewMode = 'list'" />
@@ -149,12 +155,12 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Upload, Download, Delete, EditPen, Grid, List, CaretLeft, CaretRight, Setting } from '@element-plus/icons-vue'
+import { Search, Delete, EditPen, Grid, List, CaretLeft, CaretRight, Setting } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { formatDateTime } from '@/utils/format'
 import logger from '@/utils/logger'
-import PageHeader from '@/components/common/PageHeader.vue'
+import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import BomConfigDialog from '@/components/BomConfigDialog.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
@@ -176,6 +182,8 @@ const dialogTitle = ref('新增型号')
 const isEdit = ref(false)
 const loading = ref(false)
 const searchKeyword = ref('')
+const filterSeries = ref('')
+const filterRegulation = ref('')
 const viewMode = ref('card')
 const currentPage = ref(1)
 const pageSize = ref(12)
@@ -222,13 +230,28 @@ const fetchModels = async () => {
 }
 
 const handleSearch = () => {
-  if (!searchKeyword.value) { filteredModels.value = models.value; return }
-  const keyword = searchKeyword.value.toLowerCase()
-  filteredModels.value = models.value.filter(item => 
-    item.model_name.toLowerCase().includes(keyword) || 
-    (item.regulation_name && item.regulation_name.toLowerCase().includes(keyword)) ||
-    (item.model_series && item.model_series.toLowerCase().includes(keyword))
-  )
+  let result = models.value
+  
+  // 按系列筛选
+  if (filterSeries.value) {
+    result = result.filter(item => item.model_series === filterSeries.value)
+  }
+  
+  // 按法规筛选
+  if (filterRegulation.value) {
+    result = result.filter(item => item.regulation_name === filterRegulation.value)
+  }
+  
+  // 按关键词搜索
+  if (searchKeyword.value) {
+    const keyword = searchKeyword.value.toLowerCase()
+    result = result.filter(item => 
+      item.model_name.toLowerCase().includes(keyword) || 
+      (item.model_series && item.model_series.toLowerCase().includes(keyword))
+    )
+  }
+  
+  filteredModels.value = result
 }
 
 const handleAdd = () => {

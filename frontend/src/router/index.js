@@ -179,8 +179,8 @@ router.beforeEach(async (to, from, next) => {
           return
         }
 
-        // 检查审核管理访问权限（admin/reviewer可访问）
-        if (requiresReviewAccess && role !== 'admin' && role !== 'reviewer') {
+        // 检查审核管理访问权限（admin/reviewer/salesperson可访问）
+        if (requiresReviewAccess && role !== 'admin' && role !== 'reviewer' && role !== 'salesperson') {
           next('/dashboard')
           return
         }
@@ -212,8 +212,8 @@ router.beforeEach(async (to, from, next) => {
         return
       }
 
-      // 检查审核管理访问权限（admin/reviewer可访问）
-      if (requiresReviewAccess && role !== 'admin' && role !== 'reviewer') {
+      // 检查审核管理访问权限（admin/reviewer/salesperson可访问）
+      if (requiresReviewAccess && role !== 'admin' && role !== 'reviewer' && role !== 'salesperson') {
         next('/dashboard')
         return
       }
