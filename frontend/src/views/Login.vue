@@ -306,6 +306,9 @@ onUnmounted(() => { if (animationId) cancelAnimationFrame(animationId) })
 }
 
 .form-input::placeholder { color: #94a3b8; }
+.form-input::-ms-reveal,
+.form-input::-ms-clear { display: none; }
+.form-input::-webkit-credentials-auto-fill-button { display: none !important; }
 .form-input:focus {
   outline: none;
   border-color: #3b82f6;
