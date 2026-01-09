@@ -1,6 +1,6 @@
 <template>
   <div class="process-management">
-    <PageHeader title="工序管理">
+    <CostPageHeader title="工序管理" :show-back="false">
       <template #actions>
         <div class="toolbar-wrapper">
           <el-button class="toolbar-toggle" :icon="showToolbar ? CaretRight : CaretLeft" circle @click="showToolbar = !showToolbar" :title="showToolbar ? '收起工具栏' : '展开工具栏'" />
@@ -17,7 +17,7 @@
           </transition>
         </div>
       </template>
-    </PageHeader>
+    </CostPageHeader>
 
     <el-card>
       <!-- 筛选栏 -->
@@ -238,10 +238,10 @@
           <div class="mb-4">
             <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">包装类型</span>
             <el-radio-group v-model="form.packaging_type" size="small" @change="onPackagingTypeChange">
-              <el-radio-button value="standard_box">标准彩盒</el-radio-button>
-              <el-radio-button value="no_box">无彩盒</el-radio-button>
-              <el-radio-button value="blister_direct">吸塑直出</el-radio-button>
-              <el-radio-button value="blister_bag">袋装吸塑</el-radio-button>
+              <el-radio-button label="standard_box">标准彩盒</el-radio-button>
+              <el-radio-button label="no_box">无彩盒</el-radio-button>
+              <el-radio-button label="blister_direct">吸塑直出</el-radio-button>
+              <el-radio-button label="blister_bag">袋装吸塑</el-radio-button>
             </el-radio-group>
           </div>
 
@@ -312,7 +312,7 @@
               <el-icon class="mr-1"><CopyDocument /></el-icon>一键复制
             </el-button>
             <el-button type="primary" plain size="small" @click="addProcess">
-              <el-icon class="mr-1"><Plus /></el-icon> 添加工序
+              <el-icon class="mr-1"><Plus /></el-icon> Add Process
             </el-button>
           </div>
         </div>
@@ -479,14 +479,13 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Delete, Grid, List, View, EditPen, CaretLeft, CaretRight, CopyDocument } from '@element-plus/icons-vue'
+import { Delete, Grid, List, View, EditPen, CaretLeft, CaretRight, InfoFilled, CopyDocument } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { useConfigStore } from '../../store/config'
 import { formatNumber, formatDateTime } from '../../utils/format'
-import { getRegulationColor } from '../../utils/color'
 import logger from '@/utils/logger'
-import PageHeader from '@/components/common/PageHeader.vue'
+import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
 import StatusSwitch from '@/components/common/StatusSwitch.vue'
@@ -499,12 +498,12 @@ import {
   calculateTotalPerCarton
 } from '../../config/packagingTypes'
 
-defineOptions({ name: 'ProcessManage' })
-
 const router = useRouter()
 const authStore = useAuthStore()
 const configStore = useConfigStore()
 const showToolbar = ref(false)
+
+
 
 // 权限检查
 const canEdit = computed(() => authStore.isAdmin || authStore.isProducer)
@@ -632,13 +631,23 @@ const formTotalProcessPrice = computed(() => {
 // 包装类型标签颜色
 const getPackagingTypeTagType = (type) => {
   const typeMap = {
-    standard_box: 'primary',
+    standard_box: '',
     no_box: 'success',
     blister_direct: 'warning',
     blister_bag: 'info'
   }
-  return typeMap[type] || 'info'
+  return typeMap[type] || ''
 }
+
+// 法规颜色映射
+const REGULATION_COLORS = { 
+  'NIOSH': '#409EFF', 
+  'GB': '#67C23A', 
+  'CE': '#E6A23C', 
+  'ASNZS': '#F56C6C', 
+  'KN': '#9B59B6' 
+}
+const getRegulationColor = (name) => REGULATION_COLORS[name] || '#909399'
 
 // 包装类型变更时重置层级数量
 const onPackagingTypeChange = () => {
@@ -827,8 +836,7 @@ const editConfig = async (row) => {
       form.layer2_qty = data.layer2_qty ?? data.bags_per_box
       form.layer3_qty = data.layer3_qty ?? data.boxes_per_carton
       form.is_active = data.is_active ? 1 : 0
-      // 将工序单价转为数字类型
-      form.processes = (data.processes || []).map(p => ({ ...p, unit_price: Number(p.unit_price) || 0 }))
+      form.processes = data.processes || []
       
       dialogVisible.value = true
     }
@@ -875,16 +883,47 @@ const deleteConfig = async (row) => {
 
 // 批量删除
 const handleBatchDelete = async () => {
-  if (selectedConfigs.value.length === 0) { ElMessage.warning('请先选择要删除的配置'); return }
+  if (selectedConfigs.value.length === 0) {
+    ElMessage.warning('请先选择要删除的配置')
+    return
+  }
+
   try {
-    await ElMessageBox.confirm(`确定要删除选中的 ${selectedConfigs.value.length} 条配置吗？`, '批量删除确认', { type: 'warning' })
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedConfigs.value.length} 条包装配置吗？此操作不可恢复！`, 
+      '批量删除确认', 
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
     const ids = selectedConfigs.value.map(item => item.id)
-    const results = await Promise.allSettled(ids.map(id => request.delete(`/processes/packaging-configs/${id}`)))
-    const successCount = results.filter(r => r.status === 'fulfilled').length
-    const failCount = results.filter(r => r.status === 'rejected').length
-    if (successCount > 0) { ElMessage.success(`成功删除 ${successCount} 条配置${failCount > 0 ? `，失败 ${failCount} 条` : ''}`); loadPackagingConfigs() }
-    else ElMessage.error('删除失败')
-  } catch (error) { if (error !== 'cancel') { /* 错误已在拦截器处理 */ } }
+    
+    let successCount = 0
+    let failCount = 0
+    
+    for (const id of ids) {
+      try {
+        await request.delete(`/processes/packaging-configs/${id}`)
+        successCount++
+      } catch (error) {
+        failCount++
+      }
+    }
+    
+    if (successCount > 0) {
+      ElMessage.success(`成功删除 ${successCount} 条配置${failCount > 0 ? `，失败 ${failCount} 条` : ''}`)
+      loadPackagingConfigs()
+    } else {
+      ElMessage.error('删除失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      // 错误已在拦截器处理
+    }
+  }
 }
 
 // 添加工序
@@ -1062,6 +1101,20 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.page-header {
+  margin-bottom: 16px;
+}
+
+.back-button {
+  font-size: 14px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .filter-bar {
   margin-bottom: 16px;
   display: flex;
@@ -1236,6 +1289,32 @@ onMounted(async () => {
 .delete-btn:hover:not(:disabled) {
   color: #f78989;
   border-color: #f78989;
+}
+
+/* 分页样式 */
+.pagination-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #ebeef5;
+}
+
+.pagination-total {
+  font-size: 14px;
+  color: #606266;
+}
+
+.pagination-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: #606266;
 }
 
 .packaging-info {

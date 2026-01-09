@@ -5,7 +5,7 @@
 const Model = require('../../models/Model');
 const Regulation = require('../../models/Regulation');
 const ExcelParser = require('../../utils/excelParser');
-const ExcelGenerator = require('../../utils/excelGenerator');
+const ExcelGenerator = require('../../utils/excel');
 const { success, error } = require('../../utils/response');
 const path = require('path');
 const fs = require('fs');

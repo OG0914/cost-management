@@ -1,6 +1,6 @@
 <template>
   <div class="material-manage">
-    <PageHeader title="原料管理">
+    <CostPageHeader title="原料管理" :show-back="false">
       <template #actions>
         <div class="toolbar-wrapper">
           <el-button class="toolbar-toggle" :icon="showToolbar ? CaretRight : CaretLeft" circle @click="showToolbar = !showToolbar" :title="showToolbar ? '收起工具栏' : '展开工具栏'" />
@@ -17,7 +17,7 @@
           </transition>
         </div>
       </template>
-    </PageHeader>
+    </CostPageHeader>
 
     <el-card>
 
@@ -76,17 +76,17 @@
       append-to-body
       :close-on-click-modal="false"
     >
-      <el-form ref="formRef" :model="form" :rules="formRules" label-width="100px">
-        <el-form-item label="品号" prop="item_no">
+      <el-form :model="form" label-width="100px">
+        <el-form-item label="品号" required>
           <el-input v-model="form.item_no" placeholder="请输入品号" />
         </el-form-item>
-        <el-form-item label="原料名称" prop="name">
+        <el-form-item label="原料名称" required>
           <el-input v-model="form.name" placeholder="请输入原料名称" />
         </el-form-item>
-        <el-form-item label="单位" prop="unit">
+        <el-form-item label="单位" required>
           <el-input v-model="form.unit" placeholder="请输入单位" />
         </el-form-item>
-        <el-form-item label="单价" prop="price">
+        <el-form-item label="单价" required>
           <el-input-number v-model="form.price" :min="0" :controls="false" style="width: 100%" />
         </el-form-item>
         <el-form-item label="币别">
@@ -111,18 +111,18 @@
 <script setup>
 import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, Search, EditPen, CaretLeft, CaretRight } from '@element-plus/icons-vue'
+import { Plus, Upload, Download, Delete, Search, EditPen, CaretLeft, CaretRight } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { formatNumber, formatDateTime } from '../../utils/format'
-import PageHeader from '@/components/common/PageHeader.vue'
+import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
 
-defineOptions({ name: 'MaterialManage' })
-
 const authStore = useAuthStore()
 const showToolbar = ref(false)
+
+// 表格数据（从后端获取的当前页数据）
 const tableData = ref([])
 const selectedMaterials = ref([])
 const dialogVisible = ref(false)
@@ -130,119 +130,358 @@ const dialogTitle = ref('新增原料')
 const isEdit = ref(false)
 const loading = ref(false)
 const searchKeyword = ref('')
+
+// 分页状态
 const currentPage = ref(1)
 const pageSize = ref(12)
 const total = ref(0)
-const formRef = ref(null)
+
+// 防抖定时器
 let searchTimer = null
 
-const form = reactive({ id: null, item_no: '', name: '', unit: '', price: null, currency: 'CNY', manufacturer: '', usage_amount: null })
-const formRules = {
-  item_no: [{ required: true, message: '请输入品号', trigger: 'blur' }],
-  name: [{ required: true, message: '请输入原料名称', trigger: 'blur' }],
-  unit: [{ required: true, message: '请输入单位', trigger: 'blur' }],
-  price: [{ required: true, message: '请输入单价', trigger: 'blur' }]
-}
+const form = reactive({
+  id: null,
+  item_no: '',
+  name: '',
+  unit: '',
+  price: null,
+  currency: 'CNY',
+  manufacturer: '',
+  usage_amount: null
+})
+
+// 是否可编辑（管理员或采购）
 const canEdit = computed(() => authStore.isAdmin || authStore.isPurchaser)
 
+// 获取原料列表（后端分页）
 const fetchMaterials = async () => {
   loading.value = true
   try {
-    const response = await request.get('/materials', { params: { page: currentPage.value, pageSize: pageSize.value, keyword: searchKeyword.value || undefined } })
-    if (response.success) { tableData.value = response.data; total.value = response.total }
-  } catch (error) { ElMessage.error('获取原料列表失败') }
-  finally { loading.value = false }
+    const response = await request.get('/materials', {
+      params: {
+        page: currentPage.value,
+        pageSize: pageSize.value,
+        keyword: searchKeyword.value || undefined
+      }
+    })
+    if (response.success) {
+      tableData.value = response.data
+      total.value = response.total
+    }
+  } catch (error) {
+    ElMessage.error('获取原料列表失败')
+  } finally {
+    loading.value = false
+  }
 }
 
-const handleSearch = () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { currentPage.value = 1; fetchMaterials() }, 300) }
-const handleClearSearch = () => { clearTimeout(searchTimer); currentPage.value = 1; fetchMaterials() }
-watch([currentPage, pageSize], fetchMaterials)
+// 防抖搜索（300ms）
+const handleSearch = () => {
+  // 清除之前的定时器
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+  }
+  
+  // 设置新的定时器
+  searchTimer = setTimeout(() => {
+    currentPage.value = 1  // 搜索时重置到第一页
+    fetchMaterials()
+  }, 300)
+}
 
+// 清空搜索框时立即触发查询
+const handleClearSearch = () => {
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+  }
+  currentPage.value = 1
+  fetchMaterials()
+}
+
+// 监听分页参数变化
+watch([currentPage, pageSize], () => {
+  fetchMaterials()
+})
+
+// 新增
 const handleAdd = () => {
-  isEdit.value = false; dialogTitle.value = '新增原料'
-  Object.assign(form, { id: null, item_no: '', name: '', unit: '', price: null, currency: 'CNY', manufacturer: '', usage_amount: null })
+  isEdit.value = false
+  dialogTitle.value = '新增原料'
+  form.id = null
+  form.item_no = ''
+  form.name = ''
+  form.unit = ''
+  form.price = null
+  form.currency = 'CNY'
+  form.manufacturer = ''
+  form.usage_amount = null
   dialogVisible.value = true
 }
 
+// 编辑
 const handleEdit = (row) => {
-  isEdit.value = true; dialogTitle.value = '编辑原料'
-  Object.assign(form, { ...row, price: Number(row.price) || null, manufacturer: row.manufacturer || '' })
+  isEdit.value = true
+  dialogTitle.value = '编辑原料'
+  form.id = row.id
+  form.item_no = row.item_no
+  form.name = row.name
+  form.unit = row.unit
+  form.price = row.price
+  form.currency = row.currency
+  form.manufacturer = row.manufacturer || ''
+  form.usage_amount = row.usage_amount
   dialogVisible.value = true
 }
 
+// 提交
 const handleSubmit = async () => {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
+  if (!form.item_no || !form.name || !form.unit || !form.price) {
+    ElMessage.warning('请填写品号、原料名称、单位和单价')
+    return
+  }
+
   loading.value = true
   try {
-    if (isEdit.value) { await request.put(`/materials/${form.id}`, form); ElMessage.success('更新成功') }
-    else { await request.post('/materials', form); ElMessage.success('创建成功') }
-    dialogVisible.value = false; fetchMaterials()
-  } catch (error) { /* 错误已在拦截器处理 */ }
-  finally { loading.value = false }
+    if (isEdit.value) {
+      await request.put(`/materials/${form.id}`, form)
+      ElMessage.success('更新成功')
+    } else {
+      await request.post('/materials', form)
+      ElMessage.success('创建成功')
+    }
+    dialogVisible.value = false
+    fetchMaterials()
+  } catch (error) {
+    // 错误已在拦截器处理
+  } finally {
+    loading.value = false
+  }
 }
 
+// 删除
 const handleDelete = async (row) => {
   try {
-    await ElMessageBox.confirm(`确定要删除原料"${row.name}"吗？`, '提示', { type: 'warning' })
-    await request.delete(`/materials/${row.id}`); ElMessage.success('删除成功'); fetchMaterials()
-  } catch (error) { if (error !== 'cancel') { /* 错误已在拦截器处理 */ } }
+    await ElMessageBox.confirm(`确定要删除原料"${row.name}"吗？`, '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+
+    await request.delete(`/materials/${row.id}`)
+    ElMessage.success('删除成功')
+    fetchMaterials()
+  } catch (error) {
+    if (error !== 'cancel') {
+      // 错误已在拦截器处理
+    }
+  }
 }
 
+// 批量删除
 const handleBatchDelete = async () => {
-  if (selectedMaterials.value.length === 0) { ElMessage.warning('请先选择要删除的原料'); return }
+  if (selectedMaterials.value.length === 0) {
+    ElMessage.warning('请先选择要删除的原料')
+    return
+  }
+
   try {
-    await ElMessageBox.confirm(`确定要删除选中的 ${selectedMaterials.value.length} 条原料吗？`, '批量删除确认', { type: 'warning' })
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedMaterials.value.length} 条原料吗？此操作不可恢复！`, 
+      '批量删除确认', 
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
     const ids = selectedMaterials.value.map(item => item.id)
-    const results = await Promise.allSettled(ids.map(id => request.delete(`/materials/${id}`)))
-    const successCount = results.filter(r => r.status === 'fulfilled').length
-    const failCount = results.filter(r => r.status === 'rejected').length
-    if (successCount > 0) { ElMessage.success(`成功删除 ${successCount} 条原料${failCount > 0 ? `，失败 ${failCount} 条` : ''}`); fetchMaterials() }
-    else ElMessage.error('删除失败')
-  } catch (error) { if (error !== 'cancel') { /* 错误已在拦截器处理 */ } }
+    
+    // 逐个删除
+    let successCount = 0
+    let failCount = 0
+    
+    for (const id of ids) {
+      try {
+        await request.delete(`/materials/${id}`)
+        successCount++
+      } catch (error) {
+        failCount++
+      }
+    }
+    
+    if (successCount > 0) {
+      ElMessage.success(`成功删除 ${successCount} 条原料${failCount > 0 ? `，失败 ${failCount} 条` : ''}`)
+      fetchMaterials()
+    } else {
+      ElMessage.error('删除失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      // 错误已在拦截器处理
+    }
+  }
 }
 
+// 文件选择
 const handleFileChange = async (file) => {
-  const formData = new FormData(); formData.append('file', file.raw)
+  const formData = new FormData()
+  formData.append('file', file.raw)
+
   try {
-    const response = await request.post('/materials/import', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
-    if (response.success) { ElMessage.success(`导入成功！创建 ${response.data.created} 条，更新 ${response.data.updated} 条`); fetchMaterials() }
-  } catch (error) { /* 错误已在拦截器处理 */ }
+    const response = await request.post('/materials/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    
+    if (response.success) {
+      ElMessage.success(`导入成功！创建 ${response.data.created} 条，更新 ${response.data.updated} 条`)
+      fetchMaterials()
+    }
+  } catch (error) {
+    // 错误已在拦截器处理
+  }
 }
 
-const handleSelectionChange = (selection) => { selectedMaterials.value = selection }
+// 选择变化
+const handleSelectionChange = (selection) => {
+  selectedMaterials.value = selection
+}
 
+// 导出
 const handleExport = async () => {
-  if (selectedMaterials.value.length === 0) { ElMessage.warning('请先选择要导出的数据'); return }
+  if (selectedMaterials.value.length === 0) {
+    ElMessage.warning('请先选择要导出的数据')
+    return
+  }
+
   try {
     const ids = selectedMaterials.value.map(item => item.id)
-    const response = await request.post('/materials/export/excel', { ids }, { responseType: 'blob' })
+    const response = await request.post('/materials/export/excel', 
+      { ids },
+      { responseType: 'blob' }
+    )
+    
     const url = window.URL.createObjectURL(new Blob([response]))
-    const link = document.createElement('a'); link.href = url; link.setAttribute('download', `原料清单_${Date.now()}.xlsx`)
-    document.body.appendChild(link); link.click(); document.body.removeChild(link); ElMessage.success('导出成功')
-  } catch (error) { ElMessage.error('导出失败') }
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `原料清单_${Date.now()}.xlsx`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    ElMessage.success('导出成功')
+  } catch (error) {
+    ElMessage.error('导出失败')
+  }
 }
 
+// 下载模板
 const handleDownloadTemplate = async () => {
   try {
-    const response = await request.get('/materials/template/download', { responseType: 'blob' })
+    const response = await request.get('/materials/template/download', {
+      responseType: 'blob'
+    })
+    
     const url = window.URL.createObjectURL(new Blob([response]))
-    const link = document.createElement('a'); link.href = url; link.setAttribute('download', '原料导入模板.xlsx')
-    document.body.appendChild(link); link.click(); document.body.removeChild(link); ElMessage.success('下载成功')
-  } catch (error) { ElMessage.error('下载失败') }
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', '原料导入模板.xlsx')
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    ElMessage.success('下载成功')
+  } catch (error) {
+    ElMessage.error('下载失败')
+  }
 }
 
-onMounted(fetchMaterials)
-onUnmounted(() => clearTimeout(searchTimer))
+onMounted(() => {
+  fetchMaterials()
+})
+
+onUnmounted(() => {
+  if (searchTimer) clearTimeout(searchTimer)
+})
 </script>
 
 <style scoped>
-.filter-bar { margin-bottom: 16px; display: flex; align-items: center; }
-.el-table .el-button.is-circle { transition: transform 0.2s, box-shadow 0.2s; }
-.el-table .el-button.is-circle:hover:not(:disabled) { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
-.delete-btn { color: #F56C6C; }
-.delete-btn:hover:not(:disabled) { color: #f78989; border-color: #f78989; }
-:deep(.el-table th.el-table__cell) { background-color: #f5f7fa; }
+.material-manage {
+  /* padding 由 MainLayout 提供 */
+}
+
+.page-header {
+  margin-bottom: 16px;
+}
+
+.back-button {
+  font-size: 14px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.filter-bar {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+}
+
+/* 分页样式 */
+.pagination-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #ebeef5;
+}
+
+.pagination-total {
+  font-size: 14px;
+  color: #606266;
+}
+
+.pagination-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: #606266;
+}
+
+/* 操作按钮悬停效果 */
+.el-table .el-button.is-circle {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.el-table .el-button.is-circle:hover:not(:disabled) {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 删除按钮样式 */
+.delete-btn {
+  color: #F56C6C;
+}
+
+.delete-btn:hover:not(:disabled) {
+  color: #f78989;
+  border-color: #f78989;
+}
+
+/* 表头浅色底色 */
+:deep(.el-table th.el-table__cell) {
+  background-color: #f5f7fa;
+}
+
+/* 工具栏折叠 */
 .toolbar-wrapper { display: flex; align-items: center; gap: 12px; }
 .toolbar-toggle { flex-shrink: 0; }
 .toolbar-fade-enter-active, .toolbar-fade-leave-active { transition: opacity 0.3s, transform 0.3s; }

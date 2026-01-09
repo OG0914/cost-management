@@ -1,17 +1,12 @@
 <template>
   <div class="standard-cost-container">
-    <el-card class="header-card">
-      <div class="header-content">
-        <div class="header-left">
-          <h2>标准成本</h2>
-        </div>
-        <div class="header-right">
-          <ActionButton type="compare" @click="goToStandardCostCompare" :disabled="selectedStandardCosts.length < 2">
-            对比模式 ({{ selectedStandardCosts.length }})
-          </ActionButton>
-        </div>
-      </div>
-    </el-card>
+    <CostPageHeader title="标准成本" :show-back="false">
+      <template #actions>
+        <ActionButton type="compare" @click="goToStandardCostCompare" :disabled="selectedStandardCosts.length < 2">
+          对比模式 ({{ selectedStandardCosts.length }})
+        </ActionButton>
+      </template>
+    </CostPageHeader>
 
     <!-- 标准成本历史弹窗 -->
     <el-dialog
@@ -159,6 +154,7 @@ import { getUser } from '@/utils/auth'
 import logger from '@/utils/logger'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
+import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 
 defineOptions({ name: 'StandardCost' })
 
@@ -405,37 +401,9 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.standard-cost-container {
-  /* padding 由 MainLayout 提供 */
-}
 
-.header-card {
-  margin-bottom: 20px;
-}
 
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.header-left h2 {
-  margin: 0;
-  font-size: 24px;
-  color: #303133;
-}
 
 .filter-bar {
   margin-bottom: 16px;

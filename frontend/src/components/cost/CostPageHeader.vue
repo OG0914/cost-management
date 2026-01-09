@@ -1,21 +1,31 @@
 <template>
   <div class="cost-page-header">
-    <button class="cost-back-btn" @click="$emit('back')">
-      <i class="ri-arrow-left-line"></i>
-      <span>返回</span>
-    </button>
-    <h2 class="cost-page-title">{{ title }}</h2>
-    <el-tag :type="isEditMode ? 'warning' : 'info'" size="large">
-      状态: {{ isEditMode ? '编辑中' : '创建中' }}
-    </el-tag>
+    <div class="cost-header-left">
+      <button v-if="showBack" class="cost-back-btn" type="button" @click="$emit('back')">返回</button>
+      <h2 class="cost-page-title">{{ title }}</h2>
+      <slot name="after-title"></slot>
+    </div>
+    <div class="cost-header-right">
+      <slot name="actions"></slot>
+    </div>
   </div>
 </template>
 
 <script setup>
 defineProps({
-  title: { type: String, default: '新增报价' },
-  isEditMode: { type: Boolean, default: false }
+  title: {
+    type: String,
+    default: ''
+  },
+  showBack: {
+    type: Boolean,
+    default: false
+  }
 })
 
 defineEmits(['back'])
 </script>
+
+<style scoped>
+/*样式已在 cost-form.css 中全局定义，此处无需重复 */
+</style>

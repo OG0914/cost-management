@@ -310,8 +310,6 @@ import request from '@/utils/request'
 import { formatNumber } from '@/utils/format'
 import logger from '@/utils/logger'
 
-defineOptions({ name: 'CostCompare' })
-
 const router = useRouter()
 const route = useRoute()
 const loading = ref(false)

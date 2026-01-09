@@ -1,6 +1,6 @@
 <template>
   <div class="regulation-manage">
-    <PageHeader title="法规类别管理">
+    <CostPageHeader title="法规类别管理" :show-back="false">
       <template #actions>
         <div class="toolbar-wrapper">
           <el-button class="toolbar-toggle" :icon="showToolbar ? CaretRight : CaretLeft" circle @click="showToolbar = !showToolbar" :title="showToolbar ? '收起工具栏' : '展开工具栏'" />
@@ -9,7 +9,7 @@
           </transition>
         </div>
       </template>
-    </PageHeader>
+    </CostPageHeader>
 
     <el-card>
       <!-- 筛选区域 -->
@@ -82,8 +82,8 @@
       append-to-body 
       :close-on-click-modal="false"
     >
-      <el-form ref="formRef" :model="form" :rules="formRules" label-width="100px">
-        <el-form-item label="法规名称" prop="name">
+      <el-form :model="form" label-width="100px">
+        <el-form-item label="法规名称" required>
           <el-input v-model="form.name" placeholder="请输入法规名称" />
         </el-form-item>
         <el-form-item label="描述">
@@ -107,13 +107,11 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Grid, List, EditPen, Delete, CaretLeft, CaretRight } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
-import { getRegulationColor, getInitial } from '@/utils/color'
-import PageHeader from '@/components/common/PageHeader.vue'
+import { formatDateTime } from '@/utils/format'
+import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
 import StatusSwitch from '@/components/common/StatusSwitch.vue'
-
-defineOptions({ name: 'RegulationManage' })
 
 const authStore = useAuthStore()
 const showToolbar = ref(false)
@@ -127,7 +125,6 @@ const searchKeyword = ref('')
 const viewMode = ref('card')
 const currentPage = ref(1)
 const pageSize = ref(12)
-const formRef = ref(null)
 
 const paginatedRegulations = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
@@ -135,21 +132,20 @@ const paginatedRegulations = computed(() => {
 })
 
 const form = reactive({ id: null, name: '', description: '', is_active: 1 })
-const formRules = { name: [{ required: true, message: '请输入法规名称', trigger: 'blur' }] }
+
+// 法规颜色映射
+const REGULATION_COLORS = { 'NIOSH': '#409EFF', 'GB': '#67C23A', 'CE': '#E6A23C', 'ASNZS': '#F56C6C', 'KN': '#9B59B6' }
+const getRegulationColor = (name) => REGULATION_COLORS[name] || '#909399'
+const getInitial = (name) => name ? name.charAt(0).toUpperCase() : '?'
 
 const fetchRegulations = async () => {
   try {
     const response = await request.get('/regulations')
-    if (response.success) { regulations.value = response.data; doSearch() }
+    if (response.success) { regulations.value = response.data; handleSearch() }
   } catch (error) { ElMessage.error('获取法规列表失败') }
 }
 
-let searchTimer = null
-const handleSearch = () => { // 防抖搜索
-  clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => { doSearch(); currentPage.value = 1 }, 300)
-}
-const doSearch = () => {
+const handleSearch = () => {
   if (!searchKeyword.value) { filteredRegulations.value = regulations.value; return }
   const keyword = searchKeyword.value.toLowerCase()
   filteredRegulations.value = regulations.value.filter(item => item.name.toLowerCase().includes(keyword))
@@ -168,8 +164,7 @@ const handleEdit = (row) => {
 }
 
 const handleSubmit = async () => {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
+  if (!form.name) { ElMessage.warning('请输入法规名称'); return }
   loading.value = true
   try {
     if (isEdit.value) { await request.put(`/regulations/${form.id}`, form); ElMessage.success('更新成功') }

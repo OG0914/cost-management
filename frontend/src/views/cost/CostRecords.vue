@@ -1,18 +1,13 @@
 <template>
   <div class="cost-records-container">
-    <el-card class="header-card">
-      <div class="header-content">
-        <div class="header-left">
-          <h2>成本记录</h2>
-        </div>
-        <div class="header-right">
-          <ActionButton type="compare" @click="goToCompare" :disabled="selectedQuotations.length < 2">
-            对比模式 ({{ selectedQuotations.length }})
-          </ActionButton>
-          <ActionButton type="add" @click="showCategoryModal">新增报价单</ActionButton>
-        </div>
-      </div>
-    </el-card>
+    <CostPageHeader title="成本记录" :show-back="false">
+      <template #actions>
+        <ActionButton type="compare" @click="goToCompare" :disabled="selectedQuotations.length < 2">
+          对比模式 ({{ selectedQuotations.length }})
+        </ActionButton>
+        <ActionButton type="add" @click="showCategoryModal">新增报价单</ActionButton>
+      </template>
+    </CostPageHeader>
 
     <!-- 产品类别选择弹窗 -->
     <ProductCategoryModal
@@ -127,8 +122,7 @@ import ProductCategoryModal from '@/components/ProductCategoryModal.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
 import logger from '@/utils/logger'
-
-defineOptions({ name: 'CostRecords' })
+import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 
 const router = useRouter()
 
@@ -367,36 +361,36 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.header-card {
-  margin-bottom: 20px;
-}
 
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.header-left h2 {
-  margin: 0;
-  font-size: 24px;
-  color: #303133;
-}
 
 .filter-bar {
   margin-bottom: 16px;
+}
+
+/* 分页样式 */
+.pagination-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #ebeef5;
+}
+
+.pagination-total {
+  font-size: 14px;
+  color: #606266;
+}
+
+.pagination-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: #606266;
 }
 
 /* 操作按钮悬停效果 */
