@@ -35,7 +35,7 @@
         <div v-for="item in paginatedModels" :key="item.id" class="item-card">
           <div class="card-body">
             <div class="item-header">
-              <el-image v-if="item.primary_image" :src="item.primary_image" :preview-src-list="[item.primary_image]" fit="cover" class="card-image" />
+              <el-image v-if="item.primary_image" :src="item.primary_image" :preview-src-list="[item.primary_image]" fit="cover" class="card-image" preview-teleported :z-index="3000" />
               <div v-else class="card-image-placeholder"><el-icon :size="28" color="#c0c4cc"><Picture /></el-icon></div>
               <div class="item-info">
                 <div class="item-name">{{ item.model_name }}</div>
@@ -69,7 +69,7 @@
         <el-table-column type="selection" width="55" />
         <el-table-column label="产品图" width="80" align="center">
           <template #default="{ row }">
-            <el-image v-if="row.primary_image" :src="row.primary_image" :preview-src-list="[row.primary_image]" fit="cover" style="width: 50px; height: 50px; border-radius: 4px;" />
+            <el-image v-if="row.primary_image" :src="row.primary_image" :preview-src-list="[row.primary_image]" fit="cover" style="width: 50px; height: 50px; border-radius: 4px;" preview-teleported :z-index="3000" />
             <el-icon v-else :size="24" color="#c0c4cc"><Picture /></el-icon>
           </template>
         </el-table-column>
