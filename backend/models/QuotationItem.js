@@ -310,6 +310,36 @@ class QuotationItem {
     );
     return result.rowCount > 0;
   }
+
+  /**
+   * 检查原料是否被报价单明细引用
+   * @param {number} materialId - 原料 ID
+   * @returns {Promise<boolean>} 是否被引用
+   */
+  static async isMaterialUsed(materialId) {
+    const result = await dbManager.query(
+      'SELECT COUNT(*) as count FROM quotation_items WHERE material_id = $1',
+      [materialId]
+    );
+    return parseInt(result.rows[0].count) > 0;
+  }
+
+  /**
+   * 获取引用某原料的报价单列表
+   * @param {number} materialId - 原料 ID
+   * @returns {Promise<Array>} 报价单列表
+   */
+  static async getQuotationsByMaterial(materialId) {
+    const result = await dbManager.query(`
+      SELECT DISTINCT q.id, q.quotation_no, q.customer_name, q.status
+      FROM quotation_items qi
+      JOIN quotations q ON qi.quotation_id = q.id
+      WHERE qi.material_id = $1
+      ORDER BY q.created_at DESC
+      LIMIT 10
+    `, [materialId]);
+    return result.rows;
+  }
 }
 
 module.exports = QuotationItem;

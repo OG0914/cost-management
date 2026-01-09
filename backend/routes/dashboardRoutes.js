@@ -4,7 +4,7 @@
 
 const express = require('express');
 const router = express.Router();
-const dashboardController = require('../controllers/dashboardController');
+const dashboardController = require('../controllers/system/dashboardController');
 const { verifyToken } = require('../middleware/auth');
 
 // 所有仪表盘接口都需要认证

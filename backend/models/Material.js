@@ -156,6 +156,18 @@ class Material {
   }
 
   /**
+   * 根据多个品号批量查找原料
+   * @param {Array<string>} itemNos - 品号数组
+   * @returns {Promise<Array>} 原料列表
+   */
+  static async findByItemNos(itemNos) {
+    if (!itemNos || itemNos.length === 0) return [];
+    const placeholders = itemNos.map((_, i) => `$${i + 1}`).join(',');
+    const result = await dbManager.query(`SELECT * FROM materials WHERE item_no IN (${placeholders})`, itemNos);
+    return result.rows;
+  }
+
+  /**
    * 根据名称查找原料
    * @param {string} name - 原料名称
    * @returns {Promise<Object|null>} 原料对象或 null

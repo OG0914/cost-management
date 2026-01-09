@@ -111,6 +111,8 @@ import {
 } from '@/utils/review'
 import ApprovedDetailDialog from '@/components/review/ApprovedDetailDialog.vue'
 
+defineOptions({ name: 'ApprovedReview' })
+
 const reviewStore = useReviewStore()
 const authStore = useAuthStore()
 

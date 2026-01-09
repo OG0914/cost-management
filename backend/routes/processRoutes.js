@@ -38,6 +38,7 @@ router.use(verifyToken);
 // 包装配置路由
 router.get('/packaging-configs', processController.getAllPackagingConfigs);
 router.get('/packaging-configs/grouped', processController.getPackagingConfigsGrouped);
+router.get('/packaging-configs/with-material-count', processController.getPackagingConfigsWithMaterialCount);
 router.get('/packaging-configs/model/:modelId', processController.getPackagingConfigsByModel);
 router.get('/packaging-configs/:id', processController.getPackagingConfigDetail);
 router.get('/packaging-configs/:id/full', processController.getPackagingConfigFullDetail);

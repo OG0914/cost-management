@@ -6,7 +6,8 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const modelController = require('../controllers/modelController');
+const modelController = require('../controllers/master/modelController');
+const modelImageController = require('../controllers/master/modelImageController');
 const { verifyToken } = require('../middleware/auth');
 const { checkRole } = require('../middleware/roleCheck');
 
@@ -21,6 +22,29 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
+
+// 图片上传配置
+const imageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, '../uploads/temp'));
+  },
+  filename: (req, file, cb) => {
+    cb(null, `temp_${Date.now()}_${file.originalname}`);
+  }
+});
+
+const imageUpload = multer({
+  storage: imageStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('只支持 JPG/PNG/WEBP 格式'));
+    }
+  }
+});
 
 // 所有路由都需要认证
 router.use(verifyToken);
@@ -45,6 +69,12 @@ router.get('/regulation/:regulationId', modelController.getModelsByRegulation);
 
 // 获取单个型号
 router.get('/:id', modelController.getModelById);
+
+// 型号图片管理
+router.get('/:id/images', modelImageController.getImages);
+router.post('/:id/images', checkRole('admin', 'purchaser', 'producer'), imageUpload.array('images', 10), modelImageController.uploadImages);
+router.put('/:id/images/:imageId/primary', checkRole('admin', 'purchaser', 'producer'), modelImageController.setPrimary);
+router.delete('/:id/images/:imageId', checkRole('admin', 'purchaser', 'producer'), modelImageController.deleteImage);
 
 // 以下路由管理员、采购、生产可访问
 router.post('/', checkRole('admin', 'purchaser', 'producer'), modelController.createModel);

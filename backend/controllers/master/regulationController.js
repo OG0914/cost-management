@@ -2,8 +2,8 @@
  * 法规类别控制器
  */
 
-const Regulation = require('../models/Regulation');
-const { success, error } = require('../utils/response');
+const Regulation = require('../../models/Regulation');
+const { success, error } = require('../../utils/response');
 
 // 获取所有法规类别
 const getAllRegulations = async (req, res, next) => {

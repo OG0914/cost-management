@@ -6,7 +6,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const materialController = require('../controllers/materialController');
+const materialController = require('../controllers/master/materialController');
 const { verifyToken } = require('../middleware/auth');
 const { isPurchaser } = require('../middleware/roleCheck');
 

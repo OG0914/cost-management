@@ -4,10 +4,10 @@
 
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const ExcelParser = require('../utils/excelParser');
-const ExcelGenerator = require('../utils/excel');
-const { success, error } = require('../utils/response');
+const User = require('../../models/User');
+const ExcelParser = require('../../utils/excelParser');
+const ExcelGenerator = require('../../utils/excel');
+const { success, error } = require('../../utils/response');
 const path = require('path');
 const fs = require('fs');
 
@@ -110,7 +110,7 @@ const register = async (req, res, next) => {
 const getCurrentUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);
-
+    
     if (!user) {
       return res.status(404).json(error('用户不存在', 404));
     }
@@ -167,7 +167,7 @@ const changePassword = async (req, res, next) => {
 const getAllUsers = async (req, res, next) => {
   try {
     const users = await User.findAll();
-
+    
     // 不返回密码字段
     const usersWithoutPassword = users.map(user => {
       const { password, ...userWithoutPassword } = user;
@@ -229,7 +229,7 @@ const deleteUser = async (req, res, next) => {
     if (!user) {
       return res.status(404).json(error('用户不存在', 404));
     }
-
+    
     if (user.username === 'admin') {
       return res.status(400).json(error('不能删除管理员账号', 400));
     }
@@ -238,7 +238,7 @@ const deleteUser = async (req, res, next) => {
     // 1. 删除用户创建的所有报价单
     // 2. 将用户审核的报价单的 reviewed_by 设置为 NULL
     const result = await User.deleteWithRelations(id);
-
+    
     if (!result.success) {
       return res.status(500).json(error('删除用户失败', 500));
     }
@@ -308,19 +308,19 @@ const importUsers = async (req, res, next) => {
     if (!req.file) {
       return res.status(400).json(error('请上传文件', 400));
     }
-
+    
     const filePath = req.file.path;
     const result = await ExcelParser.parseUserExcel(filePath);
-
+    
     fs.unlinkSync(filePath); // 删除临时文件
-
+    
     if (!result.success) {
       return res.status(400).json(error('文件解析失败', 400, result.errors));
     }
-
+    
     let created = 0, updated = 0;
     const errors = [];
-
+    
     for (const userData of result.data) {
       try {
         const existing = await User.findByUsername(userData.username);
@@ -336,7 +336,7 @@ const importUsers = async (req, res, next) => {
         errors.push(`用户 ${userData.username}: ${err.message}`);
       }
     }
-
+    
     res.json(success({ total: result.total, valid: result.valid, created, updated, errors }, '导入成功'));
   } catch (err) {
     if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
@@ -348,7 +348,7 @@ const importUsers = async (req, res, next) => {
 const exportUsers = async (req, res, next) => {
   try {
     const { ids } = req.body;
-
+    
     let users;
     if (ids && ids.length > 0) {
       const userPromises = ids.map(id => User.findById(id));
@@ -356,19 +356,19 @@ const exportUsers = async (req, res, next) => {
     } else {
       users = await User.findAll();
     }
-
+    
     if (users.length === 0) {
       return res.status(400).json(error('没有可导出的数据', 400));
     }
-
+    
     const workbook = await ExcelGenerator.generateUserExcel(users);
     const fileName = `用户清单_${Date.now()}.xlsx`;
     const tempDir = path.join(__dirname, '../temp');
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
     const filePath = path.join(tempDir, fileName);
-
+    
     await workbook.xlsx.writeFile(filePath);
-
+    
     res.download(filePath, fileName, (err) => {
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       if (err) next(err);
@@ -386,9 +386,9 @@ const downloadUserTemplate = async (req, res, next) => {
     const tempDir = path.join(__dirname, '../temp');
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
     const filePath = path.join(tempDir, fileName);
-
+    
     await workbook.xlsx.writeFile(filePath);
-
+    
     res.download(filePath, fileName, (err) => {
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       if (err) next(err);

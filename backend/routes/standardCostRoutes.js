@@ -4,7 +4,7 @@
 
 const express = require('express');
 const router = express.Router();
-const standardCostController = require('../controllers/standardCostController');
+const standardCostController = require('../controllers/review/standardCostController');
 const { verifyToken } = require('../middleware/auth');
 const { isAdminOrReviewer } = require('../middleware/roleCheck');
 

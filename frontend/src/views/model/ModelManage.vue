@@ -1,6 +1,6 @@
 <template>
   <div class="model-manage">
-    <CostPageHeader title="型号管理" :show-back="false">
+    <PageHeader title="型号管理">
       <template #actions>
         <div class="toolbar-wrapper">
           <el-button class="toolbar-toggle" :icon="showToolbar ? CaretRight : CaretLeft" circle @click="showToolbar = !showToolbar" :title="showToolbar ? '收起工具栏' : '展开工具栏'" />
@@ -17,18 +17,12 @@
           </transition>
         </div>
       </template>
-    </CostPageHeader>
+    </PageHeader>
 
     <el-card>
       <!-- 筛选区域 -->
       <div class="filter-section">
-        <el-input v-model="searchKeyword" placeholder="搜索型号名称..." :prefix-icon="Search" clearable @input="handleSearch" style="width: 200px" />
-        <el-select v-model="filterSeries" placeholder="按系列筛选" clearable @change="handleSearch" style="width: 140px">
-          <el-option v-for="s in seriesList" :key="s.value" :label="s.value" :value="s.value" />
-        </el-select>
-        <el-select v-model="filterRegulation" placeholder="按法规筛选" clearable @change="handleSearch" style="width: 140px">
-          <el-option v-for="reg in regulations" :key="reg.id" :label="reg.name" :value="reg.name" />
-        </el-select>
+        <el-input v-model="searchKeyword" placeholder="搜索型号名称、法规类别..." :prefix-icon="Search" clearable @input="handleSearch" style="width: 250px" />
         <el-button-group class="view-toggle">
           <el-button :type="viewMode === 'card' ? 'primary' : 'default'" :icon="Grid" @click="viewMode = 'card'" />
           <el-button :type="viewMode === 'list' ? 'primary' : 'default'" :icon="List" @click="viewMode = 'list'" />
@@ -41,19 +35,19 @@
         <div v-for="item in paginatedModels" :key="item.id" class="item-card">
           <div class="card-body">
             <div class="item-header">
-              <div class="avatar" :style="{ backgroundColor: getRegulationColor(item.regulation_name) }">
-                {{ item.model_category || item.model_series || '?' }}
-              </div>
+              <el-image v-if="item.primary_image" :src="item.primary_image" :preview-src-list="[item.primary_image]" fit="cover" class="card-image" />
+              <div v-else class="card-image-placeholder"><el-icon :size="28" color="#c0c4cc"><Picture /></el-icon></div>
               <div class="item-info">
                 <div class="item-name">{{ item.model_name }}</div>
                 <div class="item-sub">{{ item.regulation_name }}</div>
               </div>
             </div>
             <div class="item-details">
-              <div class="series-tag" v-if="item.model_series">
-                <span class="label">系列:</span> {{ item.model_series }}
+              <div class="detail-row">
+                <span v-if="item.model_series" class="series-tag"><span class="label">系列:</span> {{ item.model_series }}</span>
+                <span class="category-tag"><span class="label">分类:</span> {{ item.model_category || '暂无' }}</span>
               </div>
-              <div class="bom-info cursor-pointer hover:text-blue-600 transition-colors" @click="handleConfigBom(item)">
+              <div class="bom-info bom-link" @click="handleConfigBom(item)">
                 BOM: 共 {{ item.bom_count || 0 }} 项
               </div>
               <div class="status">
@@ -73,15 +67,19 @@
       <!-- 列表视图 -->
       <el-table v-if="viewMode === 'list'" :data="paginatedModels" border stripe @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" />
+        <el-table-column label="产品图" width="80" align="center">
+          <template #default="{ row }">
+            <el-image v-if="row.primary_image" :src="row.primary_image" :preview-src-list="[row.primary_image]" fit="cover" style="width: 50px; height: 50px; border-radius: 4px;" />
+            <el-icon v-else :size="24" color="#c0c4cc"><Picture /></el-icon>
+          </template>
+        </el-table-column>
         <el-table-column prop="regulation_name" label="法规类别" width="120" sortable />
         <el-table-column prop="model_name" label="型号名称" sortable />
-        <el-table-column prop="model_series" label="产品系列" width="140" sortable>
-         
-        </el-table-column>
+        <el-table-column prop="model_series" label="产品系列" width="140" sortable />
         <el-table-column prop="model_category" label="型号分类" width="140" sortable />
         <el-table-column label="BOM明细" width="120" align="center">
           <template #default="{ row }">
-            <el-link type="primary" :underline="false" @click="handleConfigBom(row)">
+            <el-link type="primary" underline="never" @click="handleConfigBom(row)">
               <span class="font-bold">共 {{ row.bom_count || 0 }} 项</span>
             </el-link>
           </template>
@@ -116,13 +114,13 @@
       append-to-body
       :close-on-click-modal="false"
     >
-      <el-form :model="form" label-width="100px">
-        <el-form-item label="法规类别" required>
+      <el-form ref="formRef" :model="form" :rules="formRules" label-width="100px">
+        <el-form-item label="法规类别" prop="regulation_id">
           <el-select v-model="form.regulation_id" filterable placeholder="请选择法规类别" style="width: 100%">
             <el-option v-for="reg in regulations" :key="reg.id" :label="reg.name" :value="reg.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="型号名称" required>
+        <el-form-item label="型号名称" prop="model_name">
           <el-input v-model="form.model_name" placeholder="请输入型号名称" />
         </el-form-item>
         <el-form-item label="产品系列">
@@ -140,6 +138,34 @@
         <el-form-item label="状态" v-if="isEdit">
           <StatusSwitch v-model="form.is_active" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="禁用" />
         </el-form-item>
+        <el-form-item label="产品图片" v-if="isEdit">
+          <el-upload
+            :action="`/api/models/${form.id}/images`"
+            :headers="{ Authorization: `Bearer ${authStore.token}` }"
+            :on-success="handleImageUploadSuccess"
+            :on-error="handleImageUploadError"
+            :before-upload="beforeImageUpload"
+            list-type="picture-card"
+            accept=".jpg,.jpeg,.png,.webp"
+            multiple
+            name="images"
+            :file-list="imageList"
+            :on-remove="handleImageRemove"
+          >
+            <el-icon><Plus /></el-icon>
+          </el-upload>
+          <div class="upload-tip">支持 JPG/PNG/WEBP，单张最大 5MB</div>
+          <div class="image-list" v-if="modelImages.length > 0">
+            <div v-for="img in modelImages" :key="img.id" class="image-item">
+              <el-image :src="img.file_path" fit="cover" style="width: 100px; height: 100px;" :preview-src-list="modelImages.map(i => i.file_path)" />
+              <div class="image-actions">
+                <el-tag v-if="img.is_primary" type="success" size="small">主图</el-tag>
+                <el-button v-else size="small" link @click="setAsPrimary(img.id)">设为主图</el-button>
+                <el-button size="small" link type="danger" @click="removeImage(img.id)">删除</el-button>
+              </div>
+            </div>
+          </div>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -155,16 +181,18 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Delete, EditPen, Grid, List, CaretLeft, CaretRight, Setting } from '@element-plus/icons-vue'
+import { Search, Delete, EditPen, Grid, List, CaretLeft, CaretRight, Setting, Plus, Picture } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
-import { formatDateTime } from '@/utils/format'
+import { getRegulationColor } from '@/utils/color'
 import logger from '@/utils/logger'
-import CostPageHeader from '@/components/cost/CostPageHeader.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import BomConfigDialog from '@/components/BomConfigDialog.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
 import StatusSwitch from '@/components/common/StatusSwitch.vue'
+
+defineOptions({ name: 'ModelManage' })
 
 const authStore = useAuthStore()
 const showToolbar = ref(false)
@@ -182,11 +210,12 @@ const dialogTitle = ref('新增型号')
 const isEdit = ref(false)
 const loading = ref(false)
 const searchKeyword = ref('')
-const filterSeries = ref('')
-const filterRegulation = ref('')
 const viewMode = ref('card')
 const currentPage = ref(1)
 const pageSize = ref(12)
+const formRef = ref(null)
+const modelImages = ref([])
+const imageList = ref([])
 
 const paginatedModels = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
@@ -196,10 +225,10 @@ const paginatedModels = computed(() => {
 watch(viewMode, (newMode) => { if (newMode === 'card') selectedModels.value = [] })
 
 const form = reactive({ id: null, regulation_id: null, model_name: '', model_category: '', model_series: '', is_active: 1 })
-
-// 法规颜色映射（底色关联法规类别）
-const REGULATION_COLORS = { 'NIOSH': '#409EFF', 'GB': '#67C23A', 'CE': '#E6A23C', 'ASNZS': '#F56C6C', 'KN': '#9B59B6' }
-const getRegulationColor = (name) => REGULATION_COLORS[name] || '#909399'
+const formRules = {
+  regulation_id: [{ required: true, message: '请选择法规类别', trigger: 'change' }],
+  model_name: [{ required: true, message: '请输入型号名称', trigger: 'blur' }]
+}
 
 const fetchRegulations = async () => {
   try {
@@ -225,33 +254,23 @@ const querySearchSeries = (queryString, cb) => {
 const fetchModels = async () => {
   try {
     const response = await request.get('/models')
-    if (response.success) { models.value = response.data; handleSearch() }
+    if (response.success) { models.value = response.data; doSearch() }
   } catch (error) { ElMessage.error('获取型号列表失败') }
 }
 
-const handleSearch = () => {
-  let result = models.value
-  
-  // 按系列筛选
-  if (filterSeries.value) {
-    result = result.filter(item => item.model_series === filterSeries.value)
-  }
-  
-  // 按法规筛选
-  if (filterRegulation.value) {
-    result = result.filter(item => item.regulation_name === filterRegulation.value)
-  }
-  
-  // 按关键词搜索
-  if (searchKeyword.value) {
-    const keyword = searchKeyword.value.toLowerCase()
-    result = result.filter(item => 
-      item.model_name.toLowerCase().includes(keyword) || 
-      (item.model_series && item.model_series.toLowerCase().includes(keyword))
-    )
-  }
-  
-  filteredModels.value = result
+let searchTimer = null
+const handleSearch = () => { // 防抖搜索
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => { doSearch(); currentPage.value = 1 }, 300)
+}
+const doSearch = () => {
+  if (!searchKeyword.value) { filteredModels.value = models.value; return }
+  const keyword = searchKeyword.value.toLowerCase()
+  filteredModels.value = models.value.filter(item => 
+    item.model_name.toLowerCase().includes(keyword) || 
+    (item.regulation_name && item.regulation_name.toLowerCase().includes(keyword)) ||
+    (item.model_series && item.model_series.toLowerCase().includes(keyword))
+  )
 }
 
 const handleAdd = () => {
@@ -260,10 +279,51 @@ const handleAdd = () => {
   dialogVisible.value = true
 }
 
-const handleEdit = (row) => {
+const handleEdit = async (row) => {
   isEdit.value = true; dialogTitle.value = '编辑型号'
   form.id = row.id; form.regulation_id = row.regulation_id; form.model_name = row.model_name; form.model_category = row.model_category; form.model_series = row.model_series || ''; form.is_active = row.is_active ? 1 : 0
+  imageList.value = []
+  await fetchModelImages(row.id)
   dialogVisible.value = true
+}
+
+const fetchModelImages = async (modelId) => {
+  try {
+    const response = await request.get(`/models/${modelId}/images`)
+    if (response.success) modelImages.value = response.data
+  } catch (error) { logger.error('获取图片失败', error) }
+}
+
+const beforeImageUpload = (file) => {
+  const isAllowed = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
+  const isLt5M = file.size / 1024 / 1024 < 5
+  if (!isAllowed) { ElMessage.error('只支持 JPG/PNG/WEBP 格式'); return false }
+  if (!isLt5M) { ElMessage.error('图片大小不能超过 5MB'); return false }
+  return true
+}
+
+const handleImageUploadSuccess = (response) => {
+  if (response.success) { ElMessage.success('上传成功'); fetchModelImages(form.id) }
+  else ElMessage.error(response.message || '上传失败')
+}
+
+const handleImageUploadError = () => { ElMessage.error('上传失败') }
+
+const handleImageRemove = () => { /* el-upload 自带删除，此处留空 */ }
+
+const setAsPrimary = async (imageId) => {
+  try {
+    const response = await request.put(`/models/${form.id}/images/${imageId}/primary`)
+    if (response.success) { ElMessage.success('设置成功'); fetchModelImages(form.id); fetchModels() }
+  } catch (error) { /* 错误已在拦截器处理 */ }
+}
+
+const removeImage = async (imageId) => {
+  try {
+    await ElMessageBox.confirm('确定要删除这张图片吗？', '提示', { type: 'warning' })
+    const response = await request.delete(`/models/${form.id}/images/${imageId}`)
+    if (response.success) { ElMessage.success('删除成功'); fetchModelImages(form.id); fetchModels() }
+  } catch (error) { if (error !== 'cancel') { /* 错误已在拦截器处理 */ } }
 }
 
 // 配置BOM
@@ -275,8 +335,8 @@ const handleConfigBom = (row) => {
 }
 
 const handleSubmit = async () => {
-  if (!form.regulation_id) { ElMessage.warning('请选择法规类别'); return }
-  if (!form.model_name) { ElMessage.warning('请输入型号名称'); return }
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
   loading.value = true
   try {
     if (isEdit.value) { await request.put(`/models/${form.id}`, form); ElMessage.success('更新成功') }
@@ -299,8 +359,9 @@ const handleBatchDelete = async () => {
   try {
     await ElMessageBox.confirm(`确定要删除选中的 ${selectedModels.value.length} 条型号吗？`, '批量删除确认', { confirmButtonText: '确定删除', cancelButtonText: '取消', type: 'warning' })
     const ids = selectedModels.value.map(item => item.id)
-    let successCount = 0, failCount = 0
-    for (const id of ids) { try { await request.delete(`/models/${id}`); successCount++ } catch { failCount++ } }
+    const results = await Promise.allSettled(ids.map(id => request.delete(`/models/${id}`)))
+    const successCount = results.filter(r => r.status === 'fulfilled').length
+    const failCount = results.filter(r => r.status === 'rejected').length
     if (successCount > 0) { ElMessage.success(`成功删除 ${successCount} 条型号${failCount > 0 ? `，失败 ${failCount} 条` : ''}`); fetchModels() }
     else ElMessage.error('删除失败')
   } catch (error) { if (error !== 'cancel') { /* 错误已在拦截器处理 */ } }
@@ -357,13 +418,13 @@ onMounted(() => { fetchRegulations(); fetchModels(); fetchSeries() })
 @media (max-width: 767px) { .item-cards { grid-template-columns: 1fr; } }
 
 .empty-tip { grid-column: 1 / -1; text-align: center; color: #909399; padding: 40px 0; }
-.item-card { border: 1px solid #ebeef5; border-radius: 8px; background: #fff; transition: box-shadow 0.3s, border-color 0.3s; }
+.item-card { border: 1px solid #ebeef5; border-radius: 8px; background: #fff; transition: box-shadow 0.3s, border-color 0.3s; display: flex; flex-direction: column; }
 .item-card:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
-.item-card .card-body { padding: 16px; }
+.item-card .card-body { padding: 16px; flex: 1; }
 
 .item-header { display: flex; gap: 12px; margin-bottom: 16px; }
-.avatar { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 600; flex-shrink: 0; transition: transform 0.2s; }
-.item-card:hover .avatar { transform: scale(1.05); }
+.card-image { width: 56px; height: 56px; border-radius: 6px; flex-shrink: 0; }
+.card-image-placeholder { width: 56px; height: 56px; border-radius: 6px; background: #f5f7fa; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
 .item-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .item-name { font-size: 16px; font-weight: 600; color: #303133; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -377,14 +438,25 @@ onMounted(() => { fetchRegulations(); fetchModels(); fetchSeries() })
 .status-active { width: 8px; height: 8px; border-radius: 50%; background-color: #67c23a; }
 .status-inactive { width: 8px; height: 8px; border-radius: 50%; background-color: #909399; }
 .bom-info { font-size: 13px; color: #606266; display: flex; align-items: center; }
-.series-tag { font-size: 13px; color: #606266; display: flex; align-items: center; gap: 4px; }
-.series-tag .label { color: #909399; }
+.bom-link { cursor: pointer; transition: color 0.2s; }
+.bom-link:hover { color: #409EFF; }
+.detail-row { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: #606266; }
+.series-tag, .category-tag { display: flex; align-items: center; gap: 4px; }
+.series-tag .label, .category-tag .label { color: #909399; }
 
 .card-actions { display: flex; justify-content: center; gap: 8px; padding: 12px; border-top: 1px solid #ebeef5; background: #fafafa; border-radius: 0 0 8px 8px; }
 .card-actions .el-button { transition: transform 0.2s, box-shadow 0.2s; }
 .card-actions .el-button:hover:not(:disabled) { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
 
 .delete-btn { color: #F56C6C; }
+
+/* 图片上传样式 */
+.upload-tip { color: #909399; font-size: 12px; margin-top: 8px; }
+.image-list { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+.image-item { position: relative; border: 1px solid #ebeef5; border-radius: 4px; overflow: hidden; }
+.image-actions { display: flex; gap: 8px; padding: 4px; background: rgba(0,0,0,0.6); position: absolute; bottom: 0; left: 0; right: 0; justify-content: center; }
+.image-actions .el-button { color: #fff; }
+.image-actions .el-tag { margin: 0; }
 .delete-btn:hover:not(:disabled) { color: #f78989; border-color: #f78989; }
 
 /* 工具栏折叠 */

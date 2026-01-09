@@ -87,6 +87,8 @@ import { ElMessage } from 'element-plus';
 import request from '../../utils/request';
 import { useAuthStore } from '../../store/auth';
 
+defineOptions({ name: 'ProfileSettings' })
+
 const authStore = useAuthStore();
 const loading = ref(false);
 const passwordFormRef = ref(null);

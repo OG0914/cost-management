@@ -37,10 +37,13 @@
             <el-icon><Plus /></el-icon>添加
           </el-button>
         </div>
-        <!-- 一键复制 -->
-        <el-button type="success" plain @click="showCopyDialog = true" :icon="CopyDocument">
-          一键复制
-        </el-button>
+        <!-- 批量操作 -->
+        <el-space>
+          <el-upload action="#" :auto-upload="false" :on-change="handleImportFile" :show-file-list="false" accept=".xlsx,.xls">
+            <el-button type="warning" plain :icon="Upload">导入BOM</el-button>
+          </el-upload>
+          <el-button type="success" plain @click="showCopyDialog = true" :icon="CopyDocument">一键复制</el-button>
+        </el-space>
       </div>
 
       <!-- BOM列表 -->
@@ -128,7 +131,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, CopyDocument } from '@element-plus/icons-vue'
+import { Plus, CopyDocument, Upload } from '@element-plus/icons-vue'
 import request from '../utils/request'
 import { formatNumber } from '../utils/format'
 
@@ -285,6 +288,27 @@ const handleDelete = async (row) => {
     const res = await request.delete(`/bom/${row.id}`)
     if (res.success) { bomList.value = res.data || []; ElMessage.success('删除成功'); emit('updated') }
   } catch (e) { if (e !== 'cancel') { /* 错误已在拦截器处理 */ } }
+}
+
+// 导入BOM Excel
+const handleImportFile = async (file) => {
+  const formData = new FormData()
+  formData.append('file', file.raw)
+  formData.append('model_id', props.modelId)
+  formData.append('mode', 'replace')
+  
+  try {
+    await ElMessageBox.confirm('导入将替换当前BOM，是否继续？', '确认导入', { type: 'warning' })
+    loading.value = true
+    const res = await request.post('/bom/import', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+    if (res.success) {
+      bomList.value = res.data.bom || []
+      const { created, updated, materialsCreated } = res.data
+      ElMessage.success(`导入成功：BOM ${created}项新增，${updated}项更新${materialsCreated > 0 ? `，自动创建原料${materialsCreated}项` : ''}`)
+      emit('updated')
+    }
+  } catch (e) { if (e !== 'cancel') { /* 错误已在拦截器处理 */ } }
+  finally { loading.value = false }
 }
 
 const handleClose = () => { bomList.value = []; newMaterialId.value = null; newUsageAmount.value = null; copySourceId.value = null; sourceBomPreview.value = [] }
