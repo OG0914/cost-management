@@ -4,6 +4,7 @@
 
 const ExcelJS = require('exceljs');
 const { isValidPackagingType, PACKAGING_TYPES, VALID_PACKAGING_TYPE_KEYS } = require('../config/packagingTypes');
+const logger = require('./logger');
 
 // 包装类型中文名称到 key 的映射
 const PACKAGING_TYPE_NAME_TO_KEY = {
@@ -263,10 +264,10 @@ class ExcelParser {
         }
       });
 
-      console.log('工序Excel数据行数:', data.length);
+      logger.debug('工序Excel数据行数:', data.length);
       if (data.length > 0) {
-        console.log('第一行数据:', data[0]);
-        console.log('列名:', Object.keys(data[0]));
+        logger.debug('第一行数据:', data[0]);
+        logger.debug('列名:', Object.keys(data[0]));
       }
 
       const processes = [];
@@ -373,10 +374,10 @@ class ExcelParser {
         }
       });
 
-      console.log('包材Excel数据行数:', data.length);
+      logger.debug('包材Excel数据行数:', data.length);
       if (data.length > 0) {
-        console.log('第一行数据:', data[0]);
-        console.log('列名:', Object.keys(data[0]));
+        logger.debug('第一行数据:', data[0]);
+        logger.debug('列名:', Object.keys(data[0]));
       }
 
       const materials = [];
@@ -498,12 +499,17 @@ class ExcelParser {
         if (roleMap[role]) role = roleMap[role];
         if (!validRoles.includes(role)) { errors.push(`第 ${rowNum} 行：无效角色 "${role}"`); return; }
 
+        const crypto = require('crypto');
+        const providedPassword = getValue(row['密码']) || getValue(row['password']);
+        const password = providedPassword ? String(providedPassword).trim() : crypto.randomBytes(8).toString('base64').slice(0, 12); // 随机12位密码
+
         users.push({
           username: String(getValue(row['用户代号']) || getValue(row['username']) || '').trim(),
           real_name: String(getValue(row['真实姓名']) || getValue(row['real_name']) || '').trim() || null,
           role,
           email: String(getValue(row['邮箱']) || getValue(row['email']) || '').trim() || null,
-          password: String(getValue(row['密码']) || getValue(row['password']) || '123456').trim()
+          password,
+          isRandomPassword: !providedPassword // 标记是否为随机密码，用于提示用户
         });
       });
 

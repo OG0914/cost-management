@@ -12,6 +12,7 @@ const CostCalculator = require('../utils/costCalculator');
 const { success, error, paginated } = require('../utils/response');
 const dbManager = require('../db/database');
 const ExcelGenerator = require('../utils/excel');
+const logger = require('../utils/logger');
 
 /**
  * 创建报价单
@@ -195,7 +196,7 @@ const createQuotation = async (req, res) => {
         }, '报价单创建成功'));
 
     } catch (err) {
-        console.error('创建报价单失败:', err);
+        logger.error('创建报价单失败:', err);
         res.status(500).json(error('创建报价单失败: ' + err.message, 500));
     }
 };
@@ -208,7 +209,7 @@ const createQuotation = async (req, res) => {
 const getModelStandardData = async (req, res) => {
     try {
         const { modelId } = req.params;
-        console.log('获取型号标准数据，modelId:', modelId);
+        logger.debug('获取型号标准数据，modelId:', modelId);
 
         // 获取工序数据
         const processesResult = await dbManager.query(
@@ -219,7 +220,7 @@ const getModelStandardData = async (req, res) => {
             [modelId]
         );
         const processes = processesResult.rows;
-        console.log(`找到 ${processes.length} 个工序`);
+        logger.debug(`找到 ${processes.length} 个工序`);
 
         // 获取包材数据
         const packagingResult = await dbManager.query(
@@ -230,7 +231,7 @@ const getModelStandardData = async (req, res) => {
             [modelId]
         );
         const packaging = packagingResult.rows;
-        console.log(`找到 ${packaging.length} 个包材`);
+        logger.debug(`找到 ${packaging.length} 个包材`);
 
         res.json(success({
             processes,
@@ -238,7 +239,7 @@ const getModelStandardData = async (req, res) => {
         }, '获取型号标准数据成功'));
 
     } catch (err) {
-        console.error('获取型号标准数据失败:', err);
+        logger.error('获取型号标准数据失败:', err);
         res.status(500).json(error('获取型号标准数据失败: ' + err.message, 500));
     }
 };
@@ -349,7 +350,7 @@ const calculateQuotation = async (req, res) => {
         res.json(success(calculation, '计算成功'));
 
     } catch (err) {
-        console.error('计算报价失败:', err);
+        logger.error('计算报价失败:', err);
         res.status(500).json(error('计算报价失败: ' + err.message, 500));
     }
 };
@@ -472,7 +473,7 @@ const updateQuotation = async (req, res) => {
         // 在计算结果中包含实际使用的增值税率
         calculation.vatRate = calculatorConfig.vatRate;
 
-        console.log('更新报价单 (updateQuotation) - 计算结果:', {
+        logger.debug('更新报价单 (updateQuotation) - 计算结果:', {
             salesType: sales_type,
             domesticPrice: calculation.domesticPrice,
             exportPrice: calculation.exportPrice,
@@ -488,7 +489,7 @@ const updateQuotation = async (req, res) => {
             : calculation.insurancePrice;
 
         if (!final_price) {
-            console.error('最终价格计算失败:', { sales_type, calculation });
+            logger.error('最终价格计算失败:', { sales_type, calculation });
             return res.status(500).json(error('价格计算失败', 500));
         }
 
@@ -540,7 +541,7 @@ const updateQuotation = async (req, res) => {
         }, '报价单更新成功'));
 
     } catch (err) {
-        console.error('更新报价单失败:', err);
+        logger.error('更新报价单失败:', err);
         res.status(500).json(error('更新报价单失败: ' + err.message, 500));
     }
 };
@@ -578,7 +579,7 @@ const submitQuotation = async (req, res) => {
         res.json(success(updatedQuotation, '报价单提交成功'));
 
     } catch (err) {
-        console.error('提交报价单失败:', err);
+        logger.error('提交报价单失败:', err);
         res.status(500).json(error('提交报价单失败: ' + err.message, 500));
     }
 };
@@ -615,7 +616,7 @@ const getQuotationList = async (req, res) => {
         const result = await Quotation.findAll(options);
         res.json(paginated(result.data, result.total, result.page, result.pageSize));
     } catch (err) {
-        console.error('获取报价单列表失败:', err);
+        logger.error('获取报价单列表失败:', err);
         res.status(500).json(error('获取报价单列表失败: ' + err.message, 500));
     }
 };
@@ -716,7 +717,7 @@ const getQuotationDetail = async (req, res) => {
         }, '获取报价单详情成功'));
 
     } catch (err) {
-        console.error('获取报价单详情失败:', err);
+        logger.error('获取报价单详情失败:', err);
         res.status(500).json(error('获取报价单详情失败: ' + err.message, 500));
     }
 };
@@ -765,7 +766,7 @@ const deleteQuotation = async (req, res) => {
         }
 
     } catch (err) {
-        console.error('删除报价单失败:', err);
+        logger.error('删除报价单失败:', err);
         res.status(500).json(error('删除报价单失败: ' + err.message, 500));
     }
 };
@@ -801,12 +802,12 @@ const getPackagingConfigs = async (req, res) => {
         `);
 
         const configs = result.rows;
-        console.log(`找到 ${configs.length} 个包装配置`);
+        logger.debug(`找到 ${configs.length} 个包装配置`);
 
         res.json(success(configs, '获取包装配置列表成功'));
 
     } catch (err) {
-        console.error('获取包装配置列表失败:', err);
+        logger.error('获取包装配置列表失败:', err);
         res.status(500).json(error('获取包装配置列表失败: ' + err.message, 500));
     }
 };
@@ -818,7 +819,7 @@ const getPackagingConfigs = async (req, res) => {
 const getPackagingConfigDetails = async (req, res) => {
     try {
         const { configId } = req.params;
-        console.log('获取包装配置详情，configId:', configId);
+        logger.debug('获取包装配置详情，configId:', configId);
 
         // 获取配置基本信息
         const configResult = await dbManager.query(
@@ -852,7 +853,7 @@ const getPackagingConfigDetails = async (req, res) => {
             [configId]
         );
         const processes = processesResult.rows;
-        console.log(`找到 ${processes.length} 个工序`);
+        logger.debug(`找到 ${processes.length} 个工序`);
 
         // 获取包材配置
         const materialsResult = await dbManager.query(
@@ -869,7 +870,7 @@ const getPackagingConfigDetails = async (req, res) => {
             [configId]
         );
         const materials = materialsResult.rows;
-        console.log(`找到 ${materials.length} 个包材`);
+        logger.debug(`找到 ${materials.length} 个包材`);
 
         res.json(success({
             config,
@@ -878,7 +879,7 @@ const getPackagingConfigDetails = async (req, res) => {
         }, '获取包装配置详情成功'));
 
     } catch (err) {
-        console.error('获取包装配置详情失败:', err);
+        logger.error('获取包装配置详情失败:', err);
         res.status(500).json(error('获取包装配置详情失败: ' + err.message, 500));
     }
 };
@@ -892,7 +893,7 @@ const getMaterialCoefficients = async (req, res) => {
         const coefficients = await SystemConfig.getValue('material_coefficients');
         res.json(success(coefficients || { '口罩': 0.97, '半面罩': 0.99 }));
     } catch (err) {
-        console.error('获取原料系数配置失败:', err);
+        logger.error('获取原料系数配置失败:', err);
         res.status(500).json(error('获取原料系数配置失败: ' + err.message, 500));
     }
 };
@@ -994,7 +995,7 @@ const exportQuotation = async (req, res) => {
         res.end();
 
     } catch (err) {
-        console.error('导出报价单失败:', err);
+        logger.error('导出报价单失败:', err);
         res.status(500).json(error('导出报价单失败: ' + err.message, 500));
     }
 };

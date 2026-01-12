@@ -5,6 +5,7 @@
 
 const dbManager = require('../../db/database');
 const { success, error } = require('../../utils/response');
+const logger = require('../../utils/logger');
 
 /**
  * 获取仪表盘统计数据
@@ -62,7 +63,7 @@ const getStats = async (req, res) => {
     }, '获取统计数据成功'));
 
   } catch (err) {
-    console.error('获取仪表盘统计数据失败:', err);
+    logger.error('获取仪表盘统计数据失败:', err);
     res.status(500).json(error('获取统计数据失败: ' + err.message, 500));
   }
 };
@@ -93,7 +94,7 @@ const getRegulations = async (req, res) => {
     res.json(success(regulations, '获取法规总览成功'));
 
   } catch (err) {
-    console.error('获取法规总览失败:', err);
+    logger.error('获取法规总览失败:', err);
     res.status(500).json(error('获取法规总览失败: ' + err.message, 500));
   }
 };
@@ -130,7 +131,7 @@ const getTopModels = async (req, res) => {
     res.json(success(topModels, '获取型号排行成功'));
 
   } catch (err) {
-    console.error('获取型号排行失败:', err);
+    logger.error('获取型号排行失败:', err);
     res.status(500).json(error('获取型号排行失败: ' + err.message, 500));
   }
 };
@@ -165,7 +166,7 @@ const getWeeklyQuotations = async (req, res) => {
     }, '获取周报价统计成功'));
 
   } catch (err) {
-    console.error('获取周报价统计失败:', err);
+    logger.error('获取周报价统计失败:', err);
     res.status(500).json(error('获取周报价统计失败: ' + err.message, 500));
   }
 };
@@ -286,7 +287,7 @@ const getRecentActivities = async (req, res) => {
 
     res.json(success(activities.slice(0, 5), '获取最近操作成功'));
   } catch (err) {
-    console.error('获取最近操作失败:', err);
+    logger.error('获取最近操作失败:', err);
     res.status(500).json(error('获取最近操作失败: ' + err.message, 500));
   }
 };

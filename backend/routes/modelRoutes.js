@@ -33,18 +33,53 @@ const imageStorage = multer.diskStorage({
   }
 });
 
+const fs = require('fs');
+
+// 文件魔数验证
+const FILE_SIGNATURES = {
+  'ffd8ff': 'image/jpeg',      // JPEG
+  '89504e47': 'image/png',     // PNG
+  '52494646': 'image/webp'     // WebP (RIFF header)
+};
+
+const validateFileSignature = (buffer, mimetype) => {
+  const hex = buffer.toString('hex', 0, 4).toLowerCase();
+  for (const [signature, type] of Object.entries(FILE_SIGNATURES)) {
+    if (hex.startsWith(signature) && type === mimetype) return true;
+  }
+  return false;
+};
+
 const imageUpload = multer({
   storage: imageStorage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = ['image/jpeg', 'image/png', 'image/webp'];
-    if (allowed.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
+    if (!allowed.includes(file.mimetype)) {
       cb(new Error('只支持 JPG/PNG/WEBP 格式'));
+    } else {
+      cb(null, true);
     }
   }
 });
+
+// 上传后验证文件魔数的中间件
+const verifyImageSignature = async (req, res, next) => {
+  if (!req.files || req.files.length === 0) return next();
+  
+  for (const file of req.files) {
+    try {
+      const buffer = fs.readFileSync(file.path);
+      if (!validateFileSignature(buffer, file.mimetype)) {
+        fs.unlinkSync(file.path); // 删除伪造文件
+        return res.status(400).json({ success: false, message: '文件类型验证失败，请上传真实的图片文件' });
+      }
+    } catch (err) {
+      return res.status(500).json({ success: false, message: '文件验证失败' });
+    }
+  }
+  next();
+};
 
 // 所有路由都需要认证
 router.use(verifyToken);
@@ -72,7 +107,7 @@ router.get('/:id', modelController.getModelById);
 
 // 型号图片管理
 router.get('/:id/images', modelImageController.getImages);
-router.post('/:id/images', checkRole('admin', 'purchaser', 'producer'), imageUpload.array('images', 10), modelImageController.uploadImages);
+router.post('/:id/images', checkRole('admin', 'purchaser', 'producer'), imageUpload.array('images', 10), verifyImageSignature, modelImageController.uploadImages);
 router.put('/:id/images/:imageId/primary', checkRole('admin', 'purchaser', 'producer'), modelImageController.setPrimary);
 router.delete('/:id/images/:imageId', checkRole('admin', 'purchaser', 'producer'), modelImageController.deleteImage);
 

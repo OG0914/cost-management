@@ -1,6 +1,7 @@
 const Customer = require('../../models/Customer');
 const { success, error, paginated } = require('../../utils/response');
 const ExcelJS = require('exceljs');
+const logger = require('../../utils/logger');
 
 const getCustomerList = async (req, res) => {
     try {
@@ -11,7 +12,7 @@ const getCustomerList = async (req, res) => {
         const result = await Customer.findAll({ page: parseInt(page), pageSize: parseInt(pageSize), keyword, userId, includePublic: true });
         res.json(paginated(result.data, result.total, result.page, result.pageSize));
     } catch (err) {
-        console.error('获取客户列表失败:', err);
+        logger.error('获取客户列表失败:', err);
         res.status(500).json(error('获取客户列表失败: ' + err.message, 500));
     }
 };

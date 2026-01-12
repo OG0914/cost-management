@@ -4,6 +4,7 @@
  */
 
 const SystemConfig = require('../models/SystemConfig');
+const logger = require('./logger');
 
 /**
  * 从原料名称识别类别
@@ -39,7 +40,7 @@ async function matchCategoryFromDB(materialName) {
     const categories = JSON.parse(config.config_value || '[]');
     return matchCategory(materialName, categories);
   } catch (err) {
-    console.error('匹配类别失败:', err);
+    logger.error('匹配类别失败:', err);
     return null;
   }
 }

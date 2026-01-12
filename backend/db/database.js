@@ -6,6 +6,7 @@
 const { Pool } = require('pg');
 const path = require('path');
 const fs = require('fs');
+const logger = require('../utils/logger');
 
 class DatabaseManager {
   constructor() {
@@ -49,7 +50,7 @@ class DatabaseManager {
 
       // 监听连接池错误
       this.pool.on('error', (err) => {
-        console.error('数据库连接池错误:', err);
+        logger.error('数据库连接池错误:', err);
       });
 
       // 为每个新连接设置北京时区
@@ -62,7 +63,7 @@ class DatabaseManager {
 
       // 设置当前连接的时区为北京时间
       await client.query("SET TIME ZONE 'Asia/Shanghai'");
-      console.log('PostgreSQL 连接成功，时区设置为北京时间 (Asia/Shanghai)');
+      logger.info('PostgreSQL 连接成功，时区设置为北京时间 (Asia/Shanghai)');
       client.release();
 
       this.isInitialized = true;
@@ -75,7 +76,7 @@ class DatabaseManager {
 
       return this.pool;
     } catch (error) {
-      console.error('数据库初始化失败:', error);
+      logger.error('数据库初始化失败:', error);
       throw new Error(`数据库连接失败: ${error.message}`);
     }
   }
@@ -90,7 +91,7 @@ class DatabaseManager {
     );
     
     if (result.rows[0].exists) {
-      console.log('数据表已存在，跳过初始化');
+      logger.debug('数据表已存在，跳过初始化');
       return;
     }
 
@@ -99,9 +100,9 @@ class DatabaseManager {
     if (fs.existsSync(sqlPath)) {
       const sql = fs.readFileSync(sqlPath, 'utf8');
       await this.pool.query(sql);
-      console.log('数据表初始化完成');
+      logger.info('数据表初始化完成');
     } else {
-      console.warn('未找到 schema.sql 文件');
+      logger.warn('未找到 schema.sql 文件');
     }
   }
 
@@ -147,9 +148,9 @@ class DatabaseManager {
       try {
         await this.pool.query(sql);
         await this.pool.query('INSERT INTO migrations (name) VALUES ($1)', [file]);
-        console.log(`迁移执行成功: ${file}`);
+        logger.info(`迁移执行成功: ${file}`);
       } catch (error) {
-        console.error(`迁移执行失败: ${file}`, error.message);
+        logger.error(`迁移执行失败: ${file}`, error.message);
       }
     }
   }
@@ -221,7 +222,7 @@ class DatabaseManager {
       await this.pool.end();
       this.pool = null;
       this.isInitialized = false;
-      console.log('数据库连接池已关闭');
+      logger.info('数据库连接池已关闭');
     }
   }
 

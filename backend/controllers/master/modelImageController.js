@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const ModelImage = require('../../models/ModelImage');
 const Model = require('../../models/Model');
+const logger = require('../../utils/logger');
 
 const UPLOAD_DIR = path.join(__dirname, '../../uploads/models');
 
@@ -56,8 +57,8 @@ exports.uploadImages = async (req, res) => {
     }
 
     res.json({ success: true, data: results, message: '上传成功' });
-  } catch (error) {
-    console.error('上传图片失败:', error);
+  } catch (err) {
+    logger.error('上传图片失败:', err);
     res.status(500).json({ success: false, message: '上传失败' });
   }
 };
@@ -68,8 +69,8 @@ exports.getImages = async (req, res) => {
     const { id } = req.params;
     const images = await ModelImage.findByModelId(id);
     res.json({ success: true, data: images });
-  } catch (error) {
-    console.error('获取图片失败:', error);
+  } catch (err) {
+    logger.error('获取图片失败:', err);
     res.status(500).json({ success: false, message: '获取图片失败' });
   }
 };
@@ -86,8 +87,8 @@ exports.setPrimary = async (req, res) => {
 
     await ModelImage.setPrimary(parseInt(id), parseInt(imageId));
     res.json({ success: true, message: '设置成功' });
-  } catch (error) {
-    console.error('设置主图失败:', error);
+  } catch (err) {
+    logger.error('设置主图失败:', err);
     res.status(500).json({ success: false, message: '设置主图失败' });
   }
 };
@@ -119,8 +120,8 @@ exports.deleteImage = async (req, res) => {
     }
 
     res.json({ success: true, message: '删除成功' });
-  } catch (error) {
-    console.error('删除图片失败:', error);
+  } catch (err) {
+    logger.error('删除图片失败:', err);
     res.status(500).json({ success: false, message: '删除图片失败' });
   }
 };
