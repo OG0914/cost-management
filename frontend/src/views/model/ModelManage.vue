@@ -157,7 +157,7 @@
           <div class="upload-tip">支持 JPG/PNG/WEBP，单张最大 5MB</div>
           <div class="image-list" v-if="modelImages.length > 0">
             <div v-for="img in modelImages" :key="img.id" class="image-item">
-              <el-image :src="img.file_path" fit="cover" style="width: 100px; height: 100px;" :preview-src-list="modelImages.map(i => i.file_path)" />
+              <el-image :src="img.file_path" fit="cover" style="width: 100px; height: 100px;" :preview-src-list="modelImages.map(i => i.file_path)" preview-teleported :z-index="3000" />
               <div class="image-actions">
                 <el-tag v-if="img.is_primary" type="success" size="small">主图</el-tag>
                 <el-button v-else size="small" link @click="setAsPrimary(img.id)">设为主图</el-button>

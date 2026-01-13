@@ -1,0 +1,116 @@
+version: 1
+last_updated: 2026-01-13
+project: cost-analysis
+
+triggers:
+  # PM-001: Git合并时代码被覆盖
+  - id: PM-001
+    category: STATE_MGMT
+    patterns:
+      - regex: "\\+.*deletions\\(-\\)|files changed.*insertions.*deletions"
+        description: "commit 中出现大量删除行数，可能是代码被覆盖"
+    keywords: ["恢复", "restore", "revert", "被覆盖", "merge conflict"]
+    files: ["frontend/src/views/**"]
+
+  # PM-002: 图片预览层级问题
+  - id: PM-002
+    category: LOGIC
+    patterns:
+      - regex: "<el-image[^>]*(?!preview-teleported)[^>]*preview"
+        description: "el-image 组件启用预览但未设置 preview-teleported"
+      - regex: "z-index:\\s*(?:auto|\\d{1,2}(?!\\d))"
+        description: "z-index 值过低可能导致层级问题"
+    keywords: ["el-image", "preview", "z-index", "层级", "遮挡", "预览"]
+    files: ["**/*.vue"]
+
+  # PM-003: BOM数据类型转换错误
+  - id: PM-003
+    category: PRECISION
+    patterns:
+      - regex: "type:\\s*DataTypes\\.TEXT.*(?:amount|price|cost|quantity)"
+        description: "金额/数量字段使用 TEXT 类型存储"
+      - regex: "parseFloat|parseInt|Number\\("
+        description: "频繁的运行时类型转换暗示模型层类型定义不当"
+    keywords: ["usage_amount", "unit_price", "NaN", "类型转换", "parseFloat"]
+    files: ["backend/models/**"]
+
+  # PM-004: 删除操作缺少引用检查
+  - id: PM-004
+    category: STATE_MGMT
+    patterns:
+      - regex: "\\.destroy\\(\\)|DELETE FROM(?!.*WHERE.*=.*null)"
+        description: "直接删除操作未检查关联数据"
+      - regex: "async\\s+delete[^{]*\\{[^}]*destroy"
+        description: "删除方法中直接调用 destroy 无引用检查"
+    keywords: ["destroy", "delete", "删除", "外键", "引用", "级联"]
+    files: ["backend/controllers/**"]
+
+  # PM-005: 利润区间计算错误
+  - id: PM-005
+    category: LOGIC
+    patterns:
+      - regex: "profit.*margin|利润.*区间|毛利.*计算"
+        description: "涉及利润计算的代码需仔细核对公式"
+      - regex: "\\*\\s*100|\\*\\s*0\\.\\d+|/\\s*100"
+        description: "百分比转换操作易出错"
+    keywords: ["利润", "毛利", "profit", "margin", "区间", "percent"]
+    files: ["**/cost*.js", "**/cost*.vue", "**/Standard*.vue"]
+
+  # PM-006: 工价系数重复计算
+  - id: PM-006
+    category: PRECISION
+    patterns:
+      - regex: "\\*\\s*1\\.56|\\*\\s*coefficient|系数.*\\*"
+        description: "系数乘法操作可能在多处重复"
+      - regex: "labor.*cost.*\\*|工价.*\\*|工费.*\\*"
+        description: "人工成本计算涉及系数"
+    keywords: ["系数", "coefficient", "1.56", "工价", "labor_cost"]
+    files: ["**/costCalculator.js", "**/CostAdd.vue", "**/costController.js"]
+
+  # PM-007: 增值税计算逻辑错误
+  - id: PM-007
+    category: LOGIC
+    patterns:
+      - regex: "vat.*input|tax.*input|<el-input.*税"
+        description: "税率使用 input 而非 select 可能导致非法输入"
+      - regex: "vat_rate.*[*/]\\s*100|tax.*[*/]\\s*100"
+        description: "税率百分比与小数转换易出错"
+    keywords: ["vat", "增值税", "税率", "tax_rate", "13%", "选项"]
+    files: ["**/SystemConfig.vue", "**/StandardCost.js", "**/costCalculator.js"]
+
+  # PM-008: 依赖包高危漏洞
+  - id: PM-008
+    category: DEPENDENCY
+    patterns:
+      - regex: "\"xlsx\":\\s*\"[^\"]+\""
+        description: "使用 xlsx 包需检查版本安全性"
+      - regex: "require\\(['\"]xlsx['\"]\\)|from ['\"]xlsx['\"]"
+        description: "引入 xlsx 包的代码"
+    keywords: ["xlsx", "exceljs", "sheetjs", "npm audit", "vulnerability"]
+    files: ["**/package.json", "**/excel*.js"]
+
+  # PM-009: 复制功能数据丢失
+  - id: PM-009
+    category: STATE_MGMT
+    patterns:
+      - regex: "JSON\\.parse\\(JSON\\.stringify|Object\\.assign\\(\\{\\}|\\.\\.\\."
+        description: "浅拷贝操作可能丢失关联数据"
+      - regex: "copy|clone|duplicate|复制"
+        description: "复制功能需检查关联数据完整性"
+    keywords: ["复制", "copy", "clone", "带出", "关联", "名称丢失"]
+    files: ["**/CostAdd.vue", "**/PackagingManage.vue"]
+
+# 根因类别说明
+categories:
+  PRECISION:
+    description: "精度问题 - 数值计算、类型转换、系数应用"
+    count: 2
+  LOGIC:
+    description: "逻辑错误 - 计算公式、UI逻辑、配置验证"
+    count: 3
+  STATE_MGMT:
+    description: "状态管理 - 版本控制、数据一致性、复制完整性"
+    count: 3
+  DEPENDENCY:
+    description: "依赖问题 - 安全漏洞、版本管理"
+    count: 1
