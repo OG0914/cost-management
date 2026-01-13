@@ -431,6 +431,12 @@
                   <el-table-column label="基本用量" width="100">
                     <template #default="{ row }"><el-input-number v-model="row.usage_amount" :min="0" :precision="4" :controls="false" @change="handleItemSubtotalChange(row)" size="small" style="width: 100%" :disabled="!!row.from_standard && !editMode.packaging" /></template>
                   </el-table-column>
+                  <el-table-column label="外箱材积" width="100">
+                    <template #default="{ row }">
+                      <span v-if="row.carton_volume">{{ row.carton_volume }}</span>
+                      <span v-else class="text-gray-400 text-xs">-</span>
+                    </template>
+                  </el-table-column>
                   <el-table-column label="单价(CNY)" width="100"><template #default="{ row }">{{ formatNumber(row.unit_price) || '-' }}</template></el-table-column>
                   <el-table-column label="小计" width="100"><template #default="{ row }">{{ formatNumber(row.subtotal) || '-' }}</template></el-table-column>
                   <el-table-column label="操作" width="70" fixed="right">
@@ -896,10 +902,21 @@ const fillQuotationData = async (data, isCopy = false) => {
   // 从原料库匹配原料ID（处理旧数据）
   form.materials.forEach(m => { if (!m.material_id) { const found = allMaterials.value.find(mat => mat.name === m.item_name); if (found) m.material_id = found.id } })
   form.packaging.forEach(p => { if (!p.material_id) { const found = allMaterials.value.find(mat => mat.name === p.item_name); if (found) p.material_id = found.id } })
+  // 计算 ShippingInfo (优先使用报价单快照数据，缺失时回退到配置数据)
+  let pcsPerCarton = null
   if (quotation.pc_per_bag && quotation.bags_per_box && quotation.boxes_per_carton) {
-    const pcsPerCarton = quotation.pc_per_bag * quotation.bags_per_box * quotation.boxes_per_carton
-    const cartonMaterial = items.packaging.items.find(item => item.carton_volume && item.carton_volume > 0)
-    setShippingInfoFromConfig(pcsPerCarton, cartonMaterial?.carton_volume || null)
+    pcsPerCarton = quotation.pc_per_bag * quotation.bags_per_box * quotation.boxes_per_carton
+  } else if (quotation.packaging_config_id && packagingConfigs.value && packagingConfigs.value.length > 0) {
+    // 回退尝试：从配置列表查找
+    const config = packagingConfigs.value.find(c => c.id === quotation.packaging_config_id)
+    if (config) {
+      pcsPerCarton = config.pc_per_bag * config.bags_per_box * config.boxes_per_carton
+    }
+  }
+
+  if (pcsPerCarton) {
+    const cartonMaterial = items.packaging.items.find(item => item.carton_volume && parseFloat(item.carton_volume) > 0)
+    setShippingInfoFromConfig(pcsPerCarton, cartonMaterial ? parseFloat(cartonMaterial.carton_volume) : null)
     quantityInput.value = form.quantity
     quantityUnit.value = 'pcs'
     calculateShippingInfo(form, handleCalculateCost)
@@ -1051,25 +1068,24 @@ onBeforeRouteLeave(async (to, from, next) => {
 /* ========== 页面容器 - 左右分栏布局 ========== */
 .cost-page-wrapper { max-width: 1400px; margin: 0 auto; }
 
+/* 页面布局 - 单列模式 */
 .cost-page-body {
-  display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: 20px;
-  align-items: start;
+  display: block;
+  max-width: 1000px;
+  margin: 0 auto;
 }
 
 /* 左侧表单面板 */
-.cost-form-panel { min-width: 0; }
+.cost-form-panel { width: 100%; margin-bottom: 24px; }
 
-/* 右侧预览面板 */
-.cost-preview-panel { position: relative; }
+/* 右侧预览面板（转为底部） */
+.cost-preview-panel { width: 100%; }
 
 .cost-preview-sticky {
-  position: sticky;
-  top: 16px;
+  position: static;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 20px;
 }
 
 /* ========== 右侧预览区块 ========== */
@@ -1095,9 +1111,10 @@ onBeforeRouteLeave(async (to, from, next) => {
 
 /* 成本网格 */
 .preview-cost-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  padding: 10px 0;
 }
 
 .preview-cost-item {

@@ -6,6 +6,14 @@
 const dbManager = require('../../db/database');
 const { success, error } = require('../../utils/response');
 
+// 格式化日期为本地时区 YYYY-MM-DD 格式（避免 toISOString 的 UTC 时区偏移问题）
+const formatLocalDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 /**
  * 获取仪表盘统计数据
  * GET /api/dashboard/stats
@@ -16,7 +24,7 @@ const getStats = async (req, res) => {
     // 获取本月开始日期
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthStartStr = monthStart.toISOString().split('T')[0];
+    const monthStartStr = formatLocalDate(monthStart);
 
     // 本月报价单数量
     const quotationsResult = await dbManager.query(
@@ -30,7 +38,7 @@ const getStats = async (req, res) => {
     const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
     const lastMonthResult = await dbManager.query(
       `SELECT COUNT(*) as count FROM quotations WHERE created_at >= $1 AND created_at <= $2`,
-      [lastMonthStart.toISOString().split('T')[0], lastMonthEnd.toISOString().split('T')[0]]
+      [formatLocalDate(lastMonthStart), formatLocalDate(lastMonthEnd)]
     );
     const lastMonthQuotations = parseInt(lastMonthResult.rows[0]?.count || 0);
 
@@ -108,7 +116,7 @@ const getTopModels = async (req, res) => {
     // 获取本月开始日期
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthStartStr = monthStart.toISOString().split('T')[0];
+    const monthStartStr = formatLocalDate(monthStart);
 
     const result = await dbManager.query(`
       SELECT 
@@ -178,7 +186,7 @@ const getWeeklyData = async (monthStart, monthEnd) => {
 
   const result = await dbManager.query(
     `SELECT created_at FROM quotations WHERE created_at >= $1 AND created_at <= $2`,
-    [monthStart.toISOString().split('T')[0], monthEnd.toISOString().split('T')[0]]
+    [formatLocalDate(monthStart), formatLocalDate(monthEnd)]
   );
 
   result.rows.forEach(row => {

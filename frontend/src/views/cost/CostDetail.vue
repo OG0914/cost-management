@@ -86,16 +86,20 @@
           <span class="section-title">销售类型</span>
         </template>
 
-        <div class="sales-type-display">
-          <div class="sales-card" :class="{ active: quotation.sales_type === 'domestic' }">
-            <div class="sales-card-title">内销</div>
-            <div class="sales-card-desc">币种: 人民币 CNY</div>
-            <div class="sales-card-desc">含 {{ ((quotation.vat_rate || 0.13) * 100).toFixed(0) }}% 增值税</div>
+        <div class="sales-type-group">
+          <div class="sales-type-card" :class="{ active: quotation.sales_type === 'domestic' }">
+            <div class="sales-type-header">
+              <span class="sales-type-title">内销</span>
+              <span class="sales-type-badge">CNY</span>
+            </div>
+            <div class="sales-type-desc">含 {{ ((quotation.vat_rate || 0.13) * 100).toFixed(0) }}% 增值税</div>
           </div>
-          <div class="sales-card" :class="{ active: quotation.sales_type === 'export' }">
-            <div class="sales-card-title">外销</div>
-            <div class="sales-card-desc">币种: 美元 USD</div>
-            <div class="sales-card-desc"> 0% 税率</div>
+          <div class="sales-type-card" :class="{ active: quotation.sales_type === 'export' }">
+            <div class="sales-type-header">
+              <span class="sales-type-title">外销</span>
+              <span class="sales-type-badge">USD</span>
+            </div>
+            <div class="sales-type-desc">FOB 条款 / 0% 税率</div>
           </div>
         </div>
 
@@ -187,93 +191,85 @@
       </el-card>
 
       <!-- 完整视图：成本明细（仅管理员/审核人可见） -->
-      <el-card class="form-section" shadow="hover" v-if="isFullView">
-        <template #header>
+      <div v-if="isFullView" class="form-section">
+        <div class="section-header mb-4">
           <span class="section-title">成本明细</span>
-        </template>
-
-        <!-- 原料明细 -->
-        <div class="cost-detail-section">
-          <div class="detail-header">
-            <span class="detail-title">原料明细</span>
-          </div>
-
-          <el-table :data="items.material.items" border size="small" class="detail-table">
-            <el-table-column type="index" label="#" width="50" />
-            <el-table-column prop="item_name" label="原料名称" min-width="180" />
-            <el-table-column label="基本用量" width="100">
-              <template #default="{ row }">{{ formatNumber(row.usage_amount) }}</template>
-            </el-table-column>
-            <el-table-column label="单价(CNY)" width="100">
-              <template #default="{ row }">{{ formatNumber(row.unit_price) }}</template>
-            </el-table-column>
-            <el-table-column label="小计" width="100">
-              <template #default="{ row }">{{ formatNumber(row.subtotal) }}</template>
-            </el-table-column>
-          </el-table>
-
-          <div class="subtotal-row">
-            <span>∑ 原料小计: <strong>{{ formatNumber(items.material.total) }}</strong></span>
-          </div>
         </div>
 
-        <!-- 工序明细 -->
-        <div class="cost-detail-section">
-          <div class="detail-header">
-            <span class="detail-title">工序明细</span>
-          </div>
+        <el-tabs type="border-card" class="cost-detail-tabs">
+          <!-- 原料明细 Tab -->
+          <el-tab-pane label="原料">
+            <template #label><span class="tab-label">原料 <el-badge :value="items.material.items.length" :max="99" class="tab-badge" /></span></template>
+            <div class="tab-pane-content">
+              <el-table :data="items.material.items" border size="small" class="detail-table">
+                <el-table-column type="index" label="#" width="50" />
+                <el-table-column prop="item_name" label="原料名称" min-width="180" />
+                <el-table-column label="基本用量" width="100">
+                  <template #default="{ row }">{{ formatNumber(row.usage_amount) }}</template>
+                </el-table-column>
+                <el-table-column label="单价(CNY)" width="100">
+                  <template #default="{ row }">{{ formatNumber(row.unit_price) }}</template>
+                </el-table-column>
+                <el-table-column label="小计" width="100">
+                  <template #default="{ row }">{{ formatNumber(row.subtotal) }}</template>
+                </el-table-column>
+              </el-table>
+              <div class="subtotal-row"><span>∑ 原料小计: <strong>{{ formatNumber(items.material.total) }}</strong></span></div>
+            </div>
+          </el-tab-pane>
 
-          <el-table :data="items.process.items" border size="small" class="detail-table">
-            <el-table-column type="index" label="#" width="50" />
-            <el-table-column prop="item_name" label="工序名称" min-width="150" />
-            <el-table-column label="基本用量" width="100">
-              <template #default="{ row }">{{ formatNumber(row.usage_amount) }}</template>
-            </el-table-column>
-            <el-table-column label="工价(CNY)" width="100">
-              <template #default="{ row }">{{ formatNumber(row.unit_price) }}</template>
-            </el-table-column>
-            <el-table-column label="小计" width="100">
-              <template #default="{ row }">{{ formatNumber(row.subtotal) }}</template>
-            </el-table-column>
-          </el-table>
+          <!-- 工序明细 Tab -->
+          <el-tab-pane label="工序">
+            <template #label><span class="tab-label">工序 <el-badge :value="items.process.items.length" :max="99" class="tab-badge" /></span></template>
+            <div class="tab-pane-content">
+              <el-table :data="items.process.items" border size="small" class="detail-table">
+                <el-table-column type="index" label="#" width="50" />
+                <el-table-column prop="item_name" label="工序名称" min-width="150" />
+                <el-table-column label="基本用量" width="100">
+                  <template #default="{ row }">{{ formatNumber(row.usage_amount) }}</template>
+                </el-table-column>
+                <el-table-column label="工价(CNY)" width="100">
+                  <template #default="{ row }">{{ formatNumber(row.unit_price) }}</template>
+                </el-table-column>
+                <el-table-column label="小计" width="100">
+                  <template #default="{ row }">{{ formatNumber(row.subtotal) }}</template>
+                </el-table-column>
+              </el-table>
+              <div class="subtotal-row">
+                <span>∑ 工序小计: <strong>{{ formatNumber(items.process.total) }}</strong></span>
+                <span class="process-total ml-4">工价系数({{ configStore.config.process_coefficient || 1.56 }}): <strong class="highlight">{{ formatNumber(items.process.total * (configStore.config.process_coefficient || 1.56)) }}</strong></span>
+              </div>
+            </div>
+          </el-tab-pane>
 
-          <div class="subtotal-row">
-            <span>∑ 工序小计: <strong>{{ formatNumber(items.process.total) }}</strong></span>
-            <span class="process-total">工价系数({{ configStore.config.process_coefficient || 1.56 }}): <strong class="highlight">{{ formatNumber(items.process.total * (configStore.config.process_coefficient || 1.56)) }}</strong></span>
-          </div>
-        </div>
-
-        <!-- 包材明细 -->
-        <div class="cost-detail-section">
-          <div class="detail-header">
-            <span class="detail-title">包材明细</span>
-          </div>
-
-          <el-table :data="items.packaging.items" border size="small" class="detail-table">
-            <el-table-column type="index" label="#" width="50" />
-            <el-table-column prop="item_name" label="包材名称" min-width="180" />
-            <el-table-column label="基本用量" width="100">
-              <template #default="{ row }">{{ formatNumber(row.usage_amount) }}</template>
-            </el-table-column>
-            <el-table-column label="单价(CNY)" width="100">
-              <template #default="{ row }">{{ formatNumber(row.unit_price) }}</template>
-            </el-table-column>
-            <el-table-column label="外箱材积" width="100">
-              <template #default="{ row }">
-                <span v-if="row.carton_volume">{{ row.carton_volume }}</span>
-                <span v-else class="text-muted">-</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="小计" width="100">
-              <template #default="{ row }">{{ formatNumber(row.subtotal) }}</template>
-            </el-table-column>
-          </el-table>
-
-          <div class="subtotal-row">
-            <span>∑ 包材小计: <strong>{{ formatNumber(items.packaging.total) }}</strong></span>
-          </div>
-        </div>
-      </el-card>
+          <!-- 包材明细 Tab -->
+          <el-tab-pane label="包材">
+            <template #label><span class="tab-label">包材 <el-badge :value="items.packaging.items.length" :max="99" class="tab-badge" /></span></template>
+            <div class="tab-pane-content">
+              <el-table :data="items.packaging.items" border size="small" class="detail-table">
+                <el-table-column type="index" label="#" width="50" />
+                <el-table-column prop="item_name" label="包材名称" min-width="180" />
+                <el-table-column label="基本用量" width="100">
+                  <template #default="{ row }">{{ formatNumber(row.usage_amount) }}</template>
+                </el-table-column>
+                <el-table-column label="外箱材积" width="100">
+                  <template #default="{ row }">
+                    <span v-if="row.carton_volume">{{ row.carton_volume }}</span>
+                    <span v-else class="text-muted">-</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="单价(CNY)" width="100">
+                  <template #default="{ row }">{{ formatNumber(row.unit_price) }}</template>
+                </el-table-column>
+                <el-table-column label="小计" width="100">
+                  <template #default="{ row }">{{ formatNumber(row.subtotal) }}</template>
+                </el-table-column>
+              </el-table>
+              <div class="subtotal-row"><span>∑ 包材小计: <strong>{{ formatNumber(items.packaging.total) }}</strong></span></div>
+            </div>
+          </el-tab-pane>
+        </el-tabs>
+      </div>
 
       <!-- 简略视图：成本构成比例（业务员/只读用户可见） -->
       <el-card class="form-section" shadow="hover">
@@ -541,9 +537,9 @@ const calculateShippingInfo = () => {
   const cartons = Math.ceil(quotation.value.quantity / pcsPerCarton)
   shippingInfo.cartons = cartons
   
-  const cartonMaterial = items.value.packaging.items.find(item => item.carton_volume && item.carton_volume > 0)
-  if (cartonMaterial && cartonMaterial.carton_volume > 0) {
-    const totalVolume = cartonMaterial.carton_volume * cartons
+  const cartonMaterial = items.value.packaging.items.find(item => item.carton_volume && parseFloat(item.carton_volume) > 0)
+  if (cartonMaterial && parseFloat(cartonMaterial.carton_volume) > 0) {
+    const totalVolume = parseFloat(cartonMaterial.carton_volume) * cartons
     shippingInfo.cbm = (totalVolume / 35.32).toFixed(1)
   }
 }
@@ -668,11 +664,13 @@ onMounted(async () => {
 /* 高亮蓝色 */
 .highlight-blue { color: #409eff; font-weight: 600; }
 
-/* 成本明细区块 */
-.cost-detail-section { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #ebeef5; }
-.cost-detail-section:last-child { border-bottom: none; margin-bottom: 0; }
-.detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.detail-title { font-size: 14px; font-weight: 600; color: #606266; }
+/* 成本明细 Tabs */
+.cost-detail-tabs { box-shadow: none; border-radius: 4px; border: 1px solid #dcdfe6; }
+:deep(.el-tabs__header) { margin-bottom: 0; background-color: #f5f7fa; border-bottom: 1px solid #e4e7ed; }
+:deep(.el-tabs__content) { padding: 16px; }
+.tab-label { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+.tab-badge :deep(.el-badge__content) { background-color: #e6a23c; border: none; height: 16px; line-height: 16px; padding: 0 5px; }
+
 .detail-table { margin-bottom: 8px; }
 
 /* 小计行 */

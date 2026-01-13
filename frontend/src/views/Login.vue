@@ -334,7 +334,7 @@ onUnmounted(() => { if (animationId) cancelAnimationFrame(animationId) })
   width: 100%;
   padding: 0.6875rem;
   margin-top: 0.75rem;
-  background: #2563eb;
+  background: #60a5fa;
   border: none;
   border-radius: 2rem;
   color: #fff;
@@ -345,7 +345,7 @@ onUnmounted(() => { if (animationId) cancelAnimationFrame(animationId) })
 }
 
 .submit-btn:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: #3b82f6;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
