@@ -18,10 +18,55 @@ const HOST = process.env.HOST || 'localhost';
 
 // CORS 配置 - 白名单模式
 // 默认值与 .env 中 ALLOWED_ORIGINS 保持一致
+function parseAllowedOrigins(value) {
+  return String(value || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function isOriginAllowed(origin, allowedOrigins) {
+  if (!origin) return true;
+
+  let originUrl;
+  try {
+    originUrl = new URL(origin);
+  } catch {
+    return false;
+  }
+
+  for (const item of allowedOrigins) {
+    if (item === '*') return true;
+
+    let allowedUrl;
+    try {
+      allowedUrl = new URL(item);
+    } catch {
+      continue;
+    }
+
+    if (allowedUrl.protocol !== originUrl.protocol) continue;
+    if (allowedUrl.hostname !== originUrl.hostname) continue;
+
+    if (allowedUrl.port) {
+      if (allowedUrl.port === originUrl.port) return true;
+      continue;
+    }
+
+    return true; // 未配置端口：允许该 host 的任意端口
+  }
+
+  return false;
+}
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? parseAllowedOrigins(process.env.ALLOWED_ORIGINS)
+  : ['http://192.168.0.58:5173', 'http://localhost:5173'];
+
 const corsOptions = {
-  origin: process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['http://192.168.0.58:5173', 'http://localhost:5173'],
+  origin: (origin, callback) => {
+    callback(null, isOriginAllowed(origin, allowedOrigins));
+  },
   credentials: true,
   optionsSuccessStatus: 200
 };
