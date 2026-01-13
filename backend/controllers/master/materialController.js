@@ -99,6 +99,12 @@ const createMaterial = async (req, res, next) => {
       return res.status(400).json(error('品号、原料名称、单位和单价不能为空', 400));
     }
     
+    // 检查品号唯一性
+    const existing = await Material.findByItemNo(item_no);
+    if (existing) {
+      return res.status(400).json(error('品号已存在', 400));
+    }
+    
     const id = await Material.create({ item_no, name, unit, price, currency, manufacturer, usage_amount, category });
     res.status(201).json(success({ id }, '创建成功'));
   } catch (err) {
@@ -157,6 +163,47 @@ const deleteMaterial = async (req, res, next) => {
     
     await Material.delete(id);
     res.json(success(null, '删除成功'));
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 批量删除原料（检查每个是否可删除）
+const batchDeleteMaterials = async (req, res, next) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json(error('请提供要删除的原料ID', 400));
+    }
+    
+    const results = { deleted: 0, failed: [], skipped: [] };
+    
+    for (const id of ids) {
+      const material = await Material.findById(id);
+      if (!material) { results.skipped.push({ id, reason: '不存在' }); continue; }
+      
+      // 检查 BOM 引用
+      const isUsedInBom = await ModelBom.isMaterialUsed(id);
+      if (isUsedInBom) {
+        const models = await ModelBom.getModelsByMaterial(id);
+        results.failed.push({ id, name: material.name, reason: `被型号引用: ${models.map(m => m.model_name).slice(0, 3).join('、')}` });
+        continue;
+      }
+      
+      // 检查报价单引用
+      const isUsedInQuotation = await QuotationItem.isMaterialUsed(id);
+      if (isUsedInQuotation) {
+        const quotations = await QuotationItem.getQuotationsByMaterial(id);
+        results.failed.push({ id, name: material.name, reason: `被报价单引用: ${quotations.slice(0, 3).map(q => q.quotation_no).join('、')}` });
+        continue;
+      }
+      
+      await Material.delete(id);
+      results.deleted++;
+    }
+    
+    const msg = results.deleted > 0 ? `成功删除 ${results.deleted} 条` : '无可删除项';
+    res.json(success(results, msg));
   } catch (err) {
     next(err);
   }
@@ -417,6 +464,7 @@ module.exports = {
   createMaterial,
   updateMaterial,
   deleteMaterial,
+  batchDeleteMaterials,
   importMaterials,
   preCheckImport,
   confirmImport,

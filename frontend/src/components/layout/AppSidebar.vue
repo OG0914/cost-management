@@ -1,7 +1,7 @@
 <template>
   <aside :class="[
-    'bg-white border-r border-slate-200 flex flex-col shadow-sm z-10 transition-all duration-300',
-    collapsed ? 'w-16' : 'w-64'
+    'bg-white border-r border-slate-200 flex flex-col shadow-sm z-10 transition-all duration-300 h-full',
+    mobile ? 'w-full' : (collapsed ? 'w-16' : 'w-64')
   ]">
     <!-- Logo + 折叠按钮 -->
     <div class="h-16 flex items-center justify-between border-b border-slate-100" :class="collapsed ? 'px-2' : 'px-4'">
@@ -162,6 +162,11 @@ import { useReviewStore } from '../../store/review'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { menuConfig, filterMenuByRole, findMenuItem as findMenuItemUtil, getRoleName } from '../../config/menuConfig'
 
+const props = defineProps({
+  mobile: { type: Boolean, default: false }
+})
+const emit = defineEmits(['close'])
+
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
@@ -242,6 +247,7 @@ const toggleSubmenu = (menuId) => {
 const handleMenuClick = (item) => {
   if (item.route) {
     router.push(item.route)
+    if (props.mobile) emit('close') // 移动端点击后关闭抽屉
   }
 }
 

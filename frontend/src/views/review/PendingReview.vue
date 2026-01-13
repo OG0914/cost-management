@@ -11,7 +11,7 @@
           clearable
           @input="handleSearch"
           @clear="handleClearSearch"
-          style="width: 350px"
+          class="search-input"
         >
           <template #prefix>
             <el-icon><Search /></el-icon>
@@ -19,8 +19,8 @@
         </el-input>
       </div>
 
-      <!-- 数据表格 -->
-      <el-table :data="tableData" border v-loading="loading" style="width: 100%">
+      <!-- 桌面端数据表格 -->
+      <el-table :data="tableData" border v-loading="loading" style="width: 100%" class="hidden md:table">
         <el-table-column prop="quotation_no" label="报价单编号" width="160" />
         <el-table-column prop="status" label="状态" width="90">
           <template #default="{ row }">
@@ -83,6 +83,36 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 移动端卡片列表 -->
+      <div class="md:hidden space-y-3" v-loading="loading">
+        <div v-if="tableData.length === 0 && !loading" class="text-center py-8 text-slate-400">
+          <i class="ri-inbox-line text-4xl mb-2"></i>
+          <p>暂无待审核记录</p>
+        </div>
+        <div v-for="row in tableData" :key="row.id" class="mobile-card" @click="canReview ? handleReview(row) : handleView(row)">
+          <div class="mobile-card-header">
+            <span class="mobile-card-title">{{ row.quotation_no }}</span>
+            <el-tag :type="getStatusType(row.status)" size="small">{{ getStatusName(row.status) }}</el-tag>
+          </div>
+          <div class="mobile-card-body">
+            <div class="flex justify-between">
+              <span class="text-slate-500">{{ row.customer_name }}</span>
+              <el-tag :type="row.sales_type === 'domestic' ? 'success' : 'warning'" size="small">
+                {{ getSalesTypeName(row.sales_type) }}
+              </el-tag>
+            </div>
+            <div class="flex justify-between mt-1">
+              <span class="text-slate-600">{{ row.model_name }}</span>
+              <span class="font-semibold text-primary-600">{{ formatAmount(row.final_price, row.currency) }}</span>
+            </div>
+          </div>
+          <div class="mobile-card-footer">
+            <span class="text-xs text-slate-400">{{ row.creator_name }} · {{ formatDateTime(row.submitted_at) }}</span>
+            <el-button type="primary" size="small">{{ canReview ? '审核' : '查看' }}</el-button>
+          </div>
+        </div>
+      </div>
 
       <!-- 分页 -->
       <CommonPagination v-model:current-page="currentPage" v-model:page-size="pageSize" :total="total" />
@@ -257,35 +287,14 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.pending-review-container {
-  padding: 20px;
-}
-
-.header-card {
-  margin-bottom: 20px;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-left h2 {
-  margin: 0;
-  font-size: 18px;
-}
-
-.filter-bar {
-  margin-bottom: 16px;
-}
+.pending-review-container { padding: 20px; }
+.header-card { margin-bottom: 20px; }
+.header-content { display: flex; justify-content: space-between; align-items: center; }
+.header-left h2 { margin: 0; font-size: 18px; }
+.filter-bar { margin-bottom: 16px; }
+.search-input { width: 100%; max-width: 350px; }
 
 /* 操作按钮样式 */
-.delete-btn {
-  color: #F56C6C;
-}
-.delete-btn:hover:not(:disabled) {
-  color: #f78989;
-  border-color: #f78989;
-}
+.delete-btn { color: #F56C6C; }
+.delete-btn:hover:not(:disabled) { color: #f78989; border-color: #f78989; }
 </style>

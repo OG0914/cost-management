@@ -238,4 +238,26 @@ const iconSvg = computed(() => ICONS[props.type] || ICONS.default)
 .action-btn--disabled:hover::before { 
   scale: 0; /* 禁用时不显示背景动画 */
 }
+
+/* 响应式：中等屏幕隐藏文字只显示图标 */
+@media (max-width: 1024px) {
+  .action-btn {
+    padding: 8px 12px;
+    gap: 0;
+  }
+  .action-btn__text {
+    display: none;
+  }
+}
+
+/* 响应式：小屏幕进一步缩小 */
+@media (max-width: 640px) {
+  .action-btn {
+    padding: 6px 10px;
+  }
+  .action-btn__icon {
+    width: 16px;
+    height: 16px;
+  }
+}
 </style>

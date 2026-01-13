@@ -6,13 +6,13 @@
         <div class="toolbar-wrapper">
           <el-button class="toolbar-toggle" :icon="showToolbar ? CaretRight : CaretLeft" circle @click="showToolbar = !showToolbar" :title="showToolbar ? '收起工具栏' : '展开工具栏'" />
           <transition name="toolbar-fade">
-            <el-space v-if="showToolbar && canEdit">
-              <ActionButton type="download" @click="handleDownloadTemplate">下载模板</ActionButton>
-              <el-upload action="#" :auto-upload="false" :on-change="handleFileChange" :show-file-list="false" accept=".xlsx,.xls">
+            <el-space v-if="showToolbar && (canEditConfig || canEditMaterial)">
+              <ActionButton v-if="canEditMaterial" type="download" @click="handleDownloadTemplate">下载模板</ActionButton>
+              <el-upload v-if="canEditMaterial" action="#" :auto-upload="false" :on-change="handleFileChange" :show-file-list="false" accept=".xlsx,.xls">
                 <ActionButton type="import">导入Excel</ActionButton>
               </el-upload>
-              <ActionButton type="export" @click="handleExport">导出Excel</ActionButton>
-              <ActionButton type="delete" :disabled="selectedConfigs.length === 0" @click="handleBatchDelete">批量删除</ActionButton>
+              <ActionButton v-if="canEditMaterial" type="export" @click="handleExport">导出Excel</ActionButton>
+              <ActionButton v-if="canEditConfig" type="delete" :disabled="selectedConfigs.length === 0" @click="handleBatchDelete">批量删除</ActionButton>
             </el-space>
           </transition>
         </div>
@@ -129,8 +129,8 @@
           <!-- 操作栏 -->
           <div class="card-actions">
             <el-button :icon="View" circle @click="viewMaterials(config)" title="查看" />
-            <el-button :icon="EditPen" circle @click="editConfig(config)" v-if="canEdit" title="编辑" />
-            <el-button :icon="Delete" circle class="delete-btn" @click="deleteConfig(config)" v-if="canEdit" title="删除" />
+            <el-button :icon="EditPen" circle @click="editConfig(config)" v-if="canEditConfig || canEditMaterial" title="编辑" />
+            <el-button :icon="Delete" circle class="delete-btn" @click="deleteConfig(config)" v-if="canEditConfig" title="删除" />
           </div>
         </div>
       </div>
@@ -188,8 +188,8 @@
         <el-table-column label="操作" width="140" fixed="right">
           <template #default="{ row }">
             <el-button :icon="View" circle size="small" @click="viewMaterials(row)" title="查看" />
-            <el-button :icon="EditPen" circle size="small" @click="editConfig(row)" v-if="canEdit" title="编辑" />
-            <el-button :icon="Delete" circle size="small" class="delete-btn" @click="deleteConfig(row)" v-if="canEdit" title="删除" />
+            <el-button :icon="EditPen" circle size="small" @click="editConfig(row)" v-if="canEditConfig || canEditMaterial" title="编辑" />
+            <el-button :icon="Delete" circle size="small" class="delete-btn" @click="deleteConfig(row)" v-if="canEditConfig" title="删除" />
           </template>
         </el-table-column>
       </el-table>
@@ -551,8 +551,9 @@ const router = useRouter();
 const authStore = useAuthStore();
 const showToolbar = ref(false);
 
-// 权限检查 - 只有管理员和采购人员可以编辑包材
-const canEdit = computed(() => authStore.isAdmin || authStore.isPurchaser);
+// 权限检查 - 配置需要 admin/producer，包材需要 admin/purchaser
+const canEditConfig = computed(() => authStore.isAdmin || authStore.isProducer);
+const canEditMaterial = computed(() => authStore.isAdmin || authStore.isPurchaser);
 
 // 包装类型选项
 const packagingTypeOptions = getPackagingTypeOptions();
@@ -963,11 +964,19 @@ const handleBatchDelete = async () => {
   try {
     await ElMessageBox.confirm(`确定要删除选中的 ${selectedConfigs.value.length} 条包装配置吗？`, '批量删除确认', { type: 'warning' });
     const ids = selectedConfigs.value.map(item => item.id);
-    const results = await Promise.allSettled(ids.map(id => request.delete(`/processes/packaging-configs/${id}`)));
-    const successCount = results.filter(r => r.status === 'fulfilled').length;
-    const failCount = results.filter(r => r.status === 'rejected').length;
-    if (successCount > 0) { ElMessage.success(`成功删除 ${successCount} 条配置${failCount > 0 ? `，失败 ${failCount} 条` : ''}`); loadPackagingConfigs(); }
-    else ElMessage.error('删除失败');
+    const res = await request.post('/processes/packaging-configs/batch-delete', { ids });
+    
+    if (res.success) {
+      const { deleted, failed } = res.data;
+      if (deleted > 0 && failed.length === 0) {
+        ElMessage.success(`成功删除 ${deleted} 条配置`);
+      } else if (deleted > 0 && failed.length > 0) {
+        ElMessage.warning(`成功删除 ${deleted} 条，${failed.length} 条因被引用无法删除`);
+      } else if (failed.length > 0) {
+        ElMessage.error(`${failed.length} 条配置被引用，无法删除`);
+      }
+      loadPackagingConfigs();
+    }
   } catch (error) { if (error !== 'cancel') { /* 错误已在拦截器处理 */ } }
 };
 

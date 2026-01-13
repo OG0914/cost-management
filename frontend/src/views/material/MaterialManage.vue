@@ -302,38 +302,25 @@ const handleBatchDelete = async () => {
     await ElMessageBox.confirm(
       `确定要删除选中的 ${selectedMaterials.value.length} 条原料吗？此操作不可恢复！`, 
       '批量删除确认', 
-      {
-        confirmButtonText: '确定删除',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
+      { confirmButtonText: '确定删除', cancelButtonText: '取消', type: 'warning' }
     )
 
     const ids = selectedMaterials.value.map(item => item.id)
+    const res = await request.post('/materials/batch-delete', { ids })
     
-    // 逐个删除
-    let successCount = 0
-    let failCount = 0
-    
-    for (const id of ids) {
-      try {
-        await request.delete(`/materials/${id}`)
-        successCount++
-      } catch (error) {
-        failCount++
+    if (res.success) {
+      const { deleted, failed } = res.data
+      if (deleted > 0 && failed.length === 0) {
+        ElMessage.success(`成功删除 ${deleted} 条原料`)
+      } else if (deleted > 0 && failed.length > 0) {
+        ElMessage.warning(`成功删除 ${deleted} 条，${failed.length} 条因被引用无法删除`)
+      } else if (failed.length > 0) {
+        ElMessage.error(`${failed.length} 条原料被引用，无法删除`)
       }
-    }
-    
-    if (successCount > 0) {
-      ElMessage.success(`成功删除 ${successCount} 条原料${failCount > 0 ? `，失败 ${failCount} 条` : ''}`)
       fetchMaterials()
-    } else {
-      ElMessage.error('删除失败')
     }
   } catch (error) {
-    if (error !== 'cancel') {
-      // 错误已在拦截器处理
-    }
+    if (error !== 'cancel') { /* 错误已在拦截器处理 */ }
   }
 }
 

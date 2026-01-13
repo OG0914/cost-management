@@ -39,10 +39,12 @@ router.use(verifyToken);
 router.get('/packaging-configs', processController.getAllPackagingConfigs);
 router.get('/packaging-configs/grouped', processController.getPackagingConfigsGrouped);
 router.get('/packaging-configs/with-material-count', processController.getPackagingConfigsWithMaterialCount);
+router.get('/packaging-configs/with-process-count', processController.getPackagingConfigsWithProcessCount);
 router.get('/packaging-configs/model/:modelId', processController.getPackagingConfigsByModel);
 router.get('/packaging-configs/:id', processController.getPackagingConfigDetail);
 router.get('/packaging-configs/:id/full', processController.getPackagingConfigFullDetail);
 router.post('/packaging-configs', checkRole('admin', 'producer'), processController.createPackagingConfig);
+router.post('/packaging-configs/batch-delete', checkRole('admin', 'producer'), processController.batchDeletePackagingConfigs);
 router.put('/packaging-configs/:id', checkRole('admin', 'producer'), processController.updatePackagingConfig);
 router.delete('/packaging-configs/:id', checkRole('admin', 'producer'), processController.deletePackagingConfig);
 

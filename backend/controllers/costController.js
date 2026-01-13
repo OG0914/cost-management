@@ -15,6 +15,22 @@ const ExcelGenerator = require('../utils/excel');
 const logger = require('../utils/logger');
 
 /**
+ * 验证报价单公共字段
+ * @param {Object} data - 请求数据
+ * @returns {string|null} 错误消息，无错误返回 null
+ */
+const validateQuotationData = (data) => {
+    const { sales_type, freight_total, items } = data;
+    if (sales_type === 'export' && (freight_total === undefined || freight_total === null || freight_total < 0)) {
+        return '外销报价必须填写运费';
+    }
+    if (!items || !Array.isArray(items) || items.length === 0) {
+        return '请至少添加一项成本明细';
+    }
+    return null;
+};
+
+/**
  * 创建报价单
  * POST /api/cost/quotations
  */
@@ -44,6 +60,11 @@ const createQuotation = async (req, res) => {
 
         if (quantity <= 0) {
             return res.status(400).json(error('数量必须大于0', 400));
+        }
+
+        const validationError = validateQuotationData({ sales_type, freight_total, items });
+        if (validationError) {
+            return res.status(400).json(error(validationError, 400));
         }
 
         // 获取原料系数
@@ -387,6 +408,11 @@ const updateQuotation = async (req, res) => {
         // 检查状态：只有草稿和已退回状态可以编辑
         if (!['draft', 'rejected'].includes(quotation.status)) {
             return res.status(400).json(error('当前状态不允许编辑', 400));
+        }
+
+        const validationError = validateQuotationData({ sales_type, freight_total, items });
+        if (validationError) {
+            return res.status(400).json(error(validationError, 400));
         }
 
         // 获取原料系数（使用报价单关联的型号）

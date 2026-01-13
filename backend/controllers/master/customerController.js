@@ -3,12 +3,14 @@ const { success, error, paginated } = require('../../utils/response');
 const ExcelJS = require('exceljs');
 const logger = require('../../utils/logger');
 
+// 检查用户是否为管理员或审核员
+const hasFullAccess = (user) => user?.role === 'admin' || user?.role === 'reviewer';
+
 const getCustomerList = async (req, res) => {
     try {
         const { page = 1, pageSize = 12, keyword } = req.query;
-        const currentUser = req.user;
         // 管理员/审核员看全部，业务员只看自己的客户+公共客户
-        const userId = (currentUser?.role === 'admin' || currentUser?.role === 'reviewer') ? null : currentUser?.id;
+        const userId = hasFullAccess(req.user) ? null : req.user?.id;
         const result = await Customer.findAll({ page: parseInt(page), pageSize: parseInt(pageSize), keyword, userId, includePublic: true });
         res.json(paginated(result.data, result.total, result.page, result.pageSize));
     } catch (err) {
@@ -21,6 +23,12 @@ const getCustomerById = async (req, res) => {
     try {
         const customer = await Customer.findById(req.params.id);
         if (!customer) return res.status(404).json(error('客户不存在', 404));
+        
+        // 业务员只能查看自己的客户或公共客户
+        if (!hasFullAccess(req.user) && customer.user_id && customer.user_id !== req.user?.id) {
+            return res.status(403).json(error('无权查看该客户', 403));
+        }
+        
         res.json(success(customer));
     } catch (err) {
         res.status(500).json(error('获取客户详情失败: ' + err.message, 500));
@@ -89,8 +97,7 @@ const searchCustomers = async (req, res) => {
     try {
         const { keyword } = req.query;
         if (!keyword) return res.json(success([]));
-        const currentUserId = req.user?.id || null;
-        const customers = await Customer.search(keyword, currentUserId);
+        const customers = await Customer.search(keyword, req.user?.id, hasFullAccess(req.user));
         res.json(success(customers));
     } catch (err) {
         res.status(500).json(error('搜索客户失败: ' + err.message, 500));
@@ -127,7 +134,7 @@ const importCustomers = async (req, res) => {
         await workbook.xlsx.load(req.file.buffer);
         const sheet = workbook.worksheets[0];
         
-        let created = 0, updated = 0;
+        const tasks = []; // 收集所有导入任务
         sheet.eachRow((row, rowNumber) => {
             if (rowNumber === 1) return;
             const vc_code = row.getCell(1).value?.toString().trim();
@@ -136,14 +143,17 @@ const importCustomers = async (req, res) => {
             
             const region = row.getCell(3).value?.toString().trim() || null;
             const remark = row.getCell(4).value?.toString().trim() || null;
-            
-            Customer.upsert({ vc_code, name, region, remark }).then(result => {
-                if (result.action === 'created') created++;
-                else updated++;
-            });
+            tasks.push({ vc_code, name, region, remark });
         });
         
-        setTimeout(() => res.json(success({ created, updated }, '导入完成')), 500);
+        let created = 0, updated = 0;
+        for (const task of tasks) { // 顺序执行确保数据一致性
+            const result = await Customer.upsert(task);
+            if (result.action === 'created') created++;
+            else updated++;
+        }
+        
+        res.json(success({ created, updated }, '导入完成'));
     } catch (err) {
         res.status(500).json(error('导入失败: ' + err.message, 500));
     }

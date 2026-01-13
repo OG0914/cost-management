@@ -79,15 +79,22 @@ class Customer {
         return result.rowCount;
     }
 
-    static async search(keyword, currentUserId = null) {
-        const result = await dbManager.query(
-            `SELECT c.id, c.vc_code, c.name, c.region, c.user_id, u.real_name as salesperson_name,
-                    CASE WHEN c.user_id IS NULL OR c.user_id = $2 THEN true ELSE false END as is_mine
-             FROM customers c LEFT JOIN users u ON c.user_id = u.id
-             WHERE c.vc_code ILIKE $1 OR c.name ILIKE $1 
-             ORDER BY is_mine DESC, c.name LIMIT 50`,
-            [`%${keyword}%`, currentUserId]
-        );
+    static async search(keyword, currentUserId = null, isAdminOrReviewer = false) {
+        let sql, params;
+        if (isAdminOrReviewer) { // 管理员/审核员可搜索所有客户
+            sql = `SELECT c.id, c.vc_code, c.name, c.region, c.user_id, u.real_name as salesperson_name
+                   FROM customers c LEFT JOIN users u ON c.user_id = u.id
+                   WHERE c.vc_code ILIKE $1 OR c.name ILIKE $1 
+                   ORDER BY c.name LIMIT 50`;
+            params = [`%${keyword}%`];
+        } else { // 业务员只能搜索自己的客户+公共客户
+            sql = `SELECT c.id, c.vc_code, c.name, c.region, c.user_id, u.real_name as salesperson_name
+                   FROM customers c LEFT JOIN users u ON c.user_id = u.id
+                   WHERE (c.vc_code ILIKE $1 OR c.name ILIKE $1) AND (c.user_id IS NULL OR c.user_id = $2)
+                   ORDER BY c.name LIMIT 50`;
+            params = [`%${keyword}%`, currentUserId];
+        }
+        const result = await dbManager.query(sql, params);
         return result.rows;
     }
 

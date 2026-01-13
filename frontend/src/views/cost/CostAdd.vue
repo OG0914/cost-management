@@ -1352,11 +1352,27 @@ onBeforeRouteLeave(async (to, from, next) => {
 
 /* ========== 响应式 ========== */
 @media (max-width: 1024px) {
-  .cost-page-body {
-    grid-template-columns: 1fr;
-  }
+  .cost-page-body { grid-template-columns: 1fr; }
   .cost-preview-panel { display: none; }
   .cost-mobile-footer { display: flex; justify-content: space-between; align-items: center; }
+}
+
+@media (max-width: 768px) {
+  .cost-page-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .cost-header-right { flex-wrap: wrap; }
+  .cost-section-body { padding: 12px !important; }
+  .cost-section-body .el-row { margin: 0 !important; }
+  .cost-section-body .el-col { padding: 0 !important; margin-bottom: 12px; }
+  .cost-section-body .el-col-12, .cost-section-body .el-col-8, .cost-section-body .el-col-6, .cost-section-body .el-col-4 { 
+    flex: 0 0 100% !important; max-width: 100% !important; 
+  }
+  .cost-form .el-form-item { margin-bottom: 16px; }
+  .cost-form .el-form-item__label { float: none; text-align: left; padding: 0 0 4px 0; }
+  .sales-type-group { flex-direction: column; }
+  .sales-type-card { flex: none; }
+  .container-type-btns { flex-wrap: wrap; }
+  .freight-field { flex-wrap: wrap; }
+  .freight-label { width: 100%; margin-bottom: 4px; }
 }
 
 /* ========== 原有样式保留 ========== */

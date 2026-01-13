@@ -12,6 +12,30 @@ const StandardCost = require('../../models/StandardCost');
 const dbManager = require('../../db/database');
 const { isValidPackagingType, getPackagingTypeName, VALID_PACKAGING_TYPE_KEYS } = require('../../config/packagingTypes');
 
+// 辅助函数：计算配置的工序和包材价格
+const enrichConfigWithPrices = async (config, processCoefficient, includeTypeName = false) => {
+  const processes = await ProcessConfig.findByPackagingConfigId(config.id);
+  const processSum = processes.reduce((sum, p) => sum + parseFloat(p.unit_price), 0);
+
+  const materials = await PackagingMaterial.findByPackagingConfigId(config.id);
+  const materialTotalPrice = materials.reduce((sum, m) => {
+    return sum + (m.basic_usage !== 0 ? parseFloat(m.unit_price) / parseFloat(m.basic_usage) : 0);
+  }, 0);
+
+  return {
+    ...config,
+    ...(includeTypeName && { packaging_type_name: getPackagingTypeName(config.packaging_type) }),
+    process_total_price: processSum * processCoefficient,
+    material_total_price: materialTotalPrice
+  };
+};
+
+// 辅助函数：批量计算配置价格
+const enrichConfigsWithPrices = async (configs, includeTypeName = false) => {
+  const processCoefficient = parseFloat(await SystemConfig.getValue('process_coefficient')) || 1.56;
+  return Promise.all(configs.map(config => enrichConfigWithPrices(config, processCoefficient, includeTypeName)));
+};
+
 // 获取所有包装配置（支持 packaging_type 筛选）
 exports.getAllPackagingConfigs = async (req, res) => {
   try {
@@ -25,25 +49,7 @@ exports.getAllPackagingConfigs = async (req, res) => {
     }
 
     const configs = await PackagingConfig.findAll({ packaging_type });
-    const processCoefficient = parseFloat(await SystemConfig.getValue('process_coefficient')) || 1.56;
-
-    const configsWithPrice = await Promise.all(configs.map(async config => {
-      const processes = await ProcessConfig.findByPackagingConfigId(config.id);
-      const processSum = processes.reduce((sum, p) => sum + parseFloat(p.unit_price), 0);
-      const processTotalPrice = processSum * processCoefficient;
-
-      const materials = await PackagingMaterial.findByPackagingConfigId(config.id);
-      const materialTotalPrice = materials.reduce((sum, m) => {
-        return sum + (m.basic_usage !== 0 ? parseFloat(m.unit_price) / parseFloat(m.basic_usage) : 0);
-      }, 0);
-
-      return {
-        ...config,
-        packaging_type_name: getPackagingTypeName(config.packaging_type),
-        process_total_price: processTotalPrice,
-        material_total_price: materialTotalPrice
-      };
-    }));
+    const configsWithPrice = await enrichConfigsWithPrices(configs, true);
 
     res.json({ success: true, data: configsWithPrice });
   } catch (error) {
@@ -57,24 +63,7 @@ exports.getPackagingConfigsByModel = async (req, res) => {
   try {
     const { modelId } = req.params;
     const configs = await PackagingConfig.findByModelId(modelId);
-    const processCoefficient = parseFloat(await SystemConfig.getValue('process_coefficient')) || 1.56;
-
-    const configsWithPrice = await Promise.all(configs.map(async config => {
-      const processes = await ProcessConfig.findByPackagingConfigId(config.id);
-      const processSum = processes.reduce((sum, p) => sum + parseFloat(p.unit_price), 0);
-      const processTotalPrice = processSum * processCoefficient;
-
-      const materials = await PackagingMaterial.findByPackagingConfigId(config.id);
-      const materialTotalPrice = materials.reduce((sum, m) => {
-        return sum + (m.basic_usage !== 0 ? parseFloat(m.unit_price) / parseFloat(m.basic_usage) : 0);
-      }, 0);
-
-      return {
-        ...config,
-        process_total_price: processTotalPrice,
-        material_total_price: materialTotalPrice
-      };
-    }));
+    const configsWithPrice = await enrichConfigsWithPrices(configs);
 
     res.json({ success: true, data: configsWithPrice });
   } catch (error) {
@@ -219,31 +208,108 @@ exports.updatePackagingConfig = async (req, res) => {
   }
 };
 
+// 辅助函数：检查配置是否可删除
+const checkDeleteConstraints = async (id) => {
+  const quotationCheck = await dbManager.query(
+    'SELECT COUNT(*) as count FROM quotations WHERE packaging_config_id = $1', [id]
+  );
+  if (parseInt(quotationCheck.rows[0].count) > 0) {
+    return '被报价单引用';
+  }
+  
+  const hasStandardCost = await StandardCost.findCurrentByPackagingConfigId(id);
+  if (hasStandardCost) {
+    return '已设置标准成本';
+  }
+  
+  return null; // 可删除
+};
+
+// 辅助函数：级联软删除包材和工序
+const cascadeSoftDelete = async (id) => {
+  await Promise.all([
+    dbManager.query('UPDATE packaging_materials SET is_active = false, updated_at = NOW() WHERE packaging_config_id = $1', [id]),
+    dbManager.query('UPDATE process_configs SET is_active = false, updated_at = NOW() WHERE packaging_config_id = $1', [id])
+  ]);
+};
+
 // 删除包装配置
 exports.deletePackagingConfig = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // 检查是否被报价单引用
-    const quotationCheck = await dbManager.query(
-      'SELECT COUNT(*) as count FROM quotations WHERE packaging_config_id = $1',
-      [id]
-    );
-    if (parseInt(quotationCheck.rows[0].count) > 0) {
-      return res.status(400).json({ success: false, message: '该包装配置已被报价单引用，无法删除' });
+    const reason = await checkDeleteConstraints(id);
+    if (reason) {
+      const messages = {
+        '被报价单引用': '该包装配置已被报价单引用，无法删除',
+        '已设置标准成本': '该包装配置已设置标准成本，请先删除标准成本记录'
+      };
+      return res.status(400).json({ success: false, message: messages[reason] });
     }
     
-    // 检查是否有关联的标准成本（阻止删除，保留历史记录）
-    const hasStandardCost = await StandardCost.findCurrentByPackagingConfigId(id);
-    if (hasStandardCost) {
-      return res.status(400).json({ success: false, message: '该包装配置已设置标准成本，请先删除标准成本记录' });
-    }
-    
+    await cascadeSoftDelete(id);
     await PackagingConfig.delete(id);
     res.json({ success: true, message: '包装配置删除成功' });
   } catch (error) {
     logger.error('删除包装配置失败:', error);
     res.status(500).json({ success: false, message: '删除包装配置失败' });
+  }
+};
+
+// 批量删除包装配置（检查每个是否可删除）
+exports.batchDeletePackagingConfigs = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: '请提供要删除的配置ID' });
+    }
+    
+    const results = { deleted: 0, failed: [] };
+    
+    for (const id of ids) {
+      const config = await PackagingConfig.findById(id);
+      if (!config) continue;
+      
+      const reason = await checkDeleteConstraints(id);
+      if (reason) {
+        results.failed.push({ id, name: config.config_name, reason });
+        continue;
+      }
+      
+      await cascadeSoftDelete(id);
+      await PackagingConfig.delete(id);
+      results.deleted++;
+    }
+    
+    const msg = results.deleted > 0 ? `成功删除 ${results.deleted} 条` : '无可删除项';
+    res.json({ success: true, data: results, message: msg });
+  } catch (error) {
+    logger.error('批量删除包装配置失败:', error);
+    res.status(500).json({ success: false, message: '批量删除失败' });
+  }
+};
+
+// 获取所有配置及其工序数量（用于一键复制，优化 N+1 查询）
+exports.getPackagingConfigsWithProcessCount = async (req, res) => {
+  try {
+    const result = await dbManager.query(`
+      SELECT pc.id, pc.model_id, pc.config_name, pc.packaging_type,
+             m.model_name, m.model_category, r.name as regulation_name,
+             COUNT(prc.id)::int as process_count
+      FROM packaging_configs pc
+      LEFT JOIN models m ON pc.model_id = m.id
+      LEFT JOIN regulations r ON m.regulation_id = r.id
+      LEFT JOIN process_configs prc ON pc.id = prc.packaging_config_id AND prc.is_active = true
+      WHERE pc.is_active = true
+      GROUP BY pc.id, pc.model_id, pc.config_name, pc.packaging_type,
+               m.model_name, m.model_category, r.name
+      ORDER BY pc.created_at DESC
+    `);
+
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    logger.error('获取配置工序数量失败:', error);
+    res.status(500).json({ success: false, message: '获取配置工序数量失败' });
   }
 };
 

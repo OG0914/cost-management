@@ -671,27 +671,13 @@ const loadCategories = async () => {
   }
 }
 
-// 加载所有配置及其工序数量（用于一键复制）
+// 加载所有配置及其工序数量（用于一键复制，使用优化后的接口）
 const loadConfigsForCopy = async () => {
   copyConfigsLoading.value = true
   try {
-    const response = await request.get('/processes/packaging-configs')
+    const response = await request.get('/processes/packaging-configs/with-process-count')
     if (response.success) {
-      // 获取每个配置的工序数量
-      const configsWithCount = await Promise.all(
-        response.data.map(async (config) => {
-          try {
-            const detailResponse = await request.get(`/processes/packaging-configs/${config.id}`)
-            return {
-              ...config,
-              process_count: detailResponse.success ? (detailResponse.data.processes?.length || 0) : 0
-            }
-          } catch {
-            return { ...config, process_count: 0 }
-          }
-        })
-      )
-      allConfigsForCopy.value = configsWithCount
+      allConfigsForCopy.value = response.data
     }
   } catch (error) {
     logger.error('加载配置列表失败:', error)
@@ -725,6 +711,13 @@ const handleCopySourceChange = async (configId) => {
   }
 }
 
+// 辅助函数：映射工序数据
+const mapProcessData = (p, index) => ({
+  process_name: p.process_name,
+  unit_price: p.unit_price,
+  sort_order: index
+})
+
 // 执行工序复制
 const handleCopyProcesses = () => {
   if (!copySourceConfigId.value || copySourcePreview.value.length === 0) {
@@ -734,33 +727,29 @@ const handleCopyProcesses = () => {
   
   copyLoading.value = true
   try {
+    let copiedCount = 0
+    
     if (copyMode.value === 'replace') {
-      // 替换模式：清空现有工序
-      form.processes = copySourcePreview.value.map((p, index) => ({
-        process_name: p.process_name,
-        unit_price: p.unit_price,
-        sort_order: index
-      }))
+      form.processes = copySourcePreview.value.map(mapProcessData)
+      copiedCount = form.processes.length
     } else {
       // 合并模式：追加新工序（跳过重复）
-      const existingNames = form.processes.map(p => p.process_name)
+      const existingNames = new Set(form.processes.map(p => p.process_name))
       const newProcesses = copySourcePreview.value
-        .filter(p => !existingNames.includes(p.process_name))
-        .map((p, index) => ({
-          process_name: p.process_name,
-          unit_price: p.unit_price,
-          sort_order: form.processes.length + index
-        }))
-      form.processes.push(...newProcesses)
+        .filter(p => !existingNames.has(p.process_name))
+        .map((p, index) => mapProcessData(p, form.processes.length + index))
       
-      if (newProcesses.length < copySourcePreview.value.length) {
-        const skipped = copySourcePreview.value.length - newProcesses.length
+      form.processes.push(...newProcesses)
+      copiedCount = newProcesses.length
+      
+      const skipped = copySourcePreview.value.length - copiedCount
+      if (skipped > 0) {
         ElMessage.info(`已跳过 ${skipped} 个重复工序`)
       }
     }
     
     showProcessCopyDialog.value = false
-    ElMessage.success(`成功复制 ${copyMode.value === 'replace' ? copySourcePreview.value.length : form.processes.length} 项工序`)
+    ElMessage.success(`成功复制 ${copiedCount} 项工序`)
   } finally {
     copyLoading.value = false
   }
@@ -873,17 +862,23 @@ const deleteConfig = async (row) => {
   }
 }
 
-// 批量删除
+// 批量删除（使用批量删除API，显示详细结果）
 const handleBatchDelete = async () => {
   if (selectedConfigs.value.length === 0) { ElMessage.warning('请先选择要删除的配置'); return }
   try {
     await ElMessageBox.confirm(`确定要删除选中的 ${selectedConfigs.value.length} 条配置吗？`, '批量删除确认', { type: 'warning' })
     const ids = selectedConfigs.value.map(item => item.id)
-    const results = await Promise.allSettled(ids.map(id => request.delete(`/processes/packaging-configs/${id}`)))
-    const successCount = results.filter(r => r.status === 'fulfilled').length
-    const failCount = results.filter(r => r.status === 'rejected').length
-    if (successCount > 0) { ElMessage.success(`成功删除 ${successCount} 条配置${failCount > 0 ? `，失败 ${failCount} 条` : ''}`); loadPackagingConfigs() }
-    else ElMessage.error('删除失败')
+    const response = await request.post('/processes/packaging-configs/batch-delete', { ids })
+    if (response.success) {
+      const { deleted, failed } = response.data
+      if (failed?.length > 0) {
+        const reasons = failed.map(f => `${f.name}: ${f.reason}`).join('\n')
+        ElMessageBox.alert(`成功删除 ${deleted} 条\n以下配置无法删除:\n${reasons}`, '删除结果', { type: 'warning' })
+      } else {
+        ElMessage.success(`成功删除 ${deleted} 条配置`)
+      }
+      loadPackagingConfigs()
+    }
   } catch (error) { if (error !== 'cancel') { /* 错误已在拦截器处理 */ } }
 }
 

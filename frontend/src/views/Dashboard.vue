@@ -4,24 +4,24 @@
     <div class="greeting-card group">
       <!-- 装饰背景 -->
       <div class="absolute inset-0 bg-gradient-to-br from-slate-50/50 to-blue-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-      <i class="ri-calendar-check-line absolute -right-4 -bottom-4 text-8xl text-slate-100/60 pointer-events-none z-0"></i>
+      <i class="ri-calendar-check-line absolute -right-4 -bottom-4 text-6xl sm:text-8xl text-slate-100/60 pointer-events-none z-0"></i>
       
       <!-- 左侧装饰条 -->
-      <div class="absolute left-0 top-5 bottom-5 w-1 bg-blue-500 rounded-r-full"></div>
+      <div class="absolute left-0 top-4 bottom-4 sm:top-5 sm:bottom-5 w-1 bg-blue-500 rounded-r-full"></div>
 
       <!-- 左侧文案 -->
-      <div class="relative z-10 pl-5">
-        <h1 class="text-2xl font-bold text-slate-800 mb-1.5 tracking-tight">
+      <div class="relative z-10 pl-4 sm:pl-5 flex-1 min-w-0">
+        <h1 class="text-lg sm:text-2xl font-bold text-slate-800 mb-1 sm:mb-1.5 tracking-tight truncate">
           {{ greeting }}
         </h1>
-        <p class="text-slate-500 flex items-center text-sm">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-2"></span>
-          {{ subGreeting }}
+        <p class="text-slate-500 flex items-center text-xs sm:text-sm">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-2 flex-shrink-0"></span>
+          <span class="truncate">{{ subGreeting }}</span>
         </p>
       </div>
 
       <!-- 右侧日期排版 -->
-      <div class="relative z-10 text-right">
+      <div class="relative z-10 text-right flex-shrink-0 hidden sm:block">
         <div class="flex items-baseline justify-end leading-none text-slate-700">
           <span class="text-4xl font-extrabold tracking-tighter mr-0.5 text-slate-800">{{ dateDay }}</span>
           <span class="text-2xl font-light text-slate-300 mx-1">/</span>
@@ -37,7 +37,7 @@
     <StatCards :stats="stats" :regulations="regulations" />
 
     <!-- 快捷导航与系统概况 -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
       <!-- 快捷导航 -->
       <div class="lg:col-span-2 section-card">
         <div class="section-header">
@@ -46,7 +46,7 @@
           </div>
           <h2 class="section-title">快捷导航</h2>
         </div>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           <QuickNavButton
             v-for="(nav, index) in quickNavList"
             :key="nav.key"
@@ -386,9 +386,9 @@ const loadDashboardData = async () => {
       }
     }
 
-    // 获取待审核数量（producer和purchaser角色不调用）
+    // 获取待审核数量（producer/purchaser/readonly角色不调用）
     const userRole = authStore.user?.role
-    const excludedRoles = ['producer', 'purchaser']
+    const excludedRoles = ['producer', 'purchaser', 'readonly']
     if (!excludedRoles.includes(userRole)) {
       pendingCount.value = await reviewStore.fetchPendingCount()
     }
@@ -422,7 +422,7 @@ onMounted(() => {
 
 <style scoped>
 .greeting-card {
-  @apply bg-white rounded-xl p-6 border border-slate-200 mb-6 relative overflow-hidden flex items-center justify-between;
+  @apply bg-white rounded-xl p-4 sm:p-6 border border-slate-200 mb-4 sm:mb-6 relative overflow-hidden flex items-center justify-between;
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .greeting-card:hover {
@@ -431,7 +431,7 @@ onMounted(() => {
 }
 
 .section-card {
-  @apply bg-white rounded-xl border border-slate-200 p-5;
+  @apply bg-white rounded-xl border border-slate-200 p-4 sm:p-5;
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .section-card:hover {
@@ -440,7 +440,7 @@ onMounted(() => {
 }
 
 .section-header {
-  @apply flex items-center mb-5;
+  @apply flex items-center mb-4 sm:mb-5;
 }
 .section-icon {
   @apply w-7 h-7 rounded-lg flex items-center justify-center mr-2.5 shadow-sm;

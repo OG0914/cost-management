@@ -17,12 +17,12 @@ router.use(verifyToken);
  */
 
 // 获取报价单列表
-// 权限：管理员、审核人、业务员（业务员只能看自己的）
-router.get('/quotations', checkRole('admin', 'reviewer', 'salesperson'), costController.getQuotationList);
+// 权限：管理员、审核人、业务员、只读（业务员只能看自己的，只读可查看所有）
+router.get('/quotations', checkRole('admin', 'reviewer', 'salesperson', 'readonly'), costController.getQuotationList);
 
 // 获取报价单详情
-// 权限：管理员、审核人、业务员（业务员只能看自己的或标准成本关联的）
-router.get('/quotations/:id', checkRole('admin', 'reviewer', 'salesperson'), costController.getQuotationDetail);
+// 权限：管理员、审核人、业务员、只读（业务员只能看自己的或标准成本关联的）
+router.get('/quotations/:id', checkRole('admin', 'reviewer', 'salesperson', 'readonly'), costController.getQuotationDetail);
 
 // 创建报价单
 // 权限：业务员、管理员、审核人
@@ -45,8 +45,8 @@ router.delete('/quotations/:id', checkRole('admin', 'reviewer', 'salesperson'), 
 router.post('/quotations/:id/submit', checkRole('admin', 'reviewer', 'salesperson'), costController.submitQuotation);
 
 // 导出报价单
-// 权限：管理员、审核人、业务员
-router.post('/quotations/:id/export', checkRole('admin', 'reviewer', 'salesperson'), costController.exportQuotation);
+// 权限：管理员、审核人、业务员、只读
+router.post('/quotations/:id/export', checkRole('admin', 'reviewer', 'salesperson', 'readonly'), costController.exportQuotation);
 
 /**
  * 辅助功能路由

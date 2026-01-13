@@ -268,8 +268,14 @@
     <!-- 底部按钮 -->
     <template #footer>
       <div class="dialog-footer">
-        <el-button type="danger" @click="handleReject" :loading="submitting">退回报价</el-button>
-        <el-button type="success" @click="handleApprove" :loading="submitting">此时通过</el-button>
+        <!-- 自审核提示 -->
+        <div v-if="isOwnQuotation" class="self-review-warning">
+          <el-alert title="不能审核自己创建的报价单" type="warning" :closable="false" show-icon />
+        </div>
+        <template v-else>
+          <el-button type="danger" @click="handleReject" :loading="submitting">退回报价</el-button>
+          <el-button type="success" @click="handleApprove" :loading="submitting">审核通过</el-button>
+        </template>
       </div>
     </template>
 
@@ -281,6 +287,7 @@
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useReviewStore } from '@/store/review'
+import { useAuthStore } from '@/store/auth'
 import request from '@/utils/request'
 import logger from '@/utils/logger'
 import {
@@ -310,9 +317,16 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'approved', 'rejected'])
 
 const reviewStore = useReviewStore()
+const authStore = useAuthStore()
 
 const loading = ref(false)
 const activeTab = ref('material')
+
+// 判断是否为自己创建的报价单（禁止自审核）
+const isOwnQuotation = computed(() => {
+  if (!quotationDetail.value || !authStore.user) return false
+  return quotationDetail.value.created_by === authStore.user.id
+})
 
 // removed reviewMode
 const reviewComment = ref('')
@@ -828,6 +842,12 @@ const handleReject = async () => {
   padding: 0 24px 20px 24px;
   background: #fcfcfc;
   border-radius: 0 0 8px 8px;
+}
+
+.self-review-warning {
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 /* 覆盖表格样式 */

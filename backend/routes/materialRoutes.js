@@ -46,6 +46,7 @@ router.get('/:id', materialController.getMaterialById);
 
 // 以下路由需要采购权限
 router.post('/', isPurchaser, materialController.createMaterial);
+router.post('/batch-delete', isPurchaser, materialController.batchDeleteMaterials);
 router.put('/:id', isPurchaser, materialController.updateMaterial);
 router.delete('/:id', isPurchaser, materialController.deleteMaterial);
 

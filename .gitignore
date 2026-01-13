@@ -40,3 +40,9 @@ Thumbs.db
 test-*.js
 diagnose.js
 LOGIN-INFO.md
+
+# Backup files
+*.backup
+
+# Uploads
+backend/uploads/
