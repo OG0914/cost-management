@@ -18,8 +18,9 @@ class Quotation {
         quotation_no, customer_name, customer_region, model_id, regulation_id,
         quantity, freight_total, freight_per_unit, sales_type, shipping_method, port,
         base_cost, overhead_price, final_price, currency, status, created_by, 
-        packaging_config_id, include_freight_in_base, custom_profit_tiers, vat_rate
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+        packaging_config_id, include_freight_in_base, custom_profit_tiers, vat_rate,
+        is_estimation, reference_standard_cost_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
       RETURNING id`,
       [
         data.quotation_no,
@@ -42,7 +43,9 @@ class Quotation {
         data.packaging_config_id || null,
         data.include_freight_in_base !== false,
         data.custom_profit_tiers || null,
-        data.vat_rate !== undefined ? data.vat_rate : null
+        data.vat_rate !== undefined ? data.vat_rate : null,
+        data.is_estimation || false,
+        data.reference_standard_cost_id || null
       ]
     );
     
@@ -64,13 +67,18 @@ class Quotation {
              pc.bags_per_box,
              pc.boxes_per_carton,
              u1.real_name as creator_name,
-             u2.real_name as reviewer_name
+             u2.real_name as reviewer_name,
+             ref_sc.id as ref_sc_id,
+             ref_m.model_name as reference_model_name
       FROM quotations q
       LEFT JOIN regulations r ON q.regulation_id = r.id
       LEFT JOIN models m ON q.model_id = m.id
       LEFT JOIN packaging_configs pc ON q.packaging_config_id = pc.id
       LEFT JOIN users u1 ON q.created_by = u1.id
       LEFT JOIN users u2 ON q.reviewed_by = u2.id
+      LEFT JOIN standard_costs ref_sc ON q.reference_standard_cost_id = ref_sc.id
+      LEFT JOIN quotations ref_q ON ref_sc.quotation_id = ref_q.id
+      LEFT JOIN models ref_m ON ref_q.model_id = ref_m.id
       WHERE q.id = $1`,
       [id]
     );
@@ -211,7 +219,7 @@ class Quotation {
       'shipping_method', 'port',
       'base_cost', 'overhead_price', 'final_price', 'currency', 
       'packaging_config_id', 'include_freight_in_base', 'custom_profit_tiers',
-      'vat_rate'
+      'vat_rate', 'is_estimation', 'reference_standard_cost_id'
     ];
 
     allowedFields.forEach(field => {

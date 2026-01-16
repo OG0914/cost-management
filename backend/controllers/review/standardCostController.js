@@ -12,11 +12,15 @@ const { success, error, paginated } = require('../../utils/response');
 /** 获取所有当前标准成本（支持分页） GET /api/standard-costs */
 const getAllStandardCosts = async (req, res, next) => {
   try {
-    const { model_category, model_name, keyword, page = 1, pageSize = 20 } = req.query;
+    const { model_category, model_name, keyword, regulation_id, page = 1, pageSize = 20 } = req.query;
     const pageNum = Math.max(1, parseInt(page) || 1);
     const pageSizeNum = Math.min(100, Math.max(1, parseInt(pageSize) || 20));
 
-    const result = await StandardCost.findAllCurrent({ model_category, model_name, keyword, page: pageNum, pageSize: pageSizeNum });
+    const result = await StandardCost.findAllCurrent({ 
+      model_category, model_name, keyword, 
+      regulation_id: regulation_id ? parseInt(regulation_id) : null,
+      page: pageNum, pageSize: pageSizeNum 
+    });
     res.json(paginated(result.data, result.total, result.page, result.pageSize));
   } catch (err) {
     next(err);

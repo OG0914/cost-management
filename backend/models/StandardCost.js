@@ -5,13 +5,18 @@
 const dbManager = require('../db/database');
 
 class StandardCost {
-  /** 获取所有当前版本的标准成本（支持分页） */
+  /** 获取所有当前版本的标准成本（支持分页和筛选） */
   static async findAllCurrent(options = {}) {
-    const { model_category, model_name, keyword, page = 1, pageSize = 20 } = options;
+    const { model_category, model_name, keyword, regulation_id, page = 1, pageSize = 20 } = options;
     const params = [];
     let paramIndex = 0;
     let whereClause = 'WHERE sc.is_current = true';
 
+    if (regulation_id) {
+      paramIndex++;
+      whereClause += ` AND m.regulation_id = $${paramIndex}`;
+      params.push(regulation_id);
+    }
     if (model_category) {
       paramIndex++;
       whereClause += ` AND m.model_category = $${paramIndex}`;
@@ -24,8 +29,7 @@ class StandardCost {
     }
     if (keyword && keyword.trim()) {
       paramIndex++;
-      const kw = `$${paramIndex}`;
-      whereClause += ` AND (m.model_name ILIKE ${kw} OR pc.config_name ILIKE ${kw} OR q.quotation_no ILIKE ${kw})`;
+      whereClause += ` AND (m.model_name ILIKE $${paramIndex} OR pc.config_name ILIKE $${paramIndex} OR q.quotation_no ILIKE $${paramIndex})`;
       params.push(`%${keyword.trim()}%`);
     }
 
@@ -42,14 +46,18 @@ class StandardCost {
     const total = parseInt(countResult.rows[0].total);
 
     const offset = (page - 1) * pageSize;
+    paramIndex++;
+    const limitIdx = paramIndex;
+    paramIndex++;
+    const offsetIdx = paramIndex;
     const dataParams = [...params, pageSize, offset];
     const dataResult = await dbManager.query(`
       SELECT sc.*, pc.config_name as packaging_config_name, pc.packaging_type, pc.layer1_qty, pc.layer2_qty, pc.layer3_qty,
              pc.pc_per_bag, pc.bags_per_box, pc.boxes_per_carton, m.model_name, m.model_category, r.name as regulation_name,
-             u.real_name as setter_name, q.quotation_no
+             u.real_name as setter_name, q.quotation_no, q.customer_name
       ${baseQuery}
       ORDER BY sc.created_at DESC
-      LIMIT $${paramIndex + 1} OFFSET $${paramIndex + 2}`, dataParams);
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}`, dataParams);
 
     return { data: dataResult.rows, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
   }

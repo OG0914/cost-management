@@ -140,8 +140,9 @@ exports.createQuotation = async (req, res) => {
           quotation_no, customer_name, customer_region, model_id, regulation_id,
           quantity, freight_total, freight_per_unit, sales_type, shipping_method, port,
           base_cost, overhead_price, final_price, currency, status, created_by, 
-          packaging_config_id, include_freight_in_base, custom_profit_tiers, vat_rate
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+          packaging_config_id, include_freight_in_base, custom_profit_tiers, vat_rate,
+          is_estimation, reference_standard_cost_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
         RETURNING id`,
         [
           quotation_no, customer_name, customer_region, model_id, regulation_id,
@@ -149,7 +150,8 @@ exports.createQuotation = async (req, res) => {
           shipping_method || null, port || null,
           calculation.baseCost, calculation.overheadPrice, final_price, calculation.currency,
           'draft', req.user.id, req.body.packaging_config_id || null,
-          req.body.include_freight_in_base !== false, customProfitTiersJson, vatRateToSave
+          req.body.include_freight_in_base !== false, customProfitTiersJson, vatRateToSave,
+          req.body.is_estimation || false, req.body.reference_standard_cost_id || null
         ]
       );
       const newQuotationId = insertResult.rows[0].id;

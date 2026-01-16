@@ -38,6 +38,9 @@ router.use(verifyToken);
 // 获取所有原料
 router.get('/', materialController.getAllMaterials);
 
+// 批量获取原料
+router.get('/batch', materialController.getMaterialsByIds);
+
 // 根据厂商获取原料
 router.get('/manufacturer/:manufacturer', materialController.getMaterialsByManufacturer);
 

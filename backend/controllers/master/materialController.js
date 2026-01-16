@@ -84,6 +84,28 @@ const getMaterialById = async (req, res, next) => {
   }
 };
 
+// 批量获取原料（根据ID列表）
+const getMaterialsByIds = async (req, res, next) => {
+  try {
+    const { ids } = req.query;
+    
+    if (!ids) {
+      return res.status(400).json(error('缺少ids参数', 400));
+    }
+    
+    const idArray = ids.split(',').map(id => parseInt(id)).filter(id => !isNaN(id));
+    
+    if (idArray.length === 0) {
+      return res.json(success([]));
+    }
+    
+    const materials = await Material.findByIds(idArray);
+    res.json(success(materials));
+  } catch (err) {
+    next(err);
+  }
+};
+
 // 创建原料
 const createMaterial = async (req, res, next) => {
   try {
@@ -285,6 +307,7 @@ module.exports = {
   getAllMaterials,
   getMaterialsByManufacturer,
   getMaterialById,
+  getMaterialsByIds,
   createMaterial,
   updateMaterial,
   deleteMaterial,

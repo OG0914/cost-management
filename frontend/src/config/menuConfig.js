@@ -14,6 +14,7 @@ export const menuConfig = [
     roles: ['admin', 'reviewer', 'salesperson', 'readonly'],
     children: [
       { id: 'cost_add', label: '新增报价', route: '/cost/add', icon: 'ri-add-circle-line' },
+      { id: 'cost_estimation', label: '新产品预估', route: '/cost/add?mode=estimation', icon: 'ri-lightbulb-line' },
       { id: 'cost_standard', label: '标准成本', route: '/cost/standard', icon: 'ri-bookmark-line' },
       { id: 'cost_records', label: '成本记录', route: '/cost/records', icon: 'ri-file-list-3-line' }
     ]

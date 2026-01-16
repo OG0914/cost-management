@@ -78,6 +78,24 @@ export function useMaterialSearch() {
     }
   }
 
+  const preloadSelectedMaterials = async (materialIds) => { // 预加载已选原料信息
+    if (!materialIds || materialIds.length === 0) return
+    try {
+      logger.debug('预加载原料信息，IDs:', materialIds)
+      const res = await request.get('/materials/batch', { params: { ids: materialIds.join(',') } })
+      if (res.success && res.data) {
+        logger.debug('预加载成功，数据:', res.data)
+        const existingIds = new Set(materialSearchOptions.value.map(m => m.id))
+        res.data.forEach(material => {
+          if (!existingIds.has(material.id)) materialSearchOptions.value.push(material)
+        })
+        logger.debug('当前选项列表:', materialSearchOptions.value)
+      }
+    } catch (error) {
+      logger.error('预加载原料信息失败:', error)
+    }
+  }
+
   return {
     allMaterials,
     materialSearchOptions,
@@ -85,6 +103,7 @@ export function useMaterialSearch() {
     loadAllMaterials,
     searchMaterials,
     onMaterialSelect,
-    onPackagingMaterialSelect
+    onPackagingMaterialSelect,
+    preloadSelectedMaterials
   }
 }

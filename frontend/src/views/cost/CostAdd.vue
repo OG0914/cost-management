@@ -22,20 +22,48 @@
       <div class="cost-section">
         <div class="cost-section-header">
           <h3 class="cost-section-title">基本信息</h3>
+          <el-tag v-if="isEstimationMode" type="warning" size="small">新产品预估模式</el-tag>
         </div>
         <div class="cost-section-body">
+
+        <!-- 预估模式：新产品型号选择 -->
+        <el-row v-if="isEstimationMode" :gutter="24" class="estimation-row">
+          <el-col :span="12">
+            <el-form-item label="新产品型号" prop="model_id" :rules="[{ required: true, message: '请选择新产品型号', trigger: 'change' }]">
+              <el-select v-model="form.model_id" placeholder="请选择新产品型号" @change="onNewProductModelChange" style="width: 100%" filterable :disabled="isEditMode">
+                <el-option v-for="model in newProductModels" :key="model.id" :label="`${model.model_name} (${model.model_category})`" :value="model.id">
+                  <div class="model-option"><span>{{ model.model_name }}</span><span class="model-category">{{ model.model_category }}</span></div>
+                </el-option>
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="参考标准成本">
+              <el-select v-model="referenceStandardCostId" placeholder="请选择参考标准成本" @change="onReferenceStandardCostChange" style="width: 100%" filterable clearable :disabled="!form.model_id || isEditMode" :loading="referenceStandardCostsLoading">
+                <el-option v-for="sc in referenceStandardCosts" :key="sc.id" :label="`${sc.model_name} - ${sc.customer_name}`" :value="sc.id">
+                  <div class="reference-sc-option">
+                    <span class="sc-model">{{ sc.model_name }}</span>
+                    <span class="sc-customer">{{ sc.customer_name }}</span>
+                    <span class="sc-price">¥{{ formatNumber(sc.base_cost) }}</span>
+                  </div>
+                </el-option>
+              </el-select>
+              <div v-if="form.model_id && referenceStandardCosts.length === 0 && !referenceStandardCostsLoading" class="no-reference-tip">暂无同法规同分类的标准成本可参考</div>
+            </el-form-item>
+          </el-col>
+        </el-row>
 
         <el-row :gutter="24">
           <el-col :span="12">
             <el-form-item label="法规标准" prop="regulation_id">
-              <el-select v-model="form.regulation_id" placeholder="请选择法规标准" @change="onRegulationChange" style="width: 100%" :disabled="isEditMode">
+              <el-select v-model="form.regulation_id" placeholder="请选择法规标准" @change="onRegulationChange" style="width: 100%" :disabled="isEditMode || isEstimationMode">
                 <el-option v-for="reg in regulations" :key="reg.id" :label="reg.name" :value="reg.id" />
               </el-select>
             </el-form-item>
           </el-col>
 
           <el-col :span="12">
-            <el-form-item label="型号配置" prop="packaging_config_id">
+            <el-form-item label="型号配置" prop="packaging_config_id" v-if="!isEstimationMode">
               <el-select v-model="form.packaging_config_id" placeholder="请选择型号和包装配置" @change="onPackagingConfigChange" style="width: 100%" :disabled="!form.regulation_id || isEditMode" filterable>
                 <el-option-group v-for="group in groupedPackagingConfigs" :key="group.type" :label="group.typeName">
                   <el-option v-for="config in group.configs" :key="config.id" :label="`${config.model_name} - ${config.config_name} (${formatPackagingMethodFromConfig(config)})`" :value="config.id">
@@ -46,6 +74,9 @@
                   </el-option>
                 </el-option-group>
               </el-select>
+            </el-form-item>
+            <el-form-item label="产品分类" v-else>
+              <el-input :value="selectedNewProductCategory" disabled placeholder="选择新产品型号后自动显示" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -305,7 +336,7 @@
               <el-form-item label="CBM"><el-input :value="shippingInfo.cbm" disabled /></el-form-item>
             </el-col>
           </el-row>
-          <el-row :gutter="48" class="domestic-freight-row">
+          <el-row :gutter="24" class="domestic-freight-row">
             <el-col :span="6">
               <el-form-item label="每CBM单价">
                 <el-input-number v-model="domesticCbmPrice" :min="0" :precision="2" :controls="false" @change="handleDomesticCbmPriceChange" style="width: 100%" placeholder="0" />
@@ -353,7 +384,7 @@
                   </el-table-column>
                   <el-table-column label="原料名称" min-width="200">
                     <template #default="{ row, $index }">
-                      <el-select v-if="!row.from_standard || editMode.materials" v-model="row.material_id" filterable remote reserve-keyword clearable :remote-method="searchMaterials" :loading="materialSearchLoading" placeholder="输入名称或料号搜索" @change="handleMaterialSelect(row, $index)" style="width: 100%">
+                      <el-select v-if="!row.from_standard || editMode.materials" v-model="row.material_id" filterable remote reserve-keyword clearable :remote-method="searchMaterials" :loading="materialSearchLoading" placeholder="输入名称或料号搜索" @change="handleMaterialSelect(row, $index)" @focus="() => row.material_id && !materialSearchOptions.find(m => m.id === row.material_id) && preloadSelectedMaterials([row.material_id])" style="width: 100%">
                         <el-option v-for="material in materialSearchOptions" :key="material.id" :label="`${material.name} (${material.item_no})`" :value="material.id">
                           <div class="flex justify-between w-full"><span>{{ material.name }}</span><span class="text-slate-400 text-xs">¥{{ material.price }}/{{ material.unit }}</span></div>
                         </el-option>
@@ -420,7 +451,7 @@
                 <el-table :data="form.packaging" border size="small">
                   <el-table-column label="包材名称" min-width="180">
                     <template #default="{ row, $index }">
-                      <el-select v-if="!row.from_standard || editMode.packaging" v-model="row.material_id" filterable remote reserve-keyword clearable :remote-method="searchMaterials" :loading="materialSearchLoading" placeholder="输入名称或料号搜索" @change="handlePackagingMaterialSelect(row, $index)" style="width: 100%">
+                      <el-select v-if="!row.from_standard || editMode.packaging" v-model="row.material_id" filterable remote reserve-keyword clearable :remote-method="searchMaterials" :loading="materialSearchLoading" placeholder="输入名称或料号搜索" @change="handlePackagingMaterialSelect(row, $index)" @focus="() => row.material_id && !materialSearchOptions.find(m => m.id === row.material_id) && preloadSelectedMaterials([row.material_id])" style="width: 100%">
                         <el-option v-for="material in materialSearchOptions" :key="material.id" :label="`${material.name} (${material.item_no})`" :value="material.id">
                           <div class="flex justify-between w-full"><span>{{ material.name }}</span><span class="text-slate-400 text-xs">¥{{ material.price }}/{{ material.unit }}</span></div>
                         </el-option>
@@ -596,7 +627,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { InfoFilled, Document, FolderAdd, Promotion } from '@element-plus/icons-vue'
@@ -620,19 +651,32 @@ const form = reactive({
   customer_name: '', customer_region: '', sales_type: 'domestic',
   shipping_method: '', port_type: 'fob_shenzhen', port: '',
   quantity: null, freight_total: null, include_freight_in_base: true,
-  vat_rate: null, materials: [], processes: [], packaging: [], customFees: []
+  vat_rate: null, materials: [], processes: [], packaging: [], customFees: [],
+  is_estimation: false, reference_standard_cost_id: null
 })
 
 // 编辑状态控制
 const editMode = reactive({ materials: false, processes: false, packaging: false })
 const currentModelCategory = ref('')
 
+// 预估模式相关
+const isEstimationMode = computed(() => route.query.mode === 'estimation' || form.is_estimation)
+const newProductModels = ref([])
+const referenceStandardCosts = ref([])
+const referenceStandardCostsLoading = ref(false)
+const referenceStandardCostId = ref(null)
+const selectedNewProductCategory = computed(() => {
+  if (!form.model_id || !newProductModels.value.length) return ''
+  const model = newProductModels.value.find(m => m.id === form.model_id)
+  return model?.model_category || ''
+})
+
 // Composables
 const { freightCalculation, systemConfig, shippingInfo, quantityUnit, quantityInput, domesticCbmPrice, loadSystemConfig, setShippingInfoFromConfig, calculateShippingInfo, calculateFOBFreight, onQuantityUnitChange, onQuantityInputChange, onDomesticCbmPriceChange, onShippingMethodChange, onPortTypeChange, resetShippingInfo } = useFreightCalculation()
 const { calculation, customProfitTiers, materialCoefficient, materialCoefficientsCache, loadMaterialCoefficients, calculateItemSubtotal, calculateCost, addCustomProfitTier, updateCustomTierPrice, removeCustomProfitTier, prepareCustomProfitTiersForSave, getAllProfitTiers } = useCostCalculation()
 const { saving, submitting, isSaved, loadRegulations, loadPackagingConfigs, loadBomMaterials, loadPackagingConfigDetails, loadQuotationData, loadStandardCostData, saveQuotation, submitQuotation } = useQuotationData()
 const { isNewCustomer, selectedCustomerId, customerOptions, customerSearchLoading, customerSelectFocused, onCustomerTypeChange, searchCustomers, onCustomerSelect } = useCustomerSearch()
-const { allMaterials, materialSearchOptions, materialSearchLoading, loadAllMaterials, searchMaterials, onMaterialSelect, onPackagingMaterialSelect } = useMaterialSearch()
+const { allMaterials, materialSearchOptions, materialSearchLoading, loadAllMaterials, searchMaterials, onMaterialSelect, onPackagingMaterialSelect, preloadSelectedMaterials } = useMaterialSearch()
 const { hasDraft, getDraftInfo, saveDraft, loadDraft, clearDraft, startAutoSave, stopAutoSave } = useQuotationDraft()
 
 // 数据列表
@@ -645,6 +689,7 @@ const isEditMode = computed(() => !!route.params.id)
 const pageTitle = computed(() => {
   if (route.params.id) return '编辑报价单'
   if (route.query.copyFrom) return '复制报价单'
+  if (isEstimationMode.value) return '新产品成本预估'
   if (currentModelCategory.value) return `新增报价单 - ${currentModelCategory.value}`
   return '新增报价单'
 })
@@ -770,6 +815,138 @@ const onRegulationChange = () => {
   form.processes = []
   form.packaging = []
   calculation.value = null
+  // 预估模式下重置参考标准成本
+  if (isEstimationMode.value) {
+    referenceStandardCostId.value = null
+    referenceStandardCosts.value = []
+  }
+}
+
+// 预估模式：新产品型号变更
+const onNewProductModelChange = async () => {
+  if (!form.model_id) return
+  const model = newProductModels.value.find(m => m.id === form.model_id)
+  if (model) {
+    form.regulation_id = model.regulation_id
+    currentModelCategory.value = model.model_category
+    if (materialCoefficientsCache.value[model.model_category]) {
+      materialCoefficient.value = materialCoefficientsCache.value[model.model_category]
+    }
+    // 加载同法规同分类的参考标准成本
+    await loadReferenceStandardCosts(model.regulation_id, model.model_category)
+  }
+  // 清空之前的数据
+  referenceStandardCostId.value = null
+  form.materials = []
+  form.processes = []
+  form.packaging = []
+  calculation.value = null
+}
+
+// 加载参考标准成本列表
+const loadReferenceStandardCosts = async (regulationId, modelCategory) => {
+  referenceStandardCostsLoading.value = true
+  try {
+    const request = (await import('@/utils/request')).default
+    const res = await request.get('/standard-costs', { params: { regulation_id: regulationId, model_category: modelCategory, page: 1, pageSize: 100 } })
+    referenceStandardCosts.value = res.data || []
+  } catch (error) {
+    logger.error('加载参考标准成本失败:', error)
+    referenceStandardCosts.value = []
+  } finally {
+    referenceStandardCostsLoading.value = false
+  }
+}
+
+// 选择参考标准成本
+const onReferenceStandardCostChange = async () => {
+  if (!referenceStandardCostId.value) return
+  form.reference_standard_cost_id = referenceStandardCostId.value
+  try {
+    const data = await loadStandardCostData(referenceStandardCostId.value)
+    if (data) {
+      await fillReferenceStandardCostData(data)
+      ElMessage.success('已从参考标准成本复制数据，请根据新产品需求调整')
+    }
+  } catch (error) {
+    logger.error('加载参考标准成本数据失败:', error)
+    ElMessage.error('加载参考标准成本数据失败')
+  }
+}
+
+// 填充参考标准成本数据（预估模式专用）
+const fillReferenceStandardCostData = async (data) => {
+  const { standardCost, items } = data
+  const currentModelId = form.model_id
+  const currentRegulationId = form.regulation_id
+  
+  form.sales_type = standardCost.sales_type || 'domestic'
+  form.quantity = standardCost.quantity || null
+  form.vat_rate = configStore.config.vat_rate || 0.13
+  
+  // 复制原料数据，标记为来自参考
+  if (items?.material) {
+    form.materials = items.material.items.map(item => ({
+      category: 'material', material_id: item.material_id || null, item_name: item.item_name,
+      usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0,
+      subtotal: parseFloat(item.subtotal) || 0, is_changed: 0, from_standard: true, from_reference: true,
+      after_overhead: item.after_overhead || false, coefficient_applied: true
+    }))
+  }
+  // 复制工序数据
+  if (items?.process) {
+    form.processes = items.process.items.map(item => ({
+      category: 'process', item_name: item.item_name,
+      usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0,
+      subtotal: parseFloat(item.subtotal) || 0, is_changed: 0, from_standard: true, from_reference: true
+    }))
+  }
+  // 复制包材数据
+  let cartonVolume = null
+  if (items?.packaging) {
+    form.packaging = items.packaging.items.map(item => ({
+      category: 'packaging', material_id: item.material_id || null, item_name: item.item_name,
+      usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0,
+      carton_volume: item.carton_volume ? parseFloat(item.carton_volume) : null,
+      subtotal: parseFloat(item.subtotal) || 0, is_changed: 0, from_standard: true, from_reference: true
+    }))
+    const cartonMaterial = items.packaging.items.find(item => item.carton_volume && item.carton_volume > 0)
+    if (cartonMaterial) cartonVolume = parseFloat(cartonMaterial.carton_volume)
+  }
+  
+  // 设置每箱片数和外箱材积（用于运费计算）
+  if (standardCost.pc_per_bag && standardCost.bags_per_box && standardCost.boxes_per_carton) {
+    const pcsPerCarton = standardCost.pc_per_bag * standardCost.bags_per_box * standardCost.boxes_per_carton
+    setShippingInfoFromConfig(pcsPerCarton, cartonVolume)
+  }
+  
+  // 恢复新产品型号
+  form.model_id = currentModelId
+  form.regulation_id = currentRegulationId
+  form.is_estimation = true
+  
+  editMode.materials = false
+  editMode.processes = false
+  editMode.packaging = false
+  
+  if (form.quantity) {
+    quantityInput.value = form.quantity
+    quantityUnit.value = 'pcs'
+  }
+  if (form.quantity && shippingInfo.pcsPerCarton) calculateShippingInfo(form, handleCalculateCost)
+  handleCalculateCost()
+}
+
+// 加载新产品型号列表（无标准成本的型号）
+const loadNewProductModels = async () => {
+  try {
+    const request = (await import('@/utils/request')).default
+    const res = await request.get('/models')
+    newProductModels.value = res.data || []
+  } catch (error) {
+    logger.error('加载型号列表失败:', error)
+    newProductModels.value = []
+  }
 }
 
 const onSalesTypeChange = () => {
@@ -818,7 +995,25 @@ const onPackagingConfigChange = async () => {
   }
 }
 
-const toggleEditMode = (section) => { editMode[section] = !editMode[section]; if (editMode[section]) ElMessage.info(`${section === 'materials' ? '原料' : section === 'processes' ? '工序' : '包材'}明细已解锁，可以编辑`) }
+const toggleEditMode = async (section) => { // 解锁编辑时预加载已选原料
+  console.log('toggleEditMode 被调用，section:', section)
+  editMode[section] = !editMode[section]
+  console.log('editMode状态:', editMode[section])
+  if (editMode[section]) {
+    if (section === 'materials' || section === 'packaging') {
+      const items = section === 'materials' ? form.materials : form.packaging
+      console.log('当前items:', items)
+      const materialIds = items.filter(item => item.material_id).map(item => item.material_id)
+      console.log('提取的materialIds:', materialIds)
+      if (materialIds.length > 0) {
+        console.log('开始预加载原料...')
+        await preloadSelectedMaterials(materialIds)
+        console.log('预加载完成')
+      }
+    }
+    ElMessage.info(`${section === 'materials' ? '原料' : section === 'processes' ? '工序' : '包材'}明细已解锁，可以编辑`)
+  }
+}
 const addMaterialRow = () => form.materials.push({ category: 'material', material_id: null, item_name: '', usage_amount: null, unit_price: null, subtotal: 0, is_changed: 1, from_standard: false, after_overhead: false })
 const addProcessRow = () => form.processes.push({ category: 'process', item_name: '', usage_amount: null, unit_price: null, subtotal: 0, is_changed: 1, from_standard: false })
 const addPackagingRow = () => form.packaging.push({ category: 'packaging', material_id: null, item_name: '', usage_amount: null, unit_price: null, carton_volume: null, subtotal: 0, is_changed: 1, from_standard: false })
@@ -860,7 +1055,9 @@ const prepareData = () => ({
   shipping_method: form.shipping_method || null, port: form.port || null,
   include_freight_in_base: form.include_freight_in_base, vat_rate: form.vat_rate,
   custom_profit_tiers: prepareCustomProfitTiersForSave(), custom_fees: form.customFees,
-  items: [...form.materials, ...form.processes, ...form.packaging]
+  items: [...form.materials, ...form.processes, ...form.packaging],
+  is_estimation: form.is_estimation || isEstimationMode.value,
+  reference_standard_cost_id: form.reference_standard_cost_id || referenceStandardCostId.value
 })
 
 const handleSaveDraft = async () => {
@@ -1029,6 +1226,13 @@ onMounted(async () => {
   await loadAllMaterials()
   await loadMaterialCoefficients(currentModelCategory.value)
   form.vat_rate = configStore.config.vat_rate || 0.13
+  
+  // 预估模式下加载型号列表
+  if (route.query.mode === 'estimation') {
+    form.is_estimation = true
+    await loadNewProductModels()
+  }
+  
   if (route.query.model_category) {
     currentModelCategory.value = route.query.model_category
     if (materialCoefficientsCache.value[route.query.model_category]) materialCoefficient.value = materialCoefficientsCache.value[route.query.model_category]
@@ -1046,6 +1250,20 @@ onMounted(async () => {
     await checkAndRestoreDraft()
   }
   if (!route.params.id) startAutoSave(getFormDataForDraft, 30000)
+})
+
+// 监听路由模式变化，切换时重置表单
+watch(() => route.query.mode, async (newMode, oldMode) => {
+  if (route.path !== '/cost/add' || route.params.id) return // 仅新增页面生效
+  resetForm()
+  referenceStandardCostId.value = null
+  referenceStandardCosts.value = []
+  if (newMode === 'estimation') {
+    form.is_estimation = true
+    await loadNewProductModels()
+  } else {
+    form.is_estimation = false
+  }
 })
 
 onBeforeRouteLeave(async (to, from, next) => {
@@ -1379,6 +1597,17 @@ onBeforeRouteLeave(async (to, from, next) => {
 /* ========== 原有样式保留 ========== */
 .config-option { display: flex; justify-content: space-between; width: 100%; }
 .config-method { color: #8492a6; font-size: 12px; }
+
+/* 预估模式样式 */
+.estimation-row { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px dashed #e4e7ed; background: #fffbeb; margin: -16px -16px 16px; padding: 16px; border-radius: 8px 8px 0 0; }
+.model-option { display: flex; justify-content: space-between; width: 100%; }
+.model-category { color: #8492a6; font-size: 12px; }
+.reference-sc-option { display: flex; align-items: center; gap: 12px; width: 100%; }
+.sc-model { font-weight: 500; }
+.sc-customer { color: #606266; font-size: 13px; }
+.sc-price { margin-left: auto; color: #67c23a; font-size: 12px; }
+.no-reference-tip { color: #909399; font-size: 12px; margin-top: 4px; }
+
 .customer-region { float: right; color: #8492a6; font-size: 12px; }
 .vat-rate-section { margin-top: 16px; padding-top: 16px; border-top: 1px dashed #e4e7ed; }
 .export-freight-section { margin-top: 20px; }
@@ -1395,7 +1624,8 @@ onBeforeRouteLeave(async (to, from, next) => {
 .tip-content { flex: 1; }
 .tip-title { font-weight: 600; color: #1890ff; margin-bottom: 4px; }
 .tip-content div { color: #606266; font-size: 13px; line-height: 1.6; }
-.domestic-quantity-section { margin-top: 20px; padding-top: 16px; border-top: 1px dashed #e4e7ed; }
+.domestic-quantity-section { margin-top: 16px; padding-top: 16px; border-top: 1px dashed #e4e7ed; }
+.domestic-freight-row { margin-top: 16px; padding-top: 16px; border-top: 1px dashed #e4e7ed; }
 .quantity-hint { color: #67c23a; font-size: 12px; margin-top: 4px; }
 .freight-hint { color: #909399; font-size: 12px; margin-top: 4px; }
 .subtotal-row { display: flex; justify-content: flex-end; gap: 24px; padding: 8px 0; font-size: 14px; color: #606266; }

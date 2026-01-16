@@ -102,9 +102,8 @@ class QuotationItem {
    * @returns {Promise<Array>} 明细列表
    */
   static async findByQuotationIdAndCategory(quotationId, category) {
-    // 如果是包材分类，需要关联 packaging_materials 表获取外箱材积
+    // 如果是包材分类，需要关联获取外箱材积
     if (category === 'packaging') {
-      // 首先获取报价单的 packaging_config_id
       const quotationResult = await dbManager.query(
         'SELECT packaging_config_id FROM quotations WHERE id = $1',
         [quotationId]
@@ -112,20 +111,49 @@ class QuotationItem {
       const quotation = quotationResult.rows[0];
       
       if (quotation && quotation.packaging_config_id) {
-        // 关联 packaging_materials 表获取外箱材积
-        const result = await dbManager.query(
-          `SELECT 
-            qi.*,
-            pm.carton_volume
-          FROM quotation_items qi
-          LEFT JOIN packaging_materials pm 
-            ON pm.packaging_config_id = $1 
-            AND pm.material_name = qi.item_name
-          WHERE qi.quotation_id = $2 AND qi.category = $3
-          ORDER BY qi.id`,
-          [quotation.packaging_config_id, quotationId, category]
+        // 先获取包材明细
+        const itemsResult = await dbManager.query(
+          `SELECT * FROM quotation_items WHERE quotation_id = $1 AND category = $2 ORDER BY id`,
+          [quotationId, category]
         );
-        return result.rows;
+        const items = itemsResult.rows;
+        
+        // 获取该配置下所有包材及其外箱材积
+        const pmResult = await dbManager.query(
+          `SELECT material_name, carton_volume FROM packaging_materials WHERE packaging_config_id = $1`,
+          [quotation.packaging_config_id]
+        );
+        
+        // 找出有外箱材积的记录
+        const cartonVolumeRecord = pmResult.rows.find(pm => pm.carton_volume && parseFloat(pm.carton_volume) > 0);
+        const fallbackCartonVolume = cartonVolumeRecord ? parseFloat(cartonVolumeRecord.carton_volume) : null;
+        
+        // 构建名称映射（精确匹配）
+        const pmMap = new Map(pmResult.rows.map(pm => [pm.material_name, parseFloat(pm.carton_volume) || null]));
+        
+        // 为每个包材项匹配外箱材积
+        return items.map(item => {
+          // 1. 先尝试精确匹配
+          let cartonVolume = pmMap.get(item.item_name);
+          
+          // 2. 如果精确匹配不到，尝试模糊匹配
+          if (!cartonVolume) {
+            for (const [name, vol] of pmMap) {
+              if (vol && (name.includes(item.item_name) || item.item_name.includes(name))) {
+                cartonVolume = vol;
+                break;
+              }
+            }
+          }
+          
+          // 3. 如果还是匹配不到但有兜底值，检查是否是外箱类包材
+          if (!cartonVolume && fallbackCartonVolume) {
+            const isCartonItem = item.item_name.includes('外箱') || item.item_name.includes('纸箱') || item.item_name.includes('彩箱') || item.item_name.includes('卡通箱');
+            if (isCartonItem) cartonVolume = fallbackCartonVolume;
+          }
+          
+          return { ...item, carton_volume: cartonVolume };
+        });
       }
     }
     

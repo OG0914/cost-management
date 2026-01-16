@@ -45,8 +45,11 @@
             <div class="item-details">
               <div class="detail-row">
                 <span v-if="item.model_series" class="series-tag"><span class="label">系列:</span> {{ item.model_series }}</span>
+              </div>
+              <div class="detail-row">
                 <span class="category-tag"><span class="label">分类:</span> {{ item.model_category || '暂无' }}</span>
               </div>
+              <div class="divider-line"></div>
               <div class="bom-info bom-link" @click="handleConfigBom(item)">
                 BOM: 共 {{ item.bom_count || 0 }} 项
               </div>
@@ -430,7 +433,7 @@ onMounted(() => { fetchRegulations(); fetchModels(); fetchSeries() })
 .item-name { font-size: 16px; font-weight: 600; color: #303133; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .item-sub { font-size: 13px; color: #909399; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.item-details { display: flex; flex-direction: column; gap: 8px; }
+.item-details { display: flex; flex-direction: column; gap: 10px; }
 .category { font-size: 14px; }
 .category .el-tag { font-size: 13px; padding: 4px 10px; }
 .no-category { color: #c0c4cc; font-size: 13px; }
@@ -443,6 +446,7 @@ onMounted(() => { fetchRegulations(); fetchModels(); fetchSeries() })
 .detail-row { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: #606266; }
 .series-tag, .category-tag { display: flex; align-items: center; gap: 4px; }
 .series-tag .label, .category-tag .label { color: #909399; }
+.divider-line { height: 1px; background-color: #ebeef5; margin: 4px 0; }
 
 .card-actions { display: flex; justify-content: center; gap: 8px; padding: 12px; border-top: 1px solid #ebeef5; background: #fafafa; border-radius: 0 0 8px 8px; }
 .card-actions .el-button { transition: transform 0.2s, box-shadow 0.2s; }

@@ -212,9 +212,24 @@ const toggleCollapse = () => {
 // 判断菜单是否激活
 const isActive = (menuId) => {
   const currentPath = route.path
+  const currentQuery = route.query
   const item = findMenuItem(menuId)
   if (item?.route) {
-    return currentPath === item.route || currentPath.startsWith(item.route + '/')
+    // 处理带查询参数的路由
+    if (item.route.includes('?')) {
+      const [path, queryStr] = item.route.split('?')
+      if (currentPath !== path) return false
+      const params = new URLSearchParams(queryStr)
+      for (const [key, value] of params) {
+        if (currentQuery[key] !== value) return false
+      }
+      return true
+    }
+    // 普通路由匹配（排除带mode参数的情况）
+    if (currentPath === item.route) {
+      return !currentQuery.mode // 只有没有mode参数时才匹配普通新增报价
+    }
+    return currentPath.startsWith(item.route + '/')
   }
   return false
 }
@@ -241,6 +256,19 @@ const toggleSubmenu = (menuId) => {
 // 点击菜单项
 const handleMenuClick = (item) => {
   if (item.route) {
+    const [targetPath, targetQueryStr] = item.route.split('?')
+    const currentPath = route.path
+    const currentQuery = route.query
+    
+    // 检查是否同路径但不同查询参数（如 /cost/add 和 /cost/add?mode=estimation）
+    if (targetPath === currentPath) {
+      const targetQuery = targetQueryStr ? Object.fromEntries(new URLSearchParams(targetQueryStr)) : {}
+      const queryChanged = JSON.stringify(targetQuery) !== JSON.stringify(currentQuery)
+      if (queryChanged) {
+        router.replace({ path: targetPath, query: targetQuery }) // 强制导航
+        return
+      }
+    }
     router.push(item.route)
   }
 }

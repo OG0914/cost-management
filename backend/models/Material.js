@@ -47,6 +47,18 @@ class Material {
   }
 
   /**
+   * 根据多个 ID 批量查找原料
+   * @param {Array<number>} ids - 原料 ID 数组
+   * @returns {Promise<Array>} 原料列表
+   */
+  static async findByIds(ids) {
+    if (!ids || ids.length === 0) return []
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',')
+    const result = await dbManager.query(`SELECT * FROM materials WHERE id IN (${placeholders})`, ids)
+    return result.rows
+  }
+
+  /**
    * 创建原料
    * @param {Object} data - 原料数据
    * @returns {Promise<number>} 新原料的 ID
@@ -164,6 +176,18 @@ class Material {
     if (!itemNos || itemNos.length === 0) return [];
     const placeholders = itemNos.map((_, i) => `$${i + 1}`).join(',');
     const result = await dbManager.query(`SELECT * FROM materials WHERE item_no IN (${placeholders})`, itemNos);
+    return result.rows;
+  }
+
+  /**
+   * 根据多个ID批量查找原料
+   * @param {Array<number>} ids - 原料ID数组
+   * @returns {Promise<Array>} 原料列表
+   */
+  static async findByIds(ids) {
+    if (!ids || ids.length === 0) return [];
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+    const result = await dbManager.query(`SELECT * FROM materials WHERE id IN (${placeholders})`, ids);
     return result.rows;
   }
 
