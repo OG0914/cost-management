@@ -126,10 +126,10 @@
             {{ formatDateTime(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="130" fixed="right">
           <template #default="{ row }">
             <el-button :icon="View" circle size="small" @click="viewQuotation(row)" :disabled="!row.quotation_id" title="查看" />
-            <el-button :icon="CopyDocument" circle size="small" @click="copyStandardCost(row)" title="复制" />
+            <el-button v-if="!isAdminOrReviewer" :icon="CopyDocument" circle size="small" @click="copyStandardCost(row)" title="复制" />
             <el-button v-if="isAdminOrReviewer" :icon="Clock" circle size="small" @click="showHistory(row)" title="历史" />
             <el-button v-if="isAdminOrReviewer" :icon="Delete" circle size="small" class="delete-btn" @click="deleteStandardCost(row)" title="删除" />
           </template>

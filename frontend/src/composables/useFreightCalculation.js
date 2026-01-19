@@ -68,16 +68,9 @@ export function useFreightCalculation() {
     const cartons = Math.ceil(exactCartons)
     shippingInfo.cartons = cartons
 
-    // 检查是否除不尽（仅按片输入时）
-    if (quantityUnit.value === 'pcs' && exactCartons !== cartons) {
-      const suggestedQuantity = cartons * shippingInfo.pcsPerCarton
-      ElMessage.warning({
-        message: `当前数量 ${form.quantity} 除不尽！建议数量为 ${suggestedQuantity}pcs（${cartons}箱 × ${shippingInfo.pcsPerCarton}pcs/箱）`,
-        duration: 8000,
-        showClose: true
-      })
+    if (form.quantity % shippingInfo.pcsPerCarton !== 0) {
+      // 除不尽时的逻辑已移至页面内提示，此处不再弹窗
     }
-
     // 计算 CBM
     if (shippingInfo.cartonVolume && shippingInfo.cartonVolume > 0) {
       const totalVolume = shippingInfo.cartonVolume * cartons
@@ -155,7 +148,8 @@ export function useFreightCalculation() {
       } else if (ceiledCBM > 10 && ceiledCBM <= 15) {
         baseFreight = systemConfig.value.lclBaseFreight11_15
       } else if (ceiledCBM > 15) {
-        ElMessage.warning('CBM超过15，建议选择整柜运输或联系物流确认运费')
+        // CBM超过15的提示逻辑已移至UI层显示，此处不再弹窗
+        // ElMessage.warning('CBM超过15，建议选择整柜运输或联系物流确认运费')
         return
       }
 

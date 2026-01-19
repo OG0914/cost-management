@@ -5,7 +5,7 @@
         <ActionButton type="compare" @click="goToCompare" :disabled="selectedQuotations.length < 2">
           对比模式 ({{ selectedQuotations.length }})
         </ActionButton>
-        <ActionButton type="add" @click="showCategoryModal">新增报价单</ActionButton>
+        <ActionButton v-if="!isRestrictedRole" type="add" @click="showCategoryModal">新增报价单</ActionButton>
       </template>
     </CostPageHeader>
 
@@ -33,7 +33,7 @@
       </div>
 
       <!-- 桌面端数据表格 -->
-      <el-table :data="tableData" border v-loading="loading" @selection-change="handleSelectionChange" class="hidden md:table">
+      <el-table :data="tableData" border v-loading="loading" @selection-change="handleSelectionChange" style="width: 100%" class="hidden md:block">
         <el-table-column type="selection" width="55" :selectable="checkSelectable" />
         <el-table-column prop="quotation_no" label="报价单编号" width="180">
           <template #default="{ row }">
@@ -92,11 +92,11 @@
             {{ formatDateTime(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" :width="isRestrictedRole ? 100 : 160" fixed="right">
           <template #default="{ row }">
             <el-button :icon="View" circle size="small" @click="viewDetail(row.id)" title="查看" />
             <el-button v-if="canEdit(row)" :icon="EditPen" circle size="small" @click="editQuotation(row.id)" title="编辑" />
-            <el-button :icon="CopyDocument" circle size="small" @click="copyQuotation(row.id)" title="复制" />
+            <el-button v-if="!isRestrictedRole" :icon="CopyDocument" circle size="small" @click="copyQuotation(row.id)" title="复制" />
             <el-button v-if="canDelete(row)" :icon="Delete" circle size="small" class="delete-btn" @click="deleteQuotation(row.id)" title="删除" />
           </template>
         </el-table-column>
@@ -136,7 +136,7 @@
             <div class="flex gap-2" @click.stop>
               <el-button :icon="View" circle size="small" @click="viewDetail(row.id)" />
               <el-button v-if="canEdit(row)" :icon="EditPen" circle size="small" @click="editQuotation(row.id)" />
-              <el-button :icon="CopyDocument" circle size="small" @click="copyQuotation(row.id)" />
+              <el-button v-if="!isRestrictedRole" :icon="CopyDocument" circle size="small" @click="copyQuotation(row.id)" />
             </div>
           </div>
         </div>
@@ -171,6 +171,7 @@ const categoryModalVisible = ref(false)
 
 // 用户权限
 const user = getUser()
+const isRestrictedRole = computed(() => ['admin', 'reviewer', 'readonly'].includes(user?.role))
 
 // 搜索关键词
 const searchKeyword = ref('')
@@ -292,6 +293,7 @@ const onCategoryConfirm = (category) => {
 
 // 判断是否可以编辑
 const canEdit = (row) => {
+  if (isRestrictedRole.value) return false
   return row.status === 'draft' || row.status === 'rejected'
 }
 
@@ -404,7 +406,11 @@ onUnmounted(() => {
 /* 搜索框响应式 */
 .search-input { width: 100%; max-width: 350px; }
 
-.filter-bar { margin-bottom: 16px; }
+.filter-bar {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+}
 
 /* 分页样式 */
 .pagination-wrapper {

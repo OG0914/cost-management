@@ -54,6 +54,14 @@ class QueryBuilder {
     return this;
   }
 
+  whereRaw(condition, params = []) { // 原始SQL条件，支持带占位符的复杂条件
+    let rawCondition = condition;
+    params.forEach(() => { rawCondition = rawCondition.replace(/\$\d+/, this._nextPlaceholder()); });
+    this.conditions.push(rawCondition);
+    this.params.push(...params);
+    return this;
+  }
+
   leftJoin(table, condition) {
     this.joins.push(`LEFT JOIN ${table} ON ${condition}`);
     return this;
@@ -81,32 +89,32 @@ class QueryBuilder {
 
   buildSelect(fields = '*') {
     this.paramIndex = 0; // 重置索引
-    const rebuiltConditions = this.conditions.map(condition => 
+    const rebuiltConditions = this.conditions.map(condition =>
       condition.replace(/\$\d+/g, () => { this.paramIndex++; return `$${this.paramIndex}`; })
     );
-    
+
     let sql = `SELECT ${fields} FROM ${this.table}`;
     if (this.joins.length > 0) sql += ' ' + this.joins.join(' ');
     if (rebuiltConditions.length > 0) sql += ' WHERE ' + rebuiltConditions.join(' AND ');
     if (this.orderBy) sql += ' ' + this.orderBy;
-    
+
     const queryParams = [...this.params];
     if (this.limitValue !== null) { this.paramIndex++; sql += ` LIMIT $${this.paramIndex}`; queryParams.push(this.limitValue); }
     if (this.offsetValue !== null) { this.paramIndex++; sql += ` OFFSET $${this.paramIndex}`; queryParams.push(this.offsetValue); }
-    
+
     return { sql, params: queryParams };
   }
 
   buildCount() {
     this.paramIndex = 0;
-    const rebuiltConditions = this.conditions.map(condition => 
+    const rebuiltConditions = this.conditions.map(condition =>
       condition.replace(/\$\d+/g, () => { this.paramIndex++; return `$${this.paramIndex}`; })
     );
-    
+
     let sql = `SELECT COUNT(*) as total FROM ${this.table}`;
     if (this.joins.length > 0) sql += ' ' + this.joins.join(' ');
     if (rebuiltConditions.length > 0) sql += ' WHERE ' + rebuiltConditions.join(' AND ');
-    
+
     return { sql, params: [...this.params] };
   }
 

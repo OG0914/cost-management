@@ -49,6 +49,11 @@ const createQuotation = async (req, res) => {
             items // 报价单明细数组
         } = req.body;
 
+        // 权限检查：管理员和审核员不允许创建报价单
+        if (['admin', 'reviewer'].includes(req.user.role)) {
+            return res.status(403).json(error('管理员和审核员无权创建报价单', 403));
+        }
+
         // 数据验证
         if (!customer_name || !customer_region || !model_id || !regulation_id || !quantity || !sales_type) {
             return res.status(400).json(error('缺少必填字段', 400));
@@ -400,8 +405,13 @@ const updateQuotation = async (req, res) => {
             return res.status(404).json(error('报价单不存在', 404));
         }
 
-        // 检查权限：创建者、管理员、审核人可以编辑
-        if (quotation.created_by !== req.user.id && !['admin', 'reviewer'].includes(req.user.role)) {
+        // 检查权限：只有创建者（业务员）可以编辑
+        // 管理员和审核员无权编辑，即使是他们（理论上不应该）创建的也不行，或者严格限制只能业务员操作
+        if (['admin', 'reviewer'].includes(req.user.role)) {
+            return res.status(403).json(error('管理员和审核员无权编辑报价单', 403));
+        }
+
+        if (quotation.created_by !== req.user.id) {
             return res.status(403).json(error('无权限编辑此报价单', 403));
         }
 
@@ -586,8 +596,12 @@ const submitQuotation = async (req, res) => {
             return res.status(404).json(error('报价单不存在', 404));
         }
 
-        // 检查权限
-        if (quotation.created_by !== req.user.id && req.user.role !== 'admin') {
+        // 检查权限：管理员和审核员不允许提交报价单
+        if (['admin', 'reviewer'].includes(req.user.role)) {
+            return res.status(403).json(error('管理员和审核员无权提交报价单', 403));
+        }
+
+        if (quotation.created_by !== req.user.id) {
             return res.status(403).json(error('无权限提交此报价单', 403));
         }
 
@@ -627,16 +641,19 @@ const getQuotationList = async (req, res) => {
 
         const options = {
             status,
-            keyword, // 新增：多字段搜索
+            keyword,
             date_from: start_date,
             date_to: end_date,
             page: pageNum,
             pageSize: pageSizeNum
         };
 
-        // 非管理员/审核人/只读用户只能查看自己创建的报价单
+        // 权限控制：业务员只能看自己的；审核员排除其他用户的草稿
         if (!['admin', 'reviewer', 'readonly'].includes(req.user.role)) {
-            options.created_by = req.user.id;
+            options.created_by = req.user.id; // 业务员只能看自己创建的
+        } else if (req.user.role === 'reviewer') {
+            options.excludeOthersDraft = true; // 审核员排除其他用户的草稿
+            options.currentUserId = req.user.id;
         }
 
         const result = await Quotation.findAll(options);

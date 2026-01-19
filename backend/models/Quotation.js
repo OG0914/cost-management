@@ -49,7 +49,7 @@ class Quotation {
         data.reference_standard_cost_id || null
       ]
     );
-    
+
     return result.rows[0].id;
   }
 
@@ -108,7 +108,7 @@ class Quotation {
   static async findAll(options = {}) {
     const {
       status,
-      keyword, // 新增：多字段搜索
+      keyword,
       customer_name,
       model_name,
       model_id,
@@ -116,7 +116,9 @@ class Quotation {
       date_from,
       date_to,
       page = 1,
-      pageSize = 20
+      pageSize = 20,
+      excludeOthersDraft = false, // 审核员过滤：排除其他用户的草稿
+      currentUserId = null        // 当前用户ID（用于excludeOthersDraft判断）
     } = options;
 
     // 使用查询构建器构建查询
@@ -160,6 +162,11 @@ class Quotation {
 
     if (date_to) {
       builder.whereDate('q.created_at', '<=', date_to);
+    }
+
+    // 审核员权限过滤：排除其他用户的草稿（只能看已提交的或自己的草稿）
+    if (excludeOthersDraft && currentUserId) {
+      builder.whereRaw(`(q.status != 'draft' OR q.created_by = $1)`, [currentUserId]);
     }
 
     // 查询总数
@@ -218,7 +225,7 @@ class Quotation {
       'customer_name', 'customer_region', 'model_id', 'regulation_id',
       'quantity', 'freight_total', 'freight_per_unit', 'sales_type',
       'shipping_method', 'port',
-      'base_cost', 'overhead_price', 'final_price', 'currency', 
+      'base_cost', 'overhead_price', 'final_price', 'currency',
       'packaging_config_id', 'include_freight_in_base', 'custom_profit_tiers',
       'vat_rate', 'is_estimation', 'reference_standard_cost_id'
     ];
@@ -296,13 +303,13 @@ class Quotation {
           'DELETE FROM quotation_items WHERE quotation_id = $1',
           [id]
         );
-        
+
         // 删除自定义费用
         await client.query(
           'DELETE FROM quotation_custom_fees WHERE quotation_id = $1',
           [id]
         );
-        
+
         // 删除主表
         await client.query(
           'DELETE FROM quotations WHERE id = $1',
@@ -327,7 +334,7 @@ class Quotation {
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
     const dateStr = `${year}${month}${day}`;
-    
+
     // 查询今天最大的流水号
     const result = await dbManager.query(
       `SELECT quotation_no 
@@ -337,21 +344,21 @@ class Quotation {
        LIMIT 1`,
       [`MK${dateStr}-%`]
     );
-    
+
     let serial = 1;
     if (result.rows.length > 0 && result.rows[0].quotation_no) {
       // 从最后一个编号中提取流水号并加1
       const lastSerial = parseInt(result.rows[0].quotation_no.split('-')[1]);
       serial = lastSerial + 1;
     }
-    
+
     // 循环检查编号是否存在，直到找到未使用的编号
     let quotationNo = `MK${dateStr}-${String(serial).padStart(3, '0')}`;
     while (await this.exists(quotationNo)) {
       serial++;
       quotationNo = `MK${dateStr}-${String(serial).padStart(3, '0')}`;
     }
-    
+
     return quotationNo;
   }
 

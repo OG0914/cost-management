@@ -20,25 +20,26 @@
       </div>
 
       <!-- 桌面端数据表格 -->
-      <el-table :data="tableData" border v-loading="loading" style="width: 100%" class="hidden md:table">
+      <el-table :data="tableData" border v-loading="loading" style="width: 100%" class="hidden md:block" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" />
         <el-table-column prop="quotation_no" label="报价单编号" width="160" />
-        <el-table-column prop="status" label="状态" width="90">
+        <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)">
               {{ getStatusName(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="sales_type" label="类型" width="80">
+        <el-table-column prop="sales_type" label="类型" width="90">
           <template #default="{ row }">
             <el-tag :type="row.sales_type === 'domestic' ? 'success' : 'warning'" size="small">
               {{ getSalesTypeName(row.sales_type) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="customer_name" label="客户名称" min-width="120" />
-        <el-table-column prop="model_name" label="型号" width="120" />
-        <el-table-column prop="config_name" label="包装方式" width="220">
+        <el-table-column prop="customer_name" label="客户名称" width="150" />
+        <el-table-column prop="model_name" label="型号" width="150" />
+        <el-table-column prop="config_name" label="包装方式" min-width="220">
           <template #default="{ row }">
             <div v-if="row.config_name">
               <div>{{ row.config_name }}</div>
@@ -54,13 +55,13 @@
             {{ formatQuantity(row.quantity) }}
           </template>
         </el-table-column>
-        <el-table-column prop="final_price" label="最终价格" width="120">
+        <el-table-column prop="final_price" label="最终价格" width="150">
           <template #default="{ row }">
             {{ formatAmount(row.final_price, row.currency) }}
           </template>
         </el-table-column>
-        <el-table-column prop="reviewer_name" label="审核人" width="90" />
-        <el-table-column prop="reviewed_at" label="审核时间" width="150">
+        <el-table-column prop="reviewer_name" label="审核人" width="100" />
+        <el-table-column prop="reviewed_at" label="审核时间" width="180">
           <template #default="{ row }">
             {{ formatDateTime(row.reviewed_at) }}
           </template>
@@ -241,6 +242,12 @@ const handleDelete = async (row) => {
   }
 }
 
+// 处理表格选择
+const handleSelectionChange = (val) => {
+  // 预留批量操作功能
+  console.log('Selection:', val)
+}
+
 onMounted(() => {
   fetchApprovedList()
 })
@@ -251,12 +258,24 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.approved-review-container { padding: 20px; }
-.header-card { margin-bottom: 20px; }
-.header-content { display: flex; justify-content: space-between; align-items: center; }
-.header-left h2 { margin: 0; font-size: 18px; }
-.filter-bar { margin-bottom: 16px; }
+/* .approved-review-container { padding: 20px; } */
+
+.filter-bar {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+}
 .search-input { width: 100%; max-width: 350px; }
+
+/* 操作按钮悬停效果 */
+.el-table .el-button.is-circle {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.el-table .el-button.is-circle:hover:not(:disabled) {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
 
 /* 操作按钮样式 */
 .delete-btn { color: #F56C6C; }

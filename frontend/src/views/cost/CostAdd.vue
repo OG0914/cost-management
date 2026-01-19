@@ -145,51 +145,61 @@
                   </div>
                 </el-col>
                 <el-col :span="12" v-if="form.port_type === 'other'">
-                  <div class="freight-field">
-                    <span class="freight-label">港口名称:</span>
+                  <el-form-item label="港口名称" prop="port" :rules="[{ required: true, message: '请输入港口名称', trigger: 'blur' }]">
                     <el-input v-model="form.port" placeholder="请输入港口名称" style="width: 200px" />
-                  </div>
+                  </el-form-item>
                 </el-col>
               </el-row>
 
-              <el-row :gutter="24" v-if="form.shipping_method">
-                <el-col :span="8">
-                  <div class="freight-field">
-                    <span class="freight-label">数量单位:</span>
-                    <el-radio-group v-model="quantityUnit" @change="handleQuantityUnitChange" :disabled="!shippingInfo.pcsPerCarton">
-                      <el-radio value="pcs">按片</el-radio>
-                      <el-radio value="carton">按箱</el-radio>
-                    </el-radio-group>
-                  </div>
-                </el-col>
-                <el-col :span="8">
-                  <div class="freight-field">
-                    <span class="freight-label">订购数量:</span>
-                    <el-input-number v-model="quantityInput" :min="1" :precision="0" :controls="false" @change="handleQuantityInputChange" style="width: 150px" :disabled="(form.shipping_method === 'fcl_20' || form.shipping_method === 'fcl_40') && form.port_type === 'fob_shenzhen'" />
-                    <span class="freight-unit">{{ quantityUnit === 'pcs' ? 'pcs' : '箱' }}</span>
-                  </div>
-                </el-col>
-                <el-col :span="4" v-if="shippingInfo.cartons !== null">
-                  <div class="freight-field">
-                    <span class="freight-label">箱数:</span>
-                    <span class="freight-value">{{ shippingInfo.cartons }}</span>
-                  </div>
-                </el-col>
-                <el-col :span="4" v-if="shippingInfo.cbm !== null">
-                  <div class="freight-field">
-                    <span class="freight-label">CBM:</span>
-                    <span class="freight-value">{{ shippingInfo.cbm }}</span>
-                  </div>
-                </el-col>
-              </el-row>
+              <!-- 散货 (LCL) 数量输入区域 (仿内销布局) -->
+              <div v-if="form.shipping_method === 'lcl'" class="lcl-quantity-section mt-4">
+                <el-row :gutter="24">
+                  <el-col :span="12">
+                    <el-form-item label="数量单位">
+                      <el-radio-group v-model="quantityUnit" @change="handleQuantityUnitChange" :disabled="!shippingInfo.pcsPerCarton">
+                        <el-radio value="pcs">按片</el-radio>
+                        <el-radio value="carton">按箱</el-radio>
+                      </el-radio-group>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="12">
+                    <el-form-item :label="quantityUnit === 'pcs' ? '订购数量(片)' : '订购数量(箱)'" prop="quantity" class="compact-required-label">
+                      <el-input-number v-model="quantityInput" :min="1" :precision="0" :controls="false" @change="handleQuantityInputChange" style="width: 100%" />
+                      <div v-if="quantityUnit === 'carton' && shippingInfo.pcsPerCarton" class="quantity-hint">= {{ form.quantity }} 片（{{ quantityInput }}箱 × {{ shippingInfo.pcsPerCarton }}片/箱）</div>
+                    </el-form-item>
+                  </el-col>
+                </el-row>
 
-              <!-- 智能装箱建议 -->
-              <div v-if="freightCalculation && freightCalculation.suggestedQuantity" class="smart-packing-tip">
-                <el-icon><InfoFilled /></el-icon>
-                <div class="tip-content">
-                  <div class="tip-title">智能装箱建议:</div>
-                  <div>当前数量: {{ form.quantity }} pcs ≈ {{ shippingInfo.cartons }} 箱</div>
-                  <div>建议数量: <strong>{{ freightCalculation.suggestedQuantity }} pcs</strong> ({{ freightCalculation.maxCartons }}箱) 以达到最佳装载率</div>
+                <el-row :gutter="24" v-if="shippingInfo.cartons !== null || shippingInfo.cbm !== null">
+                  <el-col :span="12">
+                    <el-form-item label="总箱数">
+                      <div class="readonly-value-box">{{ shippingInfo.cartons || '-' }}</div>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="12">
+                    <el-form-item label="总体积(CBM)">
+                      <div class="readonly-value-box">{{ shippingInfo.cbm || '-' }}</div>
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+
+                <!-- 智能装箱建议 (仅在按片且除不尽时显示) -->
+                <div v-if="quantityUnit === 'pcs' && form.quantity && shippingInfo.pcsPerCarton && (form.quantity % shippingInfo.pcsPerCarton !== 0)" class="smart-packing-tip domestic">
+                  <el-icon><InfoFilled /></el-icon>
+                  <div class="tip-content">
+                    <div class="tip-title">智能装箱建议:</div>
+                    <div>当前数量: {{ form.quantity }} pcs ({{ (form.quantity / shippingInfo.pcsPerCarton).toFixed(1) }}箱)</div>
+                    <div>建议数量: <strong>{{ Math.ceil(form.quantity / shippingInfo.pcsPerCarton) * shippingInfo.pcsPerCarton }} pcs</strong> ({{ Math.ceil(form.quantity / shippingInfo.pcsPerCarton) }}箱) 以达到整数箱</div>
+                  </div>
+                </div>
+
+                <!-- CBM过大提示 (仅在散货且CBM>15时显示) -->
+                <div v-if="shippingInfo.cbm && parseFloat(shippingInfo.cbm) > 15" class="smart-packing-tip warning">
+                  <el-icon><WarningFilled /></el-icon>
+                  <div class="tip-content">
+                    <div class="tip-title">运输建议:</div>
+                    <div>当前CBM为 <strong>{{ shippingInfo.cbm }}</strong> (超过15)，建议选择整柜运输或联系物流单独确认运费。</div>
+                  </div>
                 </div>
               </div>
 
@@ -258,22 +268,22 @@
               <!-- 运费总价（非FOB深圳时手动输入） -->
               <el-row :gutter="24" v-if="form.port_type !== 'fob_shenzhen'">
                 <el-col :span="12">
-                  <div class="freight-field">
-                    <span class="freight-label">运费总价:</span>
+                  <el-form-item label="运费总价" prop="freight_total" :rules="[{ required: true, message: '请输入运费总价', trigger: 'blur' }]">
                     <el-input-number v-model="form.freight_total" :min="0" :precision="4" :controls="false" @change="handleCalculateCost" style="width: 200px" />
                     <span class="freight-unit">CNY</span>
-                  </div>
+                  </el-form-item>
                 </el-col>
               </el-row>
 
               <el-row :gutter="24">
                 <el-col :span="24">
                   <div class="freight-field freight-field-wide">
-                    <span class="freight-label freight-label-wide">运费计入成本:</span>
-                    <el-radio-group v-model="form.include_freight_in_base" @change="handleCalculateCost">
-                      <el-radio :value="true">是</el-radio>
-                      <el-radio :value="false">否（运费在管销价基础上单独计算）</el-radio>
-                    </el-radio-group>
+                    <el-form-item label="运费计入成本" required class="wide-label-item mb-0">
+                      <el-radio-group v-model="form.include_freight_in_base" @change="handleCalculateCost">
+                        <el-radio :value="true">是</el-radio>
+                        <el-radio :value="false">否（运费在管销价基础上单独计算）</el-radio>
+                      </el-radio-group>
+                    </el-form-item>
                   </div>
                 </el-col>
               </el-row>
@@ -284,7 +294,7 @@
         <!-- 内销数量输入 -->
         <div v-if="form.sales_type === 'domestic'" class="domestic-quantity-section">
           <el-row :gutter="24">
-            <el-col :span="6">
+            <el-col :span="12">
               <el-form-item label="数量单位">
                 <el-radio-group v-model="quantityUnit" @change="handleQuantityUnitChange" :disabled="!shippingInfo.pcsPerCarton">
                   <el-radio value="pcs">按片</el-radio>
@@ -292,33 +302,53 @@
                 </el-radio-group>
               </el-form-item>
             </el-col>
-            <el-col :span="8">
-              <el-form-item :label="quantityUnit === 'pcs' ? '购买数量(片)' : '购买数量(箱)'" prop="quantity">
+            <el-col :span="12">
+              <el-form-item :label="quantityUnit === 'pcs' ? '购买数量(片)' : '购买数量(箱)'" prop="quantity" class="compact-required-label">
                 <el-input-number v-model="quantityInput" :min="1" :precision="0" :controls="false" @change="handleQuantityInputChange" style="width: 100%" />
                 <div v-if="quantityUnit === 'carton' && shippingInfo.pcsPerCarton" class="quantity-hint">= {{ form.quantity }} 片（{{ quantityInput }}箱 × {{ shippingInfo.pcsPerCarton }}片/箱）</div>
               </el-form-item>
             </el-col>
-            <el-col :span="5" v-if="shippingInfo.cartons !== null">
-              <el-form-item label="箱数"><el-input :value="shippingInfo.cartons" disabled /></el-form-item>
+          </el-row>
+          
+          <el-row :gutter="24" v-if="shippingInfo.cartons !== null || shippingInfo.cbm !== null">
+            <el-col :span="12">
+              <el-form-item label="箱数">
+                <div class="readonly-value-box">{{ shippingInfo.cartons || '-' }}</div>
+              </el-form-item>
             </el-col>
-            <el-col :span="5" v-if="shippingInfo.cbm !== null">
-              <el-form-item label="CBM"><el-input :value="shippingInfo.cbm" disabled /></el-form-item>
+            <el-col :span="12">
+              <el-form-item label="CBM">
+                <div class="readonly-value-box">{{ shippingInfo.cbm || '-' }}</div>
+              </el-form-item>
             </el-col>
           </el-row>
-          <el-row :gutter="48" class="domestic-freight-row">
-            <el-col :span="6">
+
+          <div v-if="quantityUnit === 'pcs' && form.quantity && shippingInfo.pcsPerCarton && (form.quantity % shippingInfo.pcsPerCarton !== 0)" class="smart-packing-tip domestic">
+            <el-icon><InfoFilled /></el-icon>
+            <div class="tip-content">
+              <div class="tip-title">智能装箱建议:</div>
+              <div>当前数量: {{ form.quantity }} pcs ({{ (form.quantity / shippingInfo.pcsPerCarton).toFixed(1) }}箱)</div>
+              <div>建议数量: <strong>{{ Math.ceil(form.quantity / shippingInfo.pcsPerCarton) * shippingInfo.pcsPerCarton }} pcs</strong> ({{ Math.ceil(form.quantity / shippingInfo.pcsPerCarton) }}箱) 以达到整数箱</div>
+            </div>
+          </div>
+
+          <el-row :gutter="24" class="domestic-freight-row">
+            <el-col :span="12">
               <el-form-item label="每CBM单价">
                 <el-input-number v-model="domesticCbmPrice" :min="0" :precision="2" :controls="false" @change="handleDomesticCbmPriceChange" style="width: 100%" placeholder="0" />
               </el-form-item>
             </el-col>
-            <el-col :span="8">
-              <el-form-item label="运费总价" prop="freight_total">
+            <el-col :span="12">
+              <el-form-item label="运费总价" prop="freight_total" class="compact-required-label">
                 <el-input-number v-model="form.freight_total" :min="0" :precision="2" :controls="false" @change="handleCalculateCost" style="width: 100%" />
                 <div v-if="domesticCbmPrice && shippingInfo.cbm" class="freight-hint">= {{ domesticCbmPrice }} × {{ Math.ceil(parseFloat(shippingInfo.cbm)) }} CBM</div>
               </el-form-item>
             </el-col>
-            <el-col :span="10">
-              <el-form-item label="运费计入成本">
+          </el-row>
+          
+          <el-row :gutter="24">
+            <el-col :span="24">
+              <el-form-item label="运费计入成本" required class="wide-label-item">
                 <el-radio-group v-model="form.include_freight_in_base" @change="handleCalculateCost">
                   <el-radio :value="true">是</el-radio>
                   <el-radio :value="false">否</el-radio>
@@ -353,7 +383,8 @@
                   </el-table-column>
                   <el-table-column label="原料名称" min-width="200">
                     <template #default="{ row, $index }">
-                      <el-select v-if="!row.from_standard || editMode.materials" v-model="row.material_id" filterable remote reserve-keyword clearable :remote-method="searchMaterials" :loading="materialSearchLoading" placeholder="输入名称或料号搜索" @change="handleMaterialSelect(row, $index)" style="width: 100%">
+                      <el-select v-if="!row.from_standard || editMode.materials" v-model="row.material_id" filterable remote reserve-keyword clearable :remote-method="searchMaterials" :loading="materialSearchLoading" :placeholder="row.item_name || '输入名称或料号搜索'" @change="handleMaterialSelect(row, $index)" style="width: 100%">
+                        <el-option v-if="row.material_id && row.item_name && !materialSearchOptions.some(o => o.id === row.material_id)" :label="row.item_name" :value="row.material_id" />
                         <el-option v-for="material in materialSearchOptions" :key="material.id" :label="`${material.name} (${material.item_no})`" :value="material.id">
                           <div class="flex justify-between w-full"><span>{{ material.name }}</span><span class="text-slate-400 text-xs">¥{{ material.price }}/{{ material.unit }}</span></div>
                         </el-option>
@@ -388,7 +419,7 @@
                 </div>
                 <el-table :data="form.processes" border size="small">
                   <el-table-column label="工序名称" min-width="150">
-                    <template #default="{ row }"><el-input v-model="row.item_name" @change="handleItemSubtotalChange(row)" :disabled="!!row.from_standard && !editMode.processes" /></template>
+                    <template #default="{ row }"><el-input v-model="row.item_name" @change="handleItemSubtotalChange(row)" size="small" :disabled="!!row.from_standard && !editMode.processes" /></template>
                   </el-table-column>
                   <el-table-column label="基本用量" width="100">
                     <template #default="{ row }"><el-input-number v-model="row.usage_amount" :min="0" :precision="4" :controls="false" @change="handleItemSubtotalChange(row)" size="small" style="width: 100%" :disabled="!!row.from_standard && !editMode.processes" /></template>
@@ -420,7 +451,8 @@
                 <el-table :data="form.packaging" border size="small">
                   <el-table-column label="包材名称" min-width="180">
                     <template #default="{ row, $index }">
-                      <el-select v-if="!row.from_standard || editMode.packaging" v-model="row.material_id" filterable remote reserve-keyword clearable :remote-method="searchMaterials" :loading="materialSearchLoading" placeholder="输入名称或料号搜索" @change="handlePackagingMaterialSelect(row, $index)" style="width: 100%">
+                      <el-select v-if="!row.from_standard || editMode.packaging" v-model="row.material_id" filterable remote reserve-keyword clearable :remote-method="searchMaterials" :loading="materialSearchLoading" :placeholder="row.item_name || '输入名称或料号搜索'" @change="handlePackagingMaterialSelect(row, $index)" style="width: 100%">
+                        <el-option v-if="row.material_id && row.item_name && !materialSearchOptions.some(o => o.id === row.material_id)" :label="row.item_name" :value="row.material_id" />
                         <el-option v-for="material in materialSearchOptions" :key="material.id" :label="`${material.name} (${material.item_no})`" :value="material.id">
                           <div class="flex justify-between w-full"><span>{{ material.name }}</span><span class="text-slate-400 text-xs">¥{{ material.price }}/{{ material.unit }}</span></div>
                         </el-option>
@@ -430,6 +462,12 @@
                   </el-table-column>
                   <el-table-column label="基本用量" width="100">
                     <template #default="{ row }"><el-input-number v-model="row.usage_amount" :min="0" :precision="4" :controls="false" @change="handleItemSubtotalChange(row)" size="small" style="width: 100%" :disabled="!!row.from_standard && !editMode.packaging" /></template>
+                  </el-table-column>
+                  <el-table-column label="外箱材积" width="100">
+                    <template #default="{ row }">
+                      <span v-if="row.carton_volume">{{ row.carton_volume }}</span>
+                      <span v-else class="text-gray-400">-</span>
+                    </template>
                   </el-table-column>
                   <el-table-column label="单价(CNY)" width="100"><template #default="{ row }">{{ formatNumber(row.unit_price) || '-' }}</template></el-table-column>
                   <el-table-column label="小计" width="100"><template #default="{ row }">{{ formatNumber(row.subtotal) || '-' }}</template></el-table-column>
@@ -772,6 +810,10 @@ const onSalesTypeChange = () => {
     form.port_type = 'fob_shenzhen'
     form.port = ''
     freightCalculation.value = null
+  } else {
+    // 外销默认按箱
+    quantityUnit.value = 'carton'
+    onQuantityUnitChange(form, handleCalculateCost)
   }
   handleCalculateCost()
 }
@@ -812,7 +854,7 @@ const onPackagingConfigChange = async () => {
   }
 }
 
-const toggleEditMode = (section) => { editMode[section] = !editMode[section]; if (editMode[section]) ElMessage.info(`${section === 'materials' ? '原料' : section === 'processes' ? '工序' : '包材'}明细已解锁，可以编辑`) }
+const toggleEditMode = (section) => { editMode[section] = !editMode[section]; if (editMode[section]) ElMessage.success(`${section === 'materials' ? '原料' : section === 'processes' ? '工序' : '包材'}名称已解锁，编辑后请锁定保存`) }
 const addMaterialRow = () => form.materials.push({ category: 'material', material_id: null, item_name: '', usage_amount: null, unit_price: null, subtotal: 0, is_changed: 1, from_standard: false, after_overhead: false })
 const addProcessRow = () => form.processes.push({ category: 'process', item_name: '', usage_amount: null, unit_price: null, subtotal: 0, is_changed: 1, from_standard: false })
 const addPackagingRow = () => form.packaging.push({ category: 'packaging', material_id: null, item_name: '', usage_amount: null, unit_price: null, carton_volume: null, subtotal: 0, is_changed: 1, from_standard: false })
@@ -1415,4 +1457,138 @@ onBeforeRouteLeave(async (to, from, next) => {
 .sticky-price-divider { width: 1px; height: 32px; background: #e4e7ed; }
 .sticky-placeholder { font-size: 13px; color: #909399; }
 .sticky-footer-right { display: flex; align-items: center; gap: 8px; }
-</style>
+
+/* ========== 新增布局样式 ========== */
+.compact-required-label :deep(.el-form-item__label) {
+  padding-right: 4px;
+}
+.compact-required-label :deep(.el-form-item__label::before) {
+  margin-right: 2px !important;
+}
+
+.wide-label-item {
+  display: flex !important;
+  align-items: center !important;
+}
+.wide-label-item :deep(.el-form-item__label) {
+  width: auto !important;
+  margin-right: 12px !important;
+  float: none !important;
+  white-space: nowrap;
+  text-align: left !important;
+}
+.wide-label-item :deep(.el-form-item__content) {
+  margin-left: 0 !important;
+  flex: none !important;
+}
+
+.readonly-value-box {
+  background-color: #f5f7fa;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  padding: 0 12px;
+  height: 32px;
+  line-height: 32px;
+  color: #606266;
+  width: 100%;
+}
+
+.freight-input-group {
+  display: flex;
+  align-items: center;
+  background-color: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 24px;
+  gap: 32px;
+  flex-wrap: nowrap;
+}
+
+.freight-input-group .input-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.freight-input-group .input-item.primary {
+  flex: 0 0 auto;
+}
+
+.freight-input-group .input-label {
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.freight-input-group .quantity-input {
+  width: 120px;
+}
+
+.info-divider {
+  width: 1px;
+  height: 20px;
+  background-color: #e2e8f0;
+}
+
+.freight-input-group .info-value {
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.freight-input-group .info-value.big {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.freight-input-group .unit-text {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-left: 2px;
+}
+
+.mb-0 { margin-bottom: 0 !important; }
+
+/* 智能装箱提示（内销） */
+.smart-packing-tip.domestic {
+  margin: 12px 0 20px 0;
+  border-radius: 6px;
+  background: #fdf6ec;
+  border: 1px solid #faecd8;
+  padding: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.smart-packing-tip.domestic .el-icon {
+  color: #e6a23c;
+  margin-top: 2px;
+}
+.smart-packing-tip.domestic .tip-title {
+  color: #e6a23c;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+/* CBM过大警告样式 */
+.smart-packing-tip.warning {
+  margin: 12px 0 20px 0;
+  border-radius: 6px;
+  background: #fef0f0;
+  border: 1px solid #fde2e2;
+  padding: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.smart-packing-tip.warning .el-icon {
+  color: #f56c6c;
+  margin-top: 2px;
+}
+.smart-packing-tip.warning .tip-title {
+  color: #f56c6c;
+  font-weight: 600;
+  margin-bottom: 4px;
+}</style>
