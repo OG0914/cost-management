@@ -238,10 +238,10 @@
           <div class="mb-4">
             <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">包装类型</span>
             <el-radio-group v-model="form.packaging_type" size="small" @change="onPackagingTypeChange">
-              <el-radio-button label="standard_box">标准彩盒</el-radio-button>
-              <el-radio-button label="no_box">无彩盒</el-radio-button>
-              <el-radio-button label="blister_direct">吸塑直出</el-radio-button>
-              <el-radio-button label="blister_bag">袋装吸塑</el-radio-button>
+              <el-radio-button value="standard_box">标准彩盒</el-radio-button>
+              <el-radio-button value="no_box">无彩盒</el-radio-button>
+              <el-radio-button value="blister_direct">吸塑直出</el-radio-button>
+              <el-radio-button value="blister_bag">袋装吸塑</el-radio-button>
             </el-radio-group>
           </div>
 
@@ -312,7 +312,7 @@
               <el-icon class="mr-1"><CopyDocument /></el-icon>一键复制
             </el-button>
             <el-button type="primary" plain size="small" @click="addProcess">
-              <el-icon class="mr-1"><Plus /></el-icon> Add Process
+              <el-icon class="mr-1"><Plus /></el-icon> 添加工序
             </el-button>
           </div>
         </div>
@@ -479,11 +479,12 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, Grid, List, View, EditPen, CaretLeft, CaretRight, InfoFilled, CopyDocument } from '@element-plus/icons-vue'
+import { Plus, Delete, Grid, List, View, EditPen, CaretLeft, CaretRight, CopyDocument } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { useConfigStore } from '../../store/config'
 import { formatNumber, formatDateTime } from '../../utils/format'
+import { getRegulationColor } from '../../utils/color'
 import logger from '@/utils/logger'
 import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
@@ -498,12 +499,12 @@ import {
   calculateTotalPerCarton
 } from '../../config/packagingTypes'
 
+defineOptions({ name: 'ProcessManage' })
+
 const router = useRouter()
 const authStore = useAuthStore()
 const configStore = useConfigStore()
 const showToolbar = ref(false)
-
-
 
 // 权限检查
 const canEdit = computed(() => authStore.isAdmin || authStore.isProducer)
@@ -631,23 +632,13 @@ const formTotalProcessPrice = computed(() => {
 // 包装类型标签颜色
 const getPackagingTypeTagType = (type) => {
   const typeMap = {
-    standard_box: '',
+    standard_box: 'primary',
     no_box: 'success',
     blister_direct: 'warning',
     blister_bag: 'info'
   }
-  return typeMap[type] || ''
+  return typeMap[type] || 'info'
 }
-
-// 法规颜色映射
-const REGULATION_COLORS = { 
-  'NIOSH': '#409EFF', 
-  'GB': '#67C23A', 
-  'CE': '#E6A23C', 
-  'ASNZS': '#F56C6C', 
-  'KN': '#9B59B6' 
-}
-const getRegulationColor = (name) => REGULATION_COLORS[name] || '#909399'
 
 // 包装类型变更时重置层级数量
 const onPackagingTypeChange = () => {
@@ -680,27 +671,13 @@ const loadCategories = async () => {
   }
 }
 
-// 加载所有配置及其工序数量（用于一键复制）
+// 加载所有配置及其工序数量（用于一键复制，使用优化后的接口）
 const loadConfigsForCopy = async () => {
   copyConfigsLoading.value = true
   try {
-    const response = await request.get('/processes/packaging-configs')
+    const response = await request.get('/processes/packaging-configs/with-process-count')
     if (response.success) {
-      // 获取每个配置的工序数量
-      const configsWithCount = await Promise.all(
-        response.data.map(async (config) => {
-          try {
-            const detailResponse = await request.get(`/processes/packaging-configs/${config.id}`)
-            return {
-              ...config,
-              process_count: detailResponse.success ? (detailResponse.data.processes?.length || 0) : 0
-            }
-          } catch {
-            return { ...config, process_count: 0 }
-          }
-        })
-      )
-      allConfigsForCopy.value = configsWithCount
+      allConfigsForCopy.value = response.data
     }
   } catch (error) {
     logger.error('加载配置列表失败:', error)
@@ -734,6 +711,13 @@ const handleCopySourceChange = async (configId) => {
   }
 }
 
+// 辅助函数：映射工序数据
+const mapProcessData = (p, index) => ({
+  process_name: p.process_name,
+  unit_price: p.unit_price,
+  sort_order: index
+})
+
 // 执行工序复制
 const handleCopyProcesses = () => {
   if (!copySourceConfigId.value || copySourcePreview.value.length === 0) {
@@ -743,33 +727,29 @@ const handleCopyProcesses = () => {
   
   copyLoading.value = true
   try {
+    let copiedCount = 0
+    
     if (copyMode.value === 'replace') {
-      // 替换模式：清空现有工序
-      form.processes = copySourcePreview.value.map((p, index) => ({
-        process_name: p.process_name,
-        unit_price: p.unit_price,
-        sort_order: index
-      }))
+      form.processes = copySourcePreview.value.map(mapProcessData)
+      copiedCount = form.processes.length
     } else {
       // 合并模式：追加新工序（跳过重复）
-      const existingNames = form.processes.map(p => p.process_name)
+      const existingNames = new Set(form.processes.map(p => p.process_name))
       const newProcesses = copySourcePreview.value
-        .filter(p => !existingNames.includes(p.process_name))
-        .map((p, index) => ({
-          process_name: p.process_name,
-          unit_price: p.unit_price,
-          sort_order: form.processes.length + index
-        }))
-      form.processes.push(...newProcesses)
+        .filter(p => !existingNames.has(p.process_name))
+        .map((p, index) => mapProcessData(p, form.processes.length + index))
       
-      if (newProcesses.length < copySourcePreview.value.length) {
-        const skipped = copySourcePreview.value.length - newProcesses.length
+      form.processes.push(...newProcesses)
+      copiedCount = newProcesses.length
+      
+      const skipped = copySourcePreview.value.length - copiedCount
+      if (skipped > 0) {
         ElMessage.info(`已跳过 ${skipped} 个重复工序`)
       }
     }
     
     showProcessCopyDialog.value = false
-    ElMessage.success(`成功复制 ${copyMode.value === 'replace' ? copySourcePreview.value.length : form.processes.length} 项工序`)
+    ElMessage.success(`成功复制 ${copiedCount} 项工序`)
   } finally {
     copyLoading.value = false
   }
@@ -836,7 +816,8 @@ const editConfig = async (row) => {
       form.layer2_qty = data.layer2_qty ?? data.bags_per_box
       form.layer3_qty = data.layer3_qty ?? data.boxes_per_carton
       form.is_active = data.is_active ? 1 : 0
-      form.processes = data.processes || []
+      // 将工序单价转为数字类型
+      form.processes = (data.processes || []).map(p => ({ ...p, unit_price: Number(p.unit_price) || 0 }))
       
       dialogVisible.value = true
     }
@@ -881,49 +862,24 @@ const deleteConfig = async (row) => {
   }
 }
 
-// 批量删除
+// 批量删除（使用批量删除API，显示详细结果）
 const handleBatchDelete = async () => {
-  if (selectedConfigs.value.length === 0) {
-    ElMessage.warning('请先选择要删除的配置')
-    return
-  }
-
+  if (selectedConfigs.value.length === 0) { ElMessage.warning('请先选择要删除的配置'); return }
   try {
-    await ElMessageBox.confirm(
-      `确定要删除选中的 ${selectedConfigs.value.length} 条包装配置吗？此操作不可恢复！`, 
-      '批量删除确认', 
-      {
-        confirmButtonText: '确定删除',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-
+    await ElMessageBox.confirm(`确定要删除选中的 ${selectedConfigs.value.length} 条配置吗？`, '批量删除确认', { type: 'warning' })
     const ids = selectedConfigs.value.map(item => item.id)
-    
-    let successCount = 0
-    let failCount = 0
-    
-    for (const id of ids) {
-      try {
-        await request.delete(`/processes/packaging-configs/${id}`)
-        successCount++
-      } catch (error) {
-        failCount++
+    const response = await request.post('/processes/packaging-configs/batch-delete', { ids })
+    if (response.success) {
+      const { deleted, failed } = response.data
+      if (failed?.length > 0) {
+        const reasons = failed.map(f => `${f.name}: ${f.reason}`).join('\n')
+        ElMessageBox.alert(`成功删除 ${deleted} 条\n以下配置无法删除:\n${reasons}`, '删除结果', { type: 'warning' })
+      } else {
+        ElMessage.success(`成功删除 ${deleted} 条配置`)
       }
-    }
-    
-    if (successCount > 0) {
-      ElMessage.success(`成功删除 ${successCount} 条配置${failCount > 0 ? `，失败 ${failCount} 条` : ''}`)
       loadPackagingConfigs()
-    } else {
-      ElMessage.error('删除失败')
     }
-  } catch (error) {
-    if (error !== 'cancel') {
-      // 错误已在拦截器处理
-    }
-  }
+  } catch (error) { if (error !== 'cancel') { /* 错误已在拦截器处理 */ } }
 }
 
 // 添加工序
@@ -1101,20 +1057,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.page-header {
-  margin-bottom: 16px;
-}
-
-.back-button {
-  font-size: 14px;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .filter-bar {
   margin-bottom: 16px;
   display: flex;
@@ -1289,32 +1231,6 @@ onMounted(async () => {
 .delete-btn:hover:not(:disabled) {
   color: #f78989;
   border-color: #f78989;
-}
-
-/* 分页样式 */
-.pagination-wrapper {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #ebeef5;
-}
-
-.pagination-total {
-  font-size: 14px;
-  color: #606266;
-}
-
-.pagination-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.pagination-info {
-  font-size: 14px;
-  color: #606266;
 }
 
 .packaging-info {

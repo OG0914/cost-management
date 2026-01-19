@@ -18,6 +18,6 @@ router.post('/export/excel', requireRole(['admin', 'reviewer']), customerControl
 router.post('/batch-delete', requireRole(['admin', 'reviewer']), customerController.batchDeleteCustomers);
 
 router.put('/:id', requireRole(['admin', 'reviewer']), customerController.updateCustomer);
-router.delete('/:id', requireRole(['admin']), customerController.deleteCustomer);
+router.delete('/:id', requireRole(['admin', 'reviewer']), customerController.deleteCustomer); // 与 batch-delete 权限一致
 
 module.exports = router;

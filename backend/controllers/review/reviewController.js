@@ -19,12 +19,12 @@ const { formatPackagingMethod } = require('../../config/packagingTypes');
  */
 const getPendingList = async (req, res) => {
   try {
-    const { keyword, start_date, end_date, page = 1, page_size = 20 } = req.query;
+    const { keyword, start_date, end_date, page = 1, page_size, pageSize } = req.query; // 兼容两种命名
     const userRole = req.user.role;
     const userId = req.user.id;
 
     const pageNum = Math.max(1, parseInt(page) || 1);
-    const pageSizeNum = Math.min(100, Math.max(1, parseInt(page_size) || 20));
+    const pageSizeNum = Math.min(100, Math.max(1, parseInt(page_size || pageSize) || 20)); // 优先 page_size，兼容 pageSize
     
     let sql = `
       SELECT 
@@ -106,12 +106,12 @@ const getPendingList = async (req, res) => {
  */
 const getApprovedList = async (req, res) => {
   try {
-    const { status, keyword, start_date, end_date, page = 1, page_size = 20 } = req.query;
+    const { status, keyword, start_date, end_date, page = 1, page_size, pageSize } = req.query; // 兼容两种命名
     const userRole = req.user.role;
     const userId = req.user.id;
 
     const pageNum = Math.max(1, parseInt(page) || 1);
-    const pageSizeNum = Math.min(100, Math.max(1, parseInt(page_size) || 20));
+    const pageSizeNum = Math.min(100, Math.max(1, parseInt(page_size || pageSize) || 20)); // 优先 page_size，兼容 pageSize
     
     let sql = `
       SELECT 
@@ -260,6 +260,7 @@ const approveQuotation = async (req, res) => {
     const quotation = await Quotation.findById(id);
     if (!quotation) return res.status(404).json(error('报价单不存在', 404));
     if (quotation.status !== 'submitted') return res.status(400).json(error('当前状态不允许审核操作', 400));
+    if (quotation.created_by === reviewerId) return res.status(403).json(error('不能审核自己创建的报价单', 403)); // 禁止自审核
     
     await dbManager.query(`UPDATE quotations SET status = 'approved', reviewed_by = $1, reviewed_at = NOW(), updated_at = NOW() WHERE id = $2`, [reviewerId, id]);
     
@@ -286,6 +287,7 @@ const rejectQuotation = async (req, res) => {
     const quotation = await Quotation.findById(id);
     if (!quotation) return res.status(404).json(error('报价单不存在', 404));
     if (quotation.status !== 'submitted') return res.status(400).json(error('当前状态不允许退回操作', 400));
+    if (quotation.created_by === reviewerId) return res.status(403).json(error('不能退回自己创建的报价单', 403)); // 禁止自退回
     
     await dbManager.query(`UPDATE quotations SET status = 'rejected', reviewed_by = $1, reviewed_at = NOW(), updated_at = NOW() WHERE id = $2`, [reviewerId, id]);
     await Comment.create({ quotation_id: id, user_id: reviewerId, content: `【退回原因】${reason}` });

@@ -51,6 +51,23 @@ export function parseFormattedNumber(value) {
 }
 
 /**
+ * 下载 Blob 文件
+ * @param {Blob|ArrayBuffer} data - 文件数据
+ * @param {string} filename - 文件名
+ */
+export function downloadBlob(data, filename) {
+  const blob = data instanceof Blob ? data : new Blob([data])
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', filename)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
+}
+
+/**
  * 格式化日期时间
  * 支持 ISO 格式 (2025-12-06T16:06:31.000Z) 和普通格式 (2025-12-06 16:06:31)
  * @param {string|Date} value - 日期值

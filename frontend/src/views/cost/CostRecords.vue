@@ -24,7 +24,7 @@
           clearable
           @input="handleSearch"
           @clear="handleClearSearch"
-          style="width: 350px"
+          class="search-input"
         >
           <template #prefix>
             <el-icon><Search /></el-icon>
@@ -32,8 +32,8 @@
         </el-input>
       </div>
 
-      <!-- 数据表格 -->
-      <el-table :data="tableData" border v-loading="loading" @selection-change="handleSelectionChange">
+      <!-- 桌面端数据表格 -->
+      <el-table :data="tableData" border v-loading="loading" @selection-change="handleSelectionChange" class="hidden md:table">
         <el-table-column type="selection" width="55" :selectable="checkSelectable" />
         <el-table-column prop="quotation_no" label="报价单编号" width="180">
           <template #default="{ row }">
@@ -101,6 +101,46 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 移动端卡片列表 -->
+      <div class="md:hidden space-y-3" v-loading="loading">
+        <div v-if="tableData.length === 0 && !loading" class="text-center py-8 text-slate-400">
+          <i class="ri-inbox-line text-4xl mb-2"></i>
+          <p>暂无数据</p>
+        </div>
+        <div v-for="row in tableData" :key="row.id" class="mobile-card" @click="viewDetail(row.id)">
+          <div class="mobile-card-header">
+            <div class="mobile-card-title flex items-center">
+              <span>{{ row.quotation_no }}</span>
+              <svg v-if="row.is_standard_cost" class="standard-stamp-icon ml-1" viewBox="0 0 24 24" width="16" height="16">
+                <circle cx="12" cy="12" r="10" fill="none" stroke="#E6A23C" stroke-width="2"/>
+                <text x="12" y="15" text-anchor="middle" fill="#E6A23C" font-size="7" font-weight="bold">标</text>
+              </svg>
+            </div>
+            <el-tag :type="getStatusType(row.status)" size="small">{{ getStatusText(row.status) }}</el-tag>
+          </div>
+          <div class="mobile-card-body">
+            <div class="flex justify-between">
+              <span class="text-slate-500">{{ row.customer_name }}</span>
+              <el-tag :type="row.sales_type === 'domestic' ? 'success' : 'warning'" size="small">
+                {{ row.sales_type === 'domestic' ? '内销' : '外销' }}
+              </el-tag>
+            </div>
+            <div class="flex justify-between mt-1">
+              <span class="text-slate-600">{{ row.model_name }}</span>
+              <span class="font-semibold text-primary-600">{{ formatNumber(row.final_price) }} {{ row.currency }}</span>
+            </div>
+          </div>
+          <div class="mobile-card-footer">
+            <span class="text-xs text-slate-400">{{ formatDateTime(row.created_at) }}</span>
+            <div class="flex gap-2" @click.stop>
+              <el-button :icon="View" circle size="small" @click="viewDetail(row.id)" />
+              <el-button v-if="canEdit(row)" :icon="EditPen" circle size="small" @click="editQuotation(row.id)" />
+              <el-button :icon="CopyDocument" circle size="small" @click="copyQuotation(row.id)" />
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- 分页 -->
       <CommonPagination v-model:current-page="currentPage" v-model:page-size="pageSize" :total="total" />
@@ -361,11 +401,10 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* 搜索框响应式 */
+.search-input { width: 100%; max-width: 350px; }
 
-
-.filter-bar {
-  margin-bottom: 16px;
-}
+.filter-bar { margin-bottom: 16px; }
 
 /* 分页样式 */
 .pagination-wrapper {

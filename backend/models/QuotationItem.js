@@ -36,34 +36,43 @@ class QuotationItem {
   }
 
   /**
-   * 批量创建报价单明细
+   * 批量创建报价单明细（优化版：批量INSERT）
    * @param {Array} items - 明细数组
    * @returns {Promise<number>} 创建的明细数量
    */
   static async batchCreate(items) {
-    return await dbManager.transaction(async (client) => {
-      for (const item of items) {
-        await client.query(
-          `INSERT INTO quotation_items (
-            quotation_id, category, item_name, usage_amount, 
-            unit_price, subtotal, is_changed, original_value, material_id, after_overhead
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-          [
-            item.quotation_id,
-            item.category,
-            item.item_name,
-            item.usage_amount,
-            item.unit_price,
-            item.subtotal,
-            item.is_changed || false,
-            item.original_value || null,
-            item.material_id || null,
-            item.after_overhead || false
-          ]
-        );
-      }
-      return items.length;
+    if (!items || items.length === 0) return 0;
+    
+    // 构建批量INSERT语句
+    const values = [];
+    const placeholders = [];
+    let paramIndex = 0;
+    
+    items.forEach((item) => {
+      const start = paramIndex + 1;
+      placeholders.push(`($${start}, $${start+1}, $${start+2}, $${start+3}, $${start+4}, $${start+5}, $${start+6}, $${start+7}, $${start+8}, $${start+9})`);
+      values.push(
+        item.quotation_id,
+        item.category,
+        item.item_name,
+        item.usage_amount,
+        item.unit_price,
+        item.subtotal,
+        item.is_changed || false,
+        item.original_value || null,
+        item.material_id || null,
+        item.after_overhead || false
+      );
+      paramIndex += 10;
     });
+
+    const sql = `INSERT INTO quotation_items (
+      quotation_id, category, item_name, usage_amount, 
+      unit_price, subtotal, is_changed, original_value, material_id, after_overhead
+    ) VALUES ${placeholders.join(', ')}`;
+    
+    await dbManager.query(sql, values);
+    return items.length;
   }
 
 
@@ -168,40 +177,51 @@ class QuotationItem {
   }
 
   /**
-   * 获取报价单明细的分组统计
+   * 获取报价单明细的分组统计（优化版：单次查询避免N+1）
    * @param {number} quotationId - 报价单 ID
    * @returns {Promise<Object>} 分组统计数据
    */
   static async getGroupedByCategory(quotationId) {
-    const result = await dbManager.query(
-      `SELECT 
-        category,
-        COUNT(*) as item_count,
-        SUM(subtotal) as category_total
-      FROM quotation_items
-      WHERE quotation_id = $1
-      GROUP BY category`,
+    // 获取报价单的 packaging_config_id
+    const quotationResult = await dbManager.query(
+      'SELECT packaging_config_id FROM quotations WHERE id = $1',
       [quotationId]
     );
+    const quotation = quotationResult.rows[0];
+    const packagingConfigId = quotation?.packaging_config_id;
+
+    // 单次查询获取所有明细，包含包材的外箱材积
+    const result = await dbManager.query(
+      `SELECT 
+        qi.*,
+        CASE WHEN qi.category = 'packaging' AND $2::int IS NOT NULL 
+          THEN pm.carton_volume ELSE NULL END as carton_volume
+      FROM quotation_items qi
+      LEFT JOIN packaging_materials pm 
+        ON qi.category = 'packaging' 
+        AND pm.packaging_config_id = $2 
+        AND pm.material_name = qi.item_name
+      WHERE qi.quotation_id = $1
+      ORDER BY qi.category, qi.id`,
+      [quotationId, packagingConfigId]
+    );
     
-    // 转换为对象格式
+    // 初始化分组结构
     const grouped = {
       material: { items: [], total: 0, count: 0 },
       process: { items: [], total: 0, count: 0 },
       packaging: { items: [], total: 0, count: 0 }
     };
 
+    // 单次遍历完成分组和统计
     result.rows.forEach(row => {
-      grouped[row.category] = {
-        total: parseFloat(row.category_total) || 0,
-        count: parseInt(row.item_count) || 0
-      };
+      const category = row.category;
+      if (grouped[category]) {
+        grouped[category].items.push(row);
+        grouped[category].total += parseFloat(row.subtotal) || 0;
+        grouped[category].count++;
+      }
     });
-
-    // 获取每个分类的明细
-    for (const category of ['material', 'process', 'packaging']) {
-      grouped[category].items = await this.findByQuotationIdAndCategory(quotationId, category);
-    }
 
     return grouped;
   }

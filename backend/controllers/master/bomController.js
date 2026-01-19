@@ -5,6 +5,8 @@ const ModelBom = require('../../models/ModelBom');
 const Model = require('../../models/Model');
 const Material = require('../../models/Material');
 const { success, error } = require('../../utils/response');
+const { matchCategoryFromDB } = require('../../utils/categoryMatcher');
+const logger = require('../../utils/logger');
 
 /** 获取型号BOM清单 - GET /api/bom/:modelId */
 const getBomByModelId = async (req, res) => {
@@ -16,7 +18,7 @@ const getBomByModelId = async (req, res) => {
     const bom = await ModelBom.findByModelId(modelId);
     res.json(success(bom, '获取BOM成功'));
   } catch (err) {
-    console.error('获取BOM失败:', err);
+    logger.error('获取BOM失败:', err);
     res.status(500).json(error('获取BOM失败: ' + err.message, 500));
   }
 };
@@ -44,7 +46,7 @@ const createBomItem = async (req, res) => {
     const bom = await ModelBom.findByModelId(model_id); // 返回完整BOM
     res.status(201).json(success(bom, '添加成功'));
   } catch (err) {
-    console.error('添加BOM原料失败:', err);
+    logger.error('添加BOM原料失败:', err);
     res.status(500).json(error('添加失败: ' + err.message, 500));
   }
 };
@@ -66,7 +68,7 @@ const updateBomItem = async (req, res) => {
     const bom = await ModelBom.findByModelId(bomItem.model_id);
     res.json(success(bom, '更新成功'));
   } catch (err) {
-    console.error('更新BOM原料失败:', err);
+    logger.error('更新BOM原料失败:', err);
     res.status(500).json(error('更新失败: ' + err.message, 500));
   }
 };
@@ -82,7 +84,7 @@ const deleteBomItem = async (req, res) => {
     const bom = await ModelBom.findByModelId(bomItem.model_id);
     res.json(success(bom, '删除成功'));
   } catch (err) {
-    console.error('删除BOM原料失败:', err);
+    logger.error('删除BOM原料失败:', err);
     res.status(500).json(error('删除失败: ' + err.message, 500));
   }
 };
@@ -107,7 +109,7 @@ const batchUpdateBom = async (req, res) => {
     const bom = await ModelBom.findByModelId(modelId);
     res.json(success(bom, '批量更新成功'));
   } catch (err) {
-    console.error('批量更新BOM失败:', err);
+    logger.error('批量更新BOM失败:', err);
     res.status(500).json(error('批量更新失败: ' + err.message, 500));
   }
 };
@@ -136,7 +138,7 @@ const copyBom = async (req, res) => {
     const bom = await ModelBom.findByModelId(target_model_id); // 返回复制后的BOM
     res.json(success({ ...result, bom }, `复制成功：${result.copiedCount}项${result.skippedCount > 0 ? `，跳过${result.skippedCount}项` : ''}`));
   } catch (err) {
-    console.error('复制BOM失败:', err);
+    logger.error('复制BOM失败:', err);
     res.status(500).json(error('复制失败: ' + err.message, 500));
   }
 };
@@ -222,19 +224,22 @@ const importBom = async (req, res) => {
     const existingMaterials = await Material.findByItemNos(materialCodes);
     const materialMap = new Map(existingMaterials.map(m => [m.item_no, m]));
 
-    // 自动创建不存在的原料
+    // 自动创建不存在的原料（含类别识别）
     let materialsCreated = 0;
     for (const [itemNo, data] of bomMap) {
       if (!materialMap.has(itemNo)) {
+        const materialName = data.childName || itemNo;
+        const category = await matchCategoryFromDB(materialName); // 自动识别类别
         const newMaterial = await Material.create({
           item_no: itemNo,
-          name: data.childName || itemNo,
+          name: materialName,
           unit: data.unit || 'PCS',
           price: 0,
           currency: 'CNY',
-          manufacturer: data.vendor || null
+          manufacturer: data.vendor || null,
+          category
         });
-        materialMap.set(itemNo, { id: newMaterial, item_no: itemNo, name: data.childName, unit: data.unit });
+        materialMap.set(itemNo, { id: newMaterial, item_no: itemNo, name: materialName, unit: data.unit, category });
         materialsCreated++;
       }
     }
@@ -251,7 +256,7 @@ const importBom = async (req, res) => {
       bom
     }, `导入成功：BOM ${result.created}项新增，${result.updated}项更新${materialsCreated > 0 ? `，自动创建原料${materialsCreated}项` : ''}`));
   } catch (err) {
-    console.error('导入BOM失败:', err);
+    logger.error('导入BOM失败:', err);
     res.status(500).json(error('导入失败: ' + err.message, 500));
   }
 };
@@ -283,7 +288,7 @@ const downloadTemplate = async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename=BOM_Template.xlsx');
     await wb.xlsx.write(res);
   } catch (err) {
-    console.error('下载模板失败:', err);
+    logger.error('下载模板失败:', err);
     res.status(500).json(error('下载失败: ' + err.message, 500));
   }
 };

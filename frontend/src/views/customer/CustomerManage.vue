@@ -26,11 +26,17 @@
         </el-input>
       </div>
 
-      <el-table :data="tableData" border stripe v-loading="loading" @selection-change="handleSelectionChange">
+      <el-table :data="tableData" border stripe v-loading="loading" @selection-change="handleSelectionChange" empty-text="暂无客户数据">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="vc_code" label="VC号" width="120" />
-        <el-table-column prop="name" label="客户名称" width="400" />
-        <el-table-column prop="region" label="地区" width="120" />
+        <el-table-column prop="name" label="客户名称" min-width="200" />
+        <el-table-column prop="region" label="地区" width="100" />
+        <el-table-column prop="salesperson_name" label="负责业务" width="100">
+          <template #default="{ row }">
+            <span v-if="row.salesperson_name">{{ row.salesperson_name }}</span>
+            <span v-else class="text-gray-400">公共</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="remark" label="备注" min-width="100" />
         <el-table-column label="更新时间" width="180">
           <template #default="{ row }">{{ formatDateTime(row.updated_at) }}</template>
@@ -54,15 +60,21 @@
       append-to-body 
       :close-on-click-modal="false"
     >
-      <el-form :model="form" label-width="100px">
-        <el-form-item label="VC号" required>
+      <el-form ref="formRef" :model="form" :rules="formRules" label-width="100px">
+        <el-form-item label="VC号" prop="vc_code">
           <el-input v-model="form.vc_code" placeholder="请输入VC号" />
         </el-form-item>
-        <el-form-item label="客户名称" required>
+        <el-form-item label="客户名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入客户名称" />
         </el-form-item>
         <el-form-item label="地区">
           <el-input v-model="form.region" placeholder="请输入地区" />
+        </el-form-item>
+        <el-form-item label="负责业务" v-if="canAssignSalesperson">
+          <el-select v-model="form.user_id" placeholder="请选择负责业务员" clearable filterable style="width: 100%">
+            <el-option v-for="u in salespersonList" :key="u.id" :label="u.real_name || u.username" :value="u.id" />
+          </el-select>
+          <div class="text-xs text-gray-400 mt-1">不选择则为公共客户，所有人可用</div>
         </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="form.remark" type="textarea" :rows="3" placeholder="请输入备注" />
@@ -79,13 +91,15 @@
 <script setup>
 import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, EditPen, Delete, CaretLeft, CaretRight } from '@element-plus/icons-vue'
+import { Delete, Search, EditPen, CaretLeft, CaretRight } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { useAuthStore } from '@/store/auth'
-import { formatDateTime } from '@/utils/format'
+import { formatDateTime, downloadBlob } from '@/utils/format'
 import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
+
+defineOptions({ name: 'CustomerManage' })
 
 const authStore = useAuthStore()
 const showToolbar = ref(false)
@@ -99,10 +113,25 @@ const searchKeyword = ref('')
 const currentPage = ref(1)
 const pageSize = ref(12)
 const total = ref(0)
-let searchTimer = null
+const searchTimer = ref(null)
 
-const form = reactive({ id: null, vc_code: '', name: '', region: '', remark: '' })
+const form = reactive({ id: null, vc_code: '', name: '', region: '', remark: '', user_id: null })
+const formRef = ref(null)
+const formRules = {
+  vc_code: [{ required: true, message: '请输入VC号', trigger: 'blur' }],
+  name: [{ required: true, message: '请输入客户名称', trigger: 'blur' }]
+}
 const canEdit = computed(() => authStore.isAdmin || authStore.user?.role === 'reviewer')
+const canAssignSalesperson = computed(() => authStore.isAdmin)
+const salespersonList = ref([])
+
+const fetchSalespersons = async () => {
+  if (!canAssignSalesperson.value) return
+  try {
+    const res = await request.get('/auth/users', { params: { pageSize: 100 } })
+    if (res.success) salespersonList.value = res.data.filter(u => u.role === 'salesperson' || u.role === 'admin')
+  } catch { /* ignore */ }
+}
 
 const fetchCustomers = async () => {
   loading.value = true
@@ -113,15 +142,16 @@ const fetchCustomers = async () => {
   finally { loading.value = false }
 }
 
-const handleSearch = () => { if (searchTimer) clearTimeout(searchTimer); searchTimer = setTimeout(() => { currentPage.value = 1; fetchCustomers() }, 300) }
-const handleClearSearch = () => { if (searchTimer) clearTimeout(searchTimer); currentPage.value = 1; fetchCustomers() }
+const handleSearch = () => { if (searchTimer.value) clearTimeout(searchTimer.value); searchTimer.value = setTimeout(() => { currentPage.value = 1; fetchCustomers() }, 300) }
+const handleClearSearch = () => { if (searchTimer.value) clearTimeout(searchTimer.value); currentPage.value = 1; fetchCustomers() }
 watch([currentPage, pageSize], fetchCustomers)
 
-const handleAdd = () => { isEdit.value = false; dialogTitle.value = '新增客户'; Object.assign(form, { id: null, vc_code: '', name: '', region: '', remark: '' }); dialogVisible.value = true }
-const handleEdit = (row) => { isEdit.value = true; dialogTitle.value = '编辑客户'; Object.assign(form, row); dialogVisible.value = true }
+const handleAdd = () => { isEdit.value = false; dialogTitle.value = '新增客户'; Object.assign(form, { id: null, vc_code: '', name: '', region: '', remark: '', user_id: null }); dialogVisible.value = true }
+const handleEdit = (row) => { isEdit.value = true; dialogTitle.value = '编辑客户'; Object.assign(form, { ...row, user_id: row.user_id || null }); dialogVisible.value = true }
 
 const handleSubmit = async () => {
-  if (!form.vc_code || !form.name) { ElMessage.warning('请填写VC号和客户名称'); return }
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
   loading.value = true
   try {
     if (isEdit.value) { await request.put(`/customers/${form.id}`, form); ElMessage.success('更新成功') }
@@ -162,26 +192,19 @@ const handleExport = async () => {
   try {
     const ids = selectedCustomers.value.map(c => c.id)
     const res = await request.post('/customers/export/excel', { ids }, { responseType: 'blob' })
-    const url = window.URL.createObjectURL(new Blob([res]))
-    const link = document.createElement('a'); link.href = url; link.setAttribute('download', `客户列表_${Date.now()}.xlsx`)
-    document.body.appendChild(link); link.click(); document.body.removeChild(link); ElMessage.success('导出成功')
+    downloadBlob(res, `客户列表_${Date.now()}.xlsx`); ElMessage.success('导出成功')
   } catch (e) { ElMessage.error('导出失败') }
 }
 
 const handleDownloadTemplate = async () => {
   try {
     const res = await request.get('/customers/template/download', { responseType: 'blob' })
-    const url = window.URL.createObjectURL(new Blob([res]))
-    const link = document.createElement('a'); link.href = url; link.setAttribute('download', '客户导入模板.xlsx')
-    document.body.appendChild(link); link.click(); document.body.removeChild(link); ElMessage.success('下载成功')
+    downloadBlob(res, '客户导入模板.xlsx'); ElMessage.success('下载成功')
   } catch (e) { ElMessage.error('下载失败') }
 }
 
-onMounted(fetchCustomers)
-
-onUnmounted(() => {
-  if (searchTimer) clearTimeout(searchTimer)
-})
+onMounted(() => { fetchCustomers(); fetchSalespersons() })
+onUnmounted(() => { if (searchTimer.value) clearTimeout(searchTimer.value) })
 </script>
 
 <style scoped>

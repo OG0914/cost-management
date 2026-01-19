@@ -49,11 +49,17 @@ router.get('/:id', materialController.getMaterialById);
 
 // 以下路由需要采购权限
 router.post('/', isPurchaser, materialController.createMaterial);
+router.post('/batch-delete', isPurchaser, materialController.batchDeleteMaterials);
 router.put('/:id', isPurchaser, materialController.updateMaterial);
 router.delete('/:id', isPurchaser, materialController.deleteMaterial);
 
+// 检查品号或创建原料
+router.post('/check-or-create', isPurchaser, materialController.checkOrCreate);
+
 // Excel 导入导出
 router.post('/import', isPurchaser, upload.single('file'), materialController.importMaterials);
+router.post('/import/precheck', isPurchaser, upload.single('file'), materialController.preCheckImport);
+router.post('/import/confirm', isPurchaser, materialController.confirmImport);
 router.post('/export/excel', isPurchaser, materialController.exportMaterials);
 router.get('/template/download', isPurchaser, materialController.downloadTemplate);
 

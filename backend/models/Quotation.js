@@ -5,6 +5,7 @@
 
 const dbManager = require('../db/database');
 const QueryBuilder = require('../utils/queryBuilder');
+const logger = require('../utils/logger');
 
 class Quotation {
   /**
@@ -310,7 +311,7 @@ class Quotation {
       });
       return true;
     } catch (error) {
-      console.error('删除报价单失败:', error);
+      logger.error('删除报价单失败:', error);
       return false;
     }
   }

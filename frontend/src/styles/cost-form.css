@@ -7,11 +7,11 @@
 
 /* ========== 页面头部 ========== */
 .cost-page-header {
-  @apply flex justify-between items-center px-4 py-3 bg-white border-b border-slate-200 mb-4;
+  @apply flex justify-between items-center gap-3 px-4 py-3 bg-white border-b border-slate-200 mb-4;
 }
 
 .cost-header-left {
-  @apply flex items-center gap-3;
+  @apply flex items-center gap-3 flex-shrink-0;
 }
 
 .cost-header-right {
@@ -19,7 +19,28 @@
 }
 
 .cost-page-title {
-  @apply text-xl font-semibold text-slate-800 m-0;
+  @apply text-lg sm:text-xl font-semibold text-slate-800 m-0 whitespace-nowrap;
+}
+
+/* 工具栏包装器 */
+.toolbar-wrapper {
+  @apply flex items-center gap-2;
+}
+
+/* 移动端页面头部响应式 */
+@media (max-width: 768px) {
+  .cost-page-header {
+    @apply flex-col items-stretch gap-3;
+  }
+  .cost-header-right {
+    @apply justify-end flex-wrap;
+  }
+  .toolbar-wrapper {
+    @apply flex-wrap justify-end;
+  }
+  .toolbar-wrapper .el-space {
+    flex-wrap: wrap;
+  }
 }
 
 .cost-back-btn {

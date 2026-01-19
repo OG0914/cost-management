@@ -1,6 +1,6 @@
 <template>
   <div class="model-manage">
-    <PageHeader title="型号管理">
+    <CostPageHeader title="型号管理" :show-back="false">
       <template #actions>
         <div class="toolbar-wrapper">
           <el-button class="toolbar-toggle" :icon="showToolbar ? CaretRight : CaretLeft" circle @click="showToolbar = !showToolbar" :title="showToolbar ? '收起工具栏' : '展开工具栏'" />
@@ -17,7 +17,7 @@
           </transition>
         </div>
       </template>
-    </PageHeader>
+    </CostPageHeader>
 
     <el-card>
       <!-- 筛选区域 -->
@@ -35,7 +35,7 @@
         <div v-for="item in paginatedModels" :key="item.id" class="item-card">
           <div class="card-body">
             <div class="item-header">
-              <el-image v-if="item.primary_image" :src="item.primary_image" :preview-src-list="[item.primary_image]" fit="cover" class="card-image" />
+              <el-image v-if="item.primary_image" :src="item.primary_image" :preview-src-list="[item.primary_image]" fit="cover" class="card-image" preview-teleported :z-index="3000" />
               <div v-else class="card-image-placeholder"><el-icon :size="28" color="#c0c4cc"><Picture /></el-icon></div>
               <div class="item-info">
                 <div class="item-name">{{ item.model_name }}</div>
@@ -45,11 +45,8 @@
             <div class="item-details">
               <div class="detail-row">
                 <span v-if="item.model_series" class="series-tag"><span class="label">系列:</span> {{ item.model_series }}</span>
-              </div>
-              <div class="detail-row">
                 <span class="category-tag"><span class="label">分类:</span> {{ item.model_category || '暂无' }}</span>
               </div>
-              <div class="divider-line"></div>
               <div class="bom-info bom-link" @click="handleConfigBom(item)">
                 BOM: 共 {{ item.bom_count || 0 }} 项
               </div>
@@ -72,7 +69,7 @@
         <el-table-column type="selection" width="55" />
         <el-table-column label="产品图" width="80" align="center">
           <template #default="{ row }">
-            <el-image v-if="row.primary_image" :src="row.primary_image" :preview-src-list="[row.primary_image]" fit="cover" style="width: 50px; height: 50px; border-radius: 4px;" />
+            <el-image v-if="row.primary_image" :src="row.primary_image" :preview-src-list="[row.primary_image]" fit="cover" style="width: 50px; height: 50px; border-radius: 4px;" preview-teleported :z-index="3000" />
             <el-icon v-else :size="24" color="#c0c4cc"><Picture /></el-icon>
           </template>
         </el-table-column>
@@ -160,7 +157,7 @@
           <div class="upload-tip">支持 JPG/PNG/WEBP，单张最大 5MB</div>
           <div class="image-list" v-if="modelImages.length > 0">
             <div v-for="img in modelImages" :key="img.id" class="image-item">
-              <el-image :src="img.file_path" fit="cover" style="width: 100px; height: 100px;" :preview-src-list="modelImages.map(i => i.file_path)" />
+              <el-image :src="img.file_path" fit="cover" style="width: 100px; height: 100px;" :preview-src-list="modelImages.map(i => i.file_path)" preview-teleported :z-index="3000" />
               <div class="image-actions">
                 <el-tag v-if="img.is_primary" type="success" size="small">主图</el-tag>
                 <el-button v-else size="small" link @click="setAsPrimary(img.id)">设为主图</el-button>
@@ -189,7 +186,7 @@ import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { getRegulationColor } from '@/utils/color'
 import logger from '@/utils/logger'
-import PageHeader from '@/components/common/PageHeader.vue'
+import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import BomConfigDialog from '@/components/BomConfigDialog.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
@@ -433,7 +430,7 @@ onMounted(() => { fetchRegulations(); fetchModels(); fetchSeries() })
 .item-name { font-size: 16px; font-weight: 600; color: #303133; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .item-sub { font-size: 13px; color: #909399; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.item-details { display: flex; flex-direction: column; gap: 10px; }
+.item-details { display: flex; flex-direction: column; gap: 8px; }
 .category { font-size: 14px; }
 .category .el-tag { font-size: 13px; padding: 4px 10px; }
 .no-category { color: #c0c4cc; font-size: 13px; }
@@ -446,7 +443,6 @@ onMounted(() => { fetchRegulations(); fetchModels(); fetchSeries() })
 .detail-row { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: #606266; }
 .series-tag, .category-tag { display: flex; align-items: center; gap: 4px; }
 .series-tag .label, .category-tag .label { color: #909399; }
-.divider-line { height: 1px; background-color: #ebeef5; margin: 4px 0; }
 
 .card-actions { display: flex; justify-content: center; gap: 8px; padding: 12px; border-top: 1px solid #ebeef5; background: #fafafa; border-radius: 0 0 8px 8px; }
 .card-actions .el-button { transition: transform 0.2s, box-shadow 0.2s; }

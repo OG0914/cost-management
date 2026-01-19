@@ -4,6 +4,7 @@
  */
 
 const dbManager = require('../db/database');
+const logger = require('../utils/logger');
 
 class User {
   /**
@@ -223,7 +224,7 @@ class User {
         };
       });
     } catch (error) {
-      console.error('删除用户及关联数据失败:', error);
+      logger.error('删除用户及关联数据失败:', error);
       return {
         success: false,
         deletedQuotations: 0,

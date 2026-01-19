@@ -6,9 +6,11 @@
         <h1 class="config-title">系统配置</h1>
         <span class="config-update-time" v-if="lastUpdateTime">更新于 {{ lastUpdateTime }}</span>
       </div>
-      <el-button type="primary" @click="handleSave" :loading="saving" v-if="authStore.isAdmin">保存配置</el-button>
     </div>
 
+    <el-tabs v-model="activeTab" class="config-tabs">
+      <!-- 业务配置 Tab -->
+      <el-tab-pane label="业务配置" name="business">
     <el-form :model="configForm" :disabled="!authStore.isAdmin" class="config-form">
       <!-- 基础费率 -->
       <section class="config-section">
@@ -160,16 +162,69 @@
       </section>
     </el-form>
 
-    <!-- 底部提示 -->
-    <div class="config-footer-note">
-      配置修改后立即生效，仅影响新报价单，历史报价单保留原配置
+    <!-- 底部操作 -->
+    <div class="config-footer">
+      <el-button type="primary" @click="handleSave" :loading="saving" v-if="authStore.isAdmin">保存业务配置</el-button>
+      <span class="config-footer-note">配置修改后立即生效，仅影响新报价单</span>
     </div>
+      </el-tab-pane>
+
+      <!-- 基础数据配置 Tab -->
+      <el-tab-pane label="基础数据配置" name="master">
+        <section class="config-section">
+          <h2 class="config-section-title">原料类别管理</h2>
+          <p class="config-section-desc">设置原料的分类，用于原料管理中的筛选和分组</p>
+          
+          <el-table :data="materialCategories" border stripe size="small" style="width: 450px" empty-text="暂无类别，请点击下方按钮添加">
+            <el-table-column label="类别名称" width="250">
+              <template #default="{ row }">
+                <el-input v-model="row.name" placeholder="请输入类别名称" :disabled="!authStore.isAdmin" />
+              </template>
+            </el-table-column>
+            <el-table-column label="排序" width="120">
+              <template #default="{ row }">
+                <el-input-number v-model="row.sort" :min="1" :max="999" :controls="false" :disabled="!authStore.isAdmin" style="width: 100%" />
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="80" align="center">
+              <template #default="{ $index }">
+                <el-button type="danger" :icon="Delete" circle size="small" @click="removeCategory($index)" :disabled="!authStore.isAdmin" />
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <div class="config-footer">
+            <el-button type="primary" plain @click="showAddCategoryDialog" v-if="authStore.isAdmin">
+              <el-icon><Plus /></el-icon> 新增类别
+            </el-button>
+            <el-button type="primary" @click="saveCategories" :loading="savingCategories" v-if="authStore.isAdmin">保存类别配置</el-button>
+          </div>
+        </section>
+
+        <!-- 新增类别弹窗 -->
+        <el-dialog v-model="categoryDialogVisible" title="新增类别" width="400px" :close-on-click-modal="false" append-to-body align-center>
+          <el-form :model="newCategory" label-width="80px">
+            <el-form-item label="类别名称" required>
+              <el-input v-model="newCategory.name" placeholder="请输入类别名称" />
+            </el-form-item>
+            <el-form-item label="排序">
+              <el-input-number v-model="newCategory.sort" :min="1" :max="999" :controls="false" style="width: 100%" />
+            </el-form-item>
+          </el-form>
+          <template #footer>
+            <el-button @click="categoryDialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="confirmAddCategory">确定</el-button>
+          </template>
+        </el-dialog>
+      </el-tab-pane>
+    </el-tabs>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
-import { ElMessage } from 'element-plus';
+import { ref, reactive, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { onBeforeRouteLeave } from 'vue-router';
 import { Plus, Delete } from '@element-plus/icons-vue';
 import { useAuthStore } from '../../store/auth';
 import { useConfigStore } from '../../store/config';
@@ -177,8 +232,12 @@ import request from '../../utils/request';
 import logger from '../../utils/logger';
 import { formatDateTime } from '@/utils/format';
 
+defineOptions({ name: 'SystemConfig' })
+
 const authStore = useAuthStore();
 const configStore = useConfigStore();
+
+const activeTab = ref('business');
 
 const configForm = reactive({
   overhead_rate: 0.2, vat_rate: 0.13, vat_rate_options: [0.13, 0.10],
@@ -193,21 +252,50 @@ const configForm = reactive({
 const saving = ref(false);
 const lastUpdateTime = ref('');
 
+// 原料类别
+const materialCategories = ref([]);
+const savingCategories = ref(false);
+const categoryDialogVisible = ref(false);
+const newCategory = reactive({ name: '', sort: 1 });
+
+// 追踪未保存修改
+const hasUnsavedChanges = ref(false);
+const originalConfig = ref(null);
+const originalCategories = ref(null);
+
 const loadConfig = async () => {
   try {
     const response = await request.get('/config');
     if (response.success && response.data) {
       Object.assign(configForm, response.data);
+      // 加载原料类别
+      if (response.data.material_categories) {
+        materialCategories.value = [...response.data.material_categories].sort((a, b) => a.sort - b.sort);
+      }
       const detailResponse = await request.get('/config/overhead_rate');
       if (detailResponse.success && detailResponse.data) {
         lastUpdateTime.value = formatDateTime(detailResponse.data.updated_at);
       }
+      // 保存原始值用于比较
+      originalConfig.value = JSON.stringify(configForm);
+      originalCategories.value = JSON.stringify(materialCategories.value);
+      hasUnsavedChanges.value = false;
     }
   } catch (error) {
     logger.error('加载配置失败:', error);
     ElMessage.error('加载配置失败');
   }
 };
+
+// 监听配置变化
+const checkChanges = () => {
+  if (!originalConfig.value) return;
+  const configChanged = JSON.stringify(configForm) !== originalConfig.value;
+  const categoriesChanged = JSON.stringify(materialCategories.value) !== originalCategories.value;
+  hasUnsavedChanges.value = configChanged || categoriesChanged;
+};
+watch(() => configForm, checkChanges, { deep: true });
+watch(materialCategories, checkChanges, { deep: true });
 
 const handleSave = async () => {
   if (!authStore.isAdmin) { ElMessage.warning('只有管理员可以修改配置'); return; }
@@ -226,9 +314,11 @@ const handleSave = async () => {
   try {
     const response = await request.post('/config/batch', { configs: configForm });
     if (response.success) { 
-      ElMessage.success('配置保存成功'); 
+      ElMessage.success('配置保存成功');
+      // 更新原始值，标记为已保存
+      originalConfig.value = JSON.stringify(configForm);
+      hasUnsavedChanges.value = false;
       await loadConfig(); 
-      // 刷新全局配置缓存，确保其他页面能获取最新配置
       await configStore.reloadConfig();
     }
   } catch (error) {
@@ -249,11 +339,74 @@ const removeVatRateOption = (index) => {
   configForm.vat_rate_options.splice(index, 1);
 };
 
+// 原料类别管理
+const showAddCategoryDialog = () => {
+  const maxSort = materialCategories.value.length > 0 ? Math.max(...materialCategories.value.map(c => c.sort)) : 0;
+  newCategory.name = '';
+  newCategory.sort = maxSort + 1;
+  categoryDialogVisible.value = true;
+};
+
+const confirmAddCategory = () => {
+  if (!newCategory.name || !newCategory.name.trim()) { ElMessage.warning('请输入类别名称'); return; }
+  const exists = materialCategories.value.some(c => c.name === newCategory.name.trim());
+  if (exists) { ElMessage.warning('该类别已存在'); return; }
+  materialCategories.value.push({ name: newCategory.name.trim(), sort: newCategory.sort });
+  materialCategories.value.sort((a, b) => a.sort - b.sort);
+  categoryDialogVisible.value = false;
+  ElMessage.success('类别已添加，请点击"保存类别配置"保存');
+};
+
+const removeCategory = (index) => {
+  materialCategories.value.splice(index, 1);
+};
+
+const saveCategories = async () => {
+  // 校验
+  const validCategories = materialCategories.value.filter(c => c.name && c.name.trim());
+  if (validCategories.length === 0) { ElMessage.error('请至少添加一个有效的类别'); return; }
+  
+  // 检查重复名称
+  const names = validCategories.map(c => c.name.trim());
+  if (new Set(names).size !== names.length) { ElMessage.error('类别名称不能重复'); return; }
+
+  savingCategories.value = true;
+  try {
+    const sorted = validCategories.map(c => ({ name: c.name.trim(), sort: c.sort })).sort((a, b) => a.sort - b.sort);
+    await request.put('/config/material_categories', { value: JSON.stringify(sorted) });
+    ElMessage.success('类别配置保存成功');
+    // 更新原始值，标记为已保存
+    originalCategories.value = JSON.stringify(materialCategories.value);
+    hasUnsavedChanges.value = false;
+    await configStore.reloadConfig();
+  } catch (error) {
+    logger.error('保存类别失败:', error);
+    ElMessage.error('保存类别配置失败');
+  } finally { savingCategories.value = false; }
+};
+
 onMounted(() => { loadConfig(); });
+
+// 离开页面前提醒保存
+onBeforeRouteLeave(async (to, from, next) => {
+  if (hasUnsavedChanges.value) {
+    try {
+      await ElMessageBox.confirm('您有未保存的修改，确定要离开吗？', '提示', { type: 'warning', confirmButtonText: '离开', cancelButtonText: '留下' });
+      next();
+    } catch { next(false); }
+  } else { next(); }
+});
+
+// 浏览器关闭/刷新时提醒
+const handleBeforeUnload = (e) => {
+  if (hasUnsavedChanges.value) { e.preventDefault(); e.returnValue = ''; }
+};
+onMounted(() => { window.addEventListener('beforeunload', handleBeforeUnload); });
+onBeforeUnmount(() => { window.removeEventListener('beforeunload', handleBeforeUnload); });
 </script>
 
 <style scoped>
-.config-page { max-width: 900px; }
+.config-page { max-width: 1200px; }
 
 /* 页面头部 */
 .config-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
@@ -296,11 +449,19 @@ onMounted(() => { loadConfig(); });
 .config-tag-add { border: 1px dashed #cbd5e1; background: transparent; color: #64748b; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
 .config-tag-add:hover { border-color: #3b82f6; color: #3b82f6; }
 
-/* 底部提示 */
-.config-footer-note { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 16px; }
+/* 底部操作区 */
+.config-footer { display: flex; align-items: center; gap: 16px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
+.config-footer-note { font-size: 12px; color: #94a3b8; }
 
 /* 响应式 */
 @media (max-width: 768px) {
   .config-grid-2, .config-grid-3 { grid-template-columns: 1fr; }
 }
+
+/* Tabs样式 */
+.config-tabs { margin-top: -8px; }
+.config-tabs :deep(.el-tabs__header) { margin-bottom: 20px; }
+
+/* 分组描述 */
+.config-section-desc { font-size: 13px; color: #94a3b8; margin: -8px 0 16px 0; }
 </style>

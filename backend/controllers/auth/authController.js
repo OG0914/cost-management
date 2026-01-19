@@ -10,6 +10,7 @@ const ExcelGenerator = require('../../utils/excel');
 const { success, error } = require('../../utils/response');
 const path = require('path');
 const fs = require('fs');
+const logger = require('../../utils/logger');
 
 // 用户登录
 const login = async (req, res, next) => {
@@ -248,7 +249,7 @@ const deleteUser = async (req, res, next) => {
       updatedQuotations: result.updatedQuotations
     }, `用户删除成功。已删除 ${result.deletedQuotations} 个报价单，更新 ${result.updatedQuotations} 个审核记录。`));
   } catch (err) {
-    console.error('删除用户失败:', err);
+    logger.error('删除用户失败:', err);
     next(err);
   }
 };

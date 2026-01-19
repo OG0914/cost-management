@@ -2,3 +2,60 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* 公共组件样式 */
+@layer components {
+  /* 移动端卡片列表样式 - 用于列表页面的移动端展示 */
+  .mobile-card {
+    @apply bg-white rounded-lg border border-slate-200 p-4 active:bg-slate-50 transition-colors cursor-pointer;
+  }
+  .mobile-card-header {
+    @apply flex items-start justify-between mb-2;
+  }
+  .mobile-card-title {
+    @apply text-sm font-semibold text-slate-800;
+  }
+  .mobile-card-body {
+    @apply text-sm;
+  }
+  .mobile-card-footer {
+    @apply flex items-center justify-between mt-3 pt-3 border-t border-slate-100;
+  }
+}
+
+/* 响应式工具类 */
+@layer utilities {
+  /* 管理页面表格移动端横向滚动 */
+  .table-responsive {
+    @apply overflow-x-auto;
+  }
+}
+
+/* 管理页面通用响应式覆盖 */
+@media (max-width: 768px) {
+  /* 搜索栏单列堆叠 */
+  .filter-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .filter-bar .el-select,
+  .filter-bar .el-input {
+    width: 100%;
+    margin-right: 0;
+  }
+  /* 工具栏按钮换行 */
+  .toolbar-wrapper .el-space {
+    flex-wrap: wrap;
+  }
+  /* 弹窗全屏 */
+  .el-dialog {
+    width: 95%;
+    max-width: 100vw;
+    margin: 10px auto;
+  }
+  /* el-card 内边距缩小 */
+  .el-card__body {
+    padding: 12px;
+  }
+}

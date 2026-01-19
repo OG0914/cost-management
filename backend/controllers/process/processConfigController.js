@@ -57,6 +57,10 @@ exports.updateProcessConfig = async (req, res) => {
 exports.deleteProcessConfig = async (req, res) => {
   try {
     const { id } = req.params;
+    const existing = await ProcessConfig.findById(id);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: '工序不存在' });
+    }
     await ProcessConfig.delete(id);
     res.json({ success: true, message: '工序删除成功' });
   } catch (error) {

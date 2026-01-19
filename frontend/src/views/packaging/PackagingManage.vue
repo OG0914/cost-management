@@ -6,13 +6,13 @@
         <div class="toolbar-wrapper">
           <el-button class="toolbar-toggle" :icon="showToolbar ? CaretRight : CaretLeft" circle @click="showToolbar = !showToolbar" :title="showToolbar ? '收起工具栏' : '展开工具栏'" />
           <transition name="toolbar-fade">
-            <el-space v-if="showToolbar && canEdit">
-              <ActionButton type="download" @click="handleDownloadTemplate">下载模板</ActionButton>
-              <el-upload action="#" :auto-upload="false" :on-change="handleFileChange" :show-file-list="false" accept=".xlsx,.xls">
+            <el-space v-if="showToolbar && (canEditConfig || canEditMaterial)">
+              <ActionButton v-if="canEditMaterial" type="download" @click="handleDownloadTemplate">下载模板</ActionButton>
+              <el-upload v-if="canEditMaterial" action="#" :auto-upload="false" :on-change="handleFileChange" :show-file-list="false" accept=".xlsx,.xls">
                 <ActionButton type="import">导入Excel</ActionButton>
               </el-upload>
-              <ActionButton type="export" @click="handleExport">导出Excel</ActionButton>
-              <ActionButton type="delete" :disabled="selectedConfigs.length === 0" @click="handleBatchDelete">批量删除</ActionButton>
+              <ActionButton v-if="canEditMaterial" type="export" @click="handleExport">导出Excel</ActionButton>
+              <ActionButton v-if="canEditConfig" type="delete" :disabled="selectedConfigs.length === 0" @click="handleBatchDelete">批量删除</ActionButton>
             </el-space>
           </transition>
         </div>
@@ -129,8 +129,8 @@
           <!-- 操作栏 -->
           <div class="card-actions">
             <el-button :icon="View" circle @click="viewMaterials(config)" title="查看" />
-            <el-button :icon="EditPen" circle @click="editConfig(config)" v-if="canEdit" title="编辑" />
-            <el-button :icon="Delete" circle class="delete-btn" @click="deleteConfig(config)" v-if="canEdit" title="删除" />
+            <el-button :icon="EditPen" circle @click="editConfig(config)" v-if="canEditConfig || canEditMaterial" title="编辑" />
+            <el-button :icon="Delete" circle class="delete-btn" @click="deleteConfig(config)" v-if="canEditConfig" title="删除" />
           </div>
         </div>
       </div>
@@ -188,8 +188,8 @@
         <el-table-column label="操作" width="140" fixed="right">
           <template #default="{ row }">
             <el-button :icon="View" circle size="small" @click="viewMaterials(row)" title="查看" />
-            <el-button :icon="EditPen" circle size="small" @click="editConfig(row)" v-if="canEdit" title="编辑" />
-            <el-button :icon="Delete" circle size="small" class="delete-btn" @click="deleteConfig(row)" v-if="canEdit" title="删除" />
+            <el-button :icon="EditPen" circle size="small" @click="editConfig(row)" v-if="canEditConfig || canEditMaterial" title="编辑" />
+            <el-button :icon="Delete" circle size="small" class="delete-btn" @click="deleteConfig(row)" v-if="canEditConfig" title="删除" />
           </template>
         </el-table-column>
       </el-table>
@@ -205,7 +205,7 @@
     <!-- 创建/编辑包装配置对话框 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="isEdit ? '编辑包装配置' : '新增包装配置'"
+      title="编辑包装配置"
       width="850px"
       top="5vh"
       class="minimal-dialog"
@@ -243,10 +243,10 @@
           <div class="mb-4">
             <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">包装类型</span>
             <el-radio-group v-model="form.packaging_type" size="small">
-              <el-radio-button label="standard_box">标准彩盒</el-radio-button>
-              <el-radio-button label="no_box">无彩盒</el-radio-button>
-              <el-radio-button label="blister_direct">吸塑直出</el-radio-button>
-              <el-radio-button label="blister_bag">袋装吸塑</el-radio-button>
+              <el-radio-button value="standard_box">标准彩盒</el-radio-button>
+              <el-radio-button value="no_box">无彩盒</el-radio-button>
+              <el-radio-button value="blister_direct">吸塑直出</el-radio-button>
+              <el-radio-button value="blister_bag">袋装吸塑</el-radio-button>
             </el-radio-group>
           </div>
 
@@ -295,7 +295,7 @@
               <el-icon class="mr-1"><CopyDocument /></el-icon>一键复制
             </el-button>
             <el-button type="primary" plain size="small" @click="addMaterial">
-              <el-icon class="mr-1"><Plus /></el-icon>Add Material
+              <el-icon class="mr-1"><Plus /></el-icon>添加原料
             </el-button>
           </div>
         </div>
@@ -365,7 +365,15 @@
               </template>
             </el-table-column>
             
-            <el-table-column label="材积 (m³)" width="110">
+            <el-table-column width="130">
+              <template #header>
+                <div class="flex items-center gap-1">
+                  <span>材积 (m³)</span>
+                  <el-tooltip content="外箱材积用于计算CBM和运费，请务必填写" placement="top">
+                    <el-icon class="text-blue-400 cursor-help"><InfoFilled /></el-icon>
+                  </el-tooltip>
+                </div>
+              </template>
               <template #default="{ row }">
                 <el-input-number 
                   v-model="row.carton_volume" 
@@ -375,6 +383,7 @@
                   :controls="false"
                   size="small"
                   class="w-full"
+                  placeholder="必填"
                 />
               </template>
             </el-table-column>
@@ -447,9 +456,17 @@
             <span class="subtotal-text">¥{{ formatNumber(row.basic_usage !== 0 ? (row.unit_price / row.basic_usage) : 0) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="carton_volume" label="外箱材积(m³)" width="120">
+        <el-table-column prop="carton_volume" width="140">
+          <template #header>
+            <div class="flex items-center gap-1">
+              <span>外箱材积(m³)</span>
+              <el-tooltip content="用于计算CBM和运费" placement="top">
+                <el-icon class="text-blue-400 cursor-help"><InfoFilled /></el-icon>
+              </el-tooltip>
+            </div>
+          </template>
           <template #default="{ row }">
-            {{ row.carton_volume ? formatNumber(row.carton_volume) : '-' }}
+            <span :class="{ 'text-red-400': !row.carton_volume }">{{ row.carton_volume ? formatNumber(row.carton_volume) : '未设置' }}</span>
           </template>
         </el-table-column>
       </el-table>
@@ -511,30 +528,32 @@ import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Delete, Grid, List, View, EditPen, CaretLeft, CaretRight, InfoFilled, CopyDocument } from '@element-plus/icons-vue';
-import request from '@/utils/request';
-import { useAuthStore } from '@/store/auth';
-import { formatNumber, formatDateTime } from '@/utils/format';
-import logger from '@/utils/logger';
+import request from '../../utils/request';
+import { useAuthStore } from '../../store/auth';
+import { formatNumber, formatDateTime } from '../../utils/format';
+import { getRegulationColor } from '../../utils/color';
+import logger from '../../utils/logger';
 import { 
   getPackagingTypeOptions, 
   getPackagingTypeName, 
   getPackagingTypeByKey,
   formatPackagingMethodFromConfig,
   calculateTotalFromConfig
-} from '@/config/packagingTypes';
+} from '../../config/packagingTypes';
 import CostPageHeader from '@/components/cost/CostPageHeader.vue';
-import CommonPagination from '@/components/common/CommonPagination.vue';
-import ActionButton from '@/components/common/ActionButton.vue';
-import StatusSwitch from '@/components/common/StatusSwitch.vue';
+import CommonPagination from '../../components/common/CommonPagination.vue';
+import ActionButton from '../../components/common/ActionButton.vue';
+import StatusSwitch from '../../components/common/StatusSwitch.vue';
+
+defineOptions({ name: 'PackagingManage' })
 
 const router = useRouter();
 const authStore = useAuthStore();
 const showToolbar = ref(false);
 
-
-
-// 权限检查 - 只有管理员和采购人员可以编辑包材
-const canEdit = computed(() => authStore.isAdmin || authStore.isPurchaser);
+// 权限检查 - 配置需要 admin/producer，包材需要 admin/purchaser
+const canEditConfig = computed(() => authStore.isAdmin || authStore.isProducer);
+const canEditMaterial = computed(() => authStore.isAdmin || authStore.isPurchaser);
 
 // 包装类型选项
 const packagingTypeOptions = getPackagingTypeOptions();
@@ -586,23 +605,13 @@ const paginatedConfigs = computed(() => {
 // 包装类型标签颜色
 const getPackagingTypeTagType = (type) => {
   const typeMap = {
-    standard_box: '',
+    standard_box: 'primary',
     no_box: 'success',
     blister_direct: 'warning',
     blister_bag: 'info'
   };
-  return typeMap[type] || '';
+  return typeMap[type] || 'info';
 };
-
-// 法规颜色映射
-const REGULATION_COLORS = { 
-  'NIOSH': '#409EFF', 
-  'GB': '#67C23A', 
-  'CE': '#E6A23C', 
-  'ASNZS': '#F56C6C', 
-  'KN': '#9B59B6' 
-}
-const getRegulationColor = (name) => REGULATION_COLORS[name] || '#909399'
 
 // 产品类别颜色 - 引用统一配置
 import { getCategoryColor } from '@/config/categoryColors'
@@ -798,27 +807,13 @@ const loadPackagingConfigs = async () => {
   }
 };
 
-// 加载所有配置及其包材数量（用于一键复制）
+// 加载所有配置及其包材数量（用于一键复制，使用优化后的单次查询接口）
 const loadConfigsForCopy = async () => {
   copyConfigsLoading.value = true;
   try {
-    const response = await request.get('/processes/packaging-configs');
+    const response = await request.get('/processes/packaging-configs/with-material-count');
     if (response.success) {
-      // 获取每个配置的包材数量
-      const configsWithCount = await Promise.all(
-        response.data.map(async (config) => {
-          try {
-            const detailResponse = await request.get(`/processes/packaging-configs/${config.id}/full`);
-            return {
-              ...config,
-              material_count: detailResponse.success ? (detailResponse.data.materials?.length || 0) : 0
-            };
-          } catch {
-            return { ...config, material_count: 0 };
-          }
-        })
-      );
-      allConfigsForCopy.value = configsWithCount;
+      allConfigsForCopy.value = response.data;
     }
   } catch (error) {
     logger.error('加载配置列表失败:', error);
@@ -897,13 +892,6 @@ const handleCopyMaterials = () => {
   }
 };
 
-// 显示创建对话框
-const showCreateDialog = () => {
-  isEdit.value = false;
-  resetForm();
-  dialogVisible.value = true;
-};
-
 // 编辑配置
 const editConfig = async (row) => {
   isEdit.value = true;
@@ -972,48 +960,24 @@ const deleteConfig = async (row) => {
 
 // 批量删除
 const handleBatchDelete = async () => {
-  if (selectedConfigs.value.length === 0) {
-    ElMessage.warning('请先选择要删除的配置');
-    return;
-  }
-
+  if (selectedConfigs.value.length === 0) { ElMessage.warning('请先选择要删除的配置'); return; }
   try {
-    await ElMessageBox.confirm(
-      `确定要删除选中的 ${selectedConfigs.value.length} 条包装配置吗？此操作不可恢复！`, 
-      '批量删除确认', 
-      {
-        confirmButtonText: '确定删除',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    );
-
+    await ElMessageBox.confirm(`确定要删除选中的 ${selectedConfigs.value.length} 条包装配置吗？`, '批量删除确认', { type: 'warning' });
     const ids = selectedConfigs.value.map(item => item.id);
+    const res = await request.post('/processes/packaging-configs/batch-delete', { ids });
     
-    // 逐个删除
-    let successCount = 0;
-    let failCount = 0;
-    
-    for (const id of ids) {
-      try {
-        await request.delete(`/processes/packaging-configs/${id}`);
-        successCount++;
-      } catch (error) {
-        failCount++;
+    if (res.success) {
+      const { deleted, failed } = res.data;
+      if (deleted > 0 && failed.length === 0) {
+        ElMessage.success(`成功删除 ${deleted} 条配置`);
+      } else if (deleted > 0 && failed.length > 0) {
+        ElMessage.warning(`成功删除 ${deleted} 条，${failed.length} 条因被引用无法删除`);
+      } else if (failed.length > 0) {
+        ElMessage.error(`${failed.length} 条配置被引用，无法删除`);
       }
-    }
-    
-    if (successCount > 0) {
-      ElMessage.success(`成功删除 ${successCount} 条配置${failCount > 0 ? `，失败 ${failCount} 条` : ''}`);
       loadPackagingConfigs();
-    } else {
-      ElMessage.error('删除失败');
     }
-  } catch (error) {
-    if (error !== 'cancel') {
-      // 错误已在拦截器处理
-    }
-  }
+  } catch (error) { if (error !== 'cancel') { /* 错误已在拦截器处理 */ } }
 };
 
 // 添加包材
@@ -1199,10 +1163,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.packaging-management {
-  /* padding 由 MainLayout 提供 */
-}
-
 .filter-bar {
   display: flex;
   align-items: center;

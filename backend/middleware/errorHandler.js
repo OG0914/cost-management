@@ -2,8 +2,10 @@
  * 统一错误处理中间件
  */
 
+const logger = require('../utils/logger');
+
 const errorHandler = (err, req, res, next) => {
-  console.error('错误详情:', err);
+  logger.error('错误详情:', err);
 
   // 数据验证错误
   if (err.name === 'ValidationError') {
