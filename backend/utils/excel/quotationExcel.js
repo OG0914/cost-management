@@ -190,7 +190,7 @@ function renderProfitTiers(worksheet, quotation, calculation, styles) { // 渲�
 
     let tiers = [...(calculation.profitTiers || [])];
     if (quotation.custom_profit_tiers) {
-        try { tiers = [...tiers, ...JSON.parse(quotation.custom_profit_tiers)]; } catch (e) { }
+        try { tiers = [...tiers, ...JSON.parse(quotation.custom_profit_tiers)]; } catch (e) { /* 忽略解析错误 */ }
     }
     tiers.sort((a, b) => a.profitRate - b.profitRate);
 

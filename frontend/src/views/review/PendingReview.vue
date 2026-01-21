@@ -282,7 +282,6 @@ const handleRejected = () => {
 // 处理表格选择
 const handleSelectionChange = (val) => {
   // 预留批量操作功能
-  console.log('Selection:', val)
 }
 
 onMounted(() => {
