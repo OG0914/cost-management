@@ -19,8 +19,11 @@ export function useFreightCalculation() {
     fcl20FreightUsd: 840,
     fcl40FreightUsd: 940,
     lclBaseFreight1_3: 800,
-    lclBaseFreight4_10: 1000,
-    lclBaseFreight11_15: 1500,
+    lclBaseFreight3_10: 1000,
+    lclBaseFreight10_18: 1500,
+    lclBaseFreight18_28: 2000,
+    lclBaseFreight28_40: 2500,
+    lclBaseFreight40_58: 3000,
     lclHandlingCharge: 500,
     lclCfsPerCbm: 170,
     lclDocumentFee: 500
@@ -41,8 +44,11 @@ export function useFreightCalculation() {
         systemConfig.value.fcl20FreightUsd = response.data.fcl_20_freight_usd || 840
         systemConfig.value.fcl40FreightUsd = response.data.fcl_40_freight_usd || 940
         systemConfig.value.lclBaseFreight1_3 = response.data.lcl_base_freight_1_3 || 800
-        systemConfig.value.lclBaseFreight4_10 = response.data.lcl_base_freight_4_10 || 1000
-        systemConfig.value.lclBaseFreight11_15 = response.data.lcl_base_freight_11_15 || 1500
+        systemConfig.value.lclBaseFreight3_10 = response.data.lcl_base_freight_3_10 || 1000
+        systemConfig.value.lclBaseFreight10_18 = response.data.lcl_base_freight_10_18 || 1500
+        systemConfig.value.lclBaseFreight18_28 = response.data.lcl_base_freight_18_28 || 2000
+        systemConfig.value.lclBaseFreight28_40 = response.data.lcl_base_freight_28_40 || 2500
+        systemConfig.value.lclBaseFreight40_58 = response.data.lcl_base_freight_40_58 || 3000
         systemConfig.value.lclHandlingCharge = response.data.lcl_handling_charge || 500
         systemConfig.value.lclCfsPerCbm = response.data.lcl_cfs_per_cbm || 170
         systemConfig.value.lclDocumentFee = response.data.lcl_document_fee || 500
@@ -118,6 +124,7 @@ export function useFreightCalculation() {
           quantityUnit.value = 'carton'
           quantityInput.value = maxCartons
           shippingInfo.cartons = maxCartons
+          shippingInfo.cbm = (cartonVolume * maxCartons / 35.32).toFixed(1) // 计算整柜总CBM
         }
       }
 
@@ -144,12 +151,17 @@ export function useFreightCalculation() {
       if (ceiledCBM >= 1 && ceiledCBM <= 3) {
         baseFreight = systemConfig.value.lclBaseFreight1_3
       } else if (ceiledCBM > 3 && ceiledCBM <= 10) {
-        baseFreight = systemConfig.value.lclBaseFreight4_10
-      } else if (ceiledCBM > 10 && ceiledCBM <= 15) {
-        baseFreight = systemConfig.value.lclBaseFreight11_15
-      } else if (ceiledCBM > 15) {
-        // CBM超过15的提示逻辑已移至UI层显示，此处不再弹窗
-        // ElMessage.warning('CBM超过15，建议选择整柜运输或联系物流确认运费')
+        baseFreight = systemConfig.value.lclBaseFreight3_10
+      } else if (ceiledCBM > 10 && ceiledCBM <= 18) {
+        baseFreight = systemConfig.value.lclBaseFreight10_18
+      } else if (ceiledCBM > 18 && ceiledCBM <= 28) {
+        baseFreight = systemConfig.value.lclBaseFreight18_28
+      } else if (ceiledCBM > 28 && ceiledCBM <= 40) {
+        baseFreight = systemConfig.value.lclBaseFreight28_40
+      } else if (ceiledCBM > 40 && ceiledCBM <= 58) {
+        baseFreight = systemConfig.value.lclBaseFreight40_58
+      } else if (ceiledCBM > 58) {
+        // CBM超过58的提示逻辑已移至UI层显示，此处不再弹窗
         return
       }
 

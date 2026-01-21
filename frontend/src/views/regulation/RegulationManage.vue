@@ -109,6 +109,7 @@ import request from '../../utils/request'
 import { useAuthStore } from '../../store/auth'
 import { formatDateTime } from '@/utils/format'
 import CostPageHeader from '@/components/cost/CostPageHeader.vue'
+import { usePagination } from '@/composables/usePagination'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
 import StatusSwitch from '@/components/common/StatusSwitch.vue'
@@ -123,8 +124,7 @@ const isEdit = ref(false)
 const loading = ref(false)
 const searchKeyword = ref('')
 const viewMode = ref('card')
-const currentPage = ref(1)
-const pageSize = ref(12)
+const { currentPage, pageSize } = usePagination('regulation')
 
 const paginatedRegulations = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value

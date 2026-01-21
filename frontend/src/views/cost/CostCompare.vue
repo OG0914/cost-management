@@ -1,38 +1,6 @@
 <template>
   <div class="cost-compare-container">
-    <el-card class="header-card">
-      <div class="header-content">
-        <div class="header-left">
-          <button
-            class="bg-white text-center w-[154px] rounded-xl h-[45px] relative text-black text-base font-semibold group"
-            type="button"
-            @click="goBack"
-          >
-            <div
-              class="bg-[#409EFF] rounded-lg h-[38px] w-1/4 flex items-center justify-center absolute left-[3px] top-[3.5px] group-hover:w-[148px] z-10 duration-500"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 1024 1024"
-                height="20px"
-                width="20px"
-              >
-                <path
-                  d="M224 480h640a32 32 0 1 1 0 64H224a32 32 0 0 1 0-64z"
-                  fill="#000000"
-                ></path>
-                <path
-                  d="m237.248 512 265.408 265.344a32 32 0 0 1-45.312 45.312l-288-288a32 32 0 0 1 0-45.312l288-288a32 32 0 1 1 45.312 45.312L237.248 512z"
-                  fill="#000000"
-                ></path>
-              </svg>
-            </div>
-            <p class="translate-x-2">返回</p>
-          </button>
-          <h2>成本对比分析</h2>
-        </div>
-      </div>
-    </el-card>
+    <CostPageHeader title="成本对比分析" :show-back="true" @back="goBack" />
 
     <div v-loading="loading" class="compare-content">
       <!-- 对比概览 -->
@@ -306,6 +274,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, Printer, Download } from '@element-plus/icons-vue'
+import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import request from '@/utils/request'
 import { formatNumber } from '@/utils/format'
 import logger from '@/utils/logger'

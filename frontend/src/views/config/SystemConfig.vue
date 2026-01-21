@@ -107,42 +107,63 @@
             <label class="config-label">基础运费 1-3 CBM</label>
             <div class="config-input-group">
               <el-input-number v-model="configForm.lcl_base_freight_1_3" :min="0" :precision="0" :controls="false" class="config-input" />
-              <span class="config-suffix">USD</span>
+              <span class="config-suffix">CNY</span>
             </div>
           </div>
           <div class="config-item">
-            <label class="config-label">基础运费 4-10 CBM</label>
+            <label class="config-label">基础运费 3-10 CBM</label>
             <div class="config-input-group">
-              <el-input-number v-model="configForm.lcl_base_freight_4_10" :min="0" :precision="0" :controls="false" class="config-input" />
-              <span class="config-suffix">USD</span>
+              <el-input-number v-model="configForm.lcl_base_freight_3_10" :min="0" :precision="0" :controls="false" class="config-input" />
+              <span class="config-suffix">CNY</span>
             </div>
           </div>
           <div class="config-item">
-            <label class="config-label">基础运费 11-15 CBM</label>
+            <label class="config-label">基础运费 10-18 CBM</label>
             <div class="config-input-group">
-              <el-input-number v-model="configForm.lcl_base_freight_11_15" :min="0" :precision="0" :controls="false" class="config-input" />
-              <span class="config-suffix">USD</span>
+              <el-input-number v-model="configForm.lcl_base_freight_10_18" :min="0" :precision="0" :controls="false" class="config-input" />
+              <span class="config-suffix">CNY</span>
+            </div>
+          </div>
+          <div class="config-item">
+            <label class="config-label">基础运费 18-28 CBM</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.lcl_base_freight_18_28" :min="0" :precision="0" :controls="false" class="config-input" />
+              <span class="config-suffix">CNY</span>
+            </div>
+          </div>
+          <div class="config-item">
+            <label class="config-label">基础运费 28-40 CBM</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.lcl_base_freight_28_40" :min="0" :precision="0" :controls="false" class="config-input" />
+              <span class="config-suffix">CNY</span>
+            </div>
+          </div>
+          <div class="config-item">
+            <label class="config-label">基础运费 40-58 CBM</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.lcl_base_freight_40_58" :min="0" :precision="0" :controls="false" class="config-input" />
+              <span class="config-suffix">CNY</span>
             </div>
           </div>
           <div class="config-item">
             <label class="config-label">操作费 Handling</label>
             <div class="config-input-group">
               <el-input-number v-model="configForm.lcl_handling_charge" :min="0" :precision="0" :controls="false" class="config-input" />
-              <span class="config-suffix">USD</span>
+              <span class="config-suffix">CNY</span>
             </div>
           </div>
           <div class="config-item">
             <label class="config-label">拼箱费 CFS/CBM</label>
             <div class="config-input-group">
               <el-input-number v-model="configForm.lcl_cfs_per_cbm" :min="0" :precision="0" :controls="false" class="config-input" />
-              <span class="config-suffix">USD</span>
+              <span class="config-suffix">CNY</span>
             </div>
           </div>
           <div class="config-item">
             <label class="config-label">文件费</label>
             <div class="config-input-group">
               <el-input-number v-model="configForm.lcl_document_fee" :min="0" :precision="0" :controls="false" class="config-input" />
-              <span class="config-suffix">USD</span>
+              <span class="config-suffix">CNY</span>
             </div>
           </div>
         </div>
@@ -244,7 +265,8 @@ const configForm = reactive({
   insurance_rate: 0.003, exchange_rate: 7.2,
   process_coefficient: 1.56, fob_shenzhen_exchange_rate: 7.1,
   fcl_20_freight_usd: 840, fcl_40_freight_usd: 940,
-  lcl_base_freight_1_3: 800, lcl_base_freight_4_10: 1000, lcl_base_freight_11_15: 1500,
+  lcl_base_freight_1_3: 800, lcl_base_freight_3_10: 1000, lcl_base_freight_10_18: 1500,
+  lcl_base_freight_18_28: 2000, lcl_base_freight_28_40: 2500, lcl_base_freight_40_58: 3000,
   lcl_handling_charge: 500, lcl_cfs_per_cbm: 170, lcl_document_fee: 500,
   profit_tiers: [0.05, 0.10, 0.25, 0.50]
 });
@@ -425,6 +447,7 @@ onBeforeUnmount(() => { window.removeEventListener('beforeunload', handleBeforeU
 .config-grid { display: grid; gap: 16px; }
 .config-grid-2 { grid-template-columns: repeat(2, 1fr); }
 .config-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.config-grid-4 { grid-template-columns: repeat(4, 1fr); }
 
 /* 配置项 */
 .config-item { display: flex; flex-direction: column; gap: 6px; }
@@ -455,7 +478,7 @@ onBeforeUnmount(() => { window.removeEventListener('beforeunload', handleBeforeU
 
 /* 响应式 */
 @media (max-width: 768px) {
-  .config-grid-2, .config-grid-3 { grid-template-columns: 1fr; }
+  .config-grid-2, .config-grid-3, .config-grid-4 { grid-template-columns: 1fr; }
 }
 
 /* Tabs样式 */

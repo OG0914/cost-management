@@ -155,6 +155,7 @@
       v-model="dialogVisible"
       :title="isEdit ? '编辑用户' : '新增用户'"
       width="500px"
+      class="minimal-dialog-auto"
       append-to-body
     >
       <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
@@ -201,7 +202,7 @@
     </el-dialog>
 
     <!-- 重置密码对话框 -->
-    <el-dialog v-model="resetPasswordVisible" title="重置密码" width="400px" append-to-body>
+    <el-dialog v-model="resetPasswordVisible" title="重置密码" width="400px" class="minimal-dialog-auto" append-to-body>
       <el-form :model="resetPasswordForm" :rules="resetPasswordRules" ref="resetPasswordFormRef" label-width="80px">
         <el-form-item label="新密码" prop="newPassword">
           <el-input
@@ -227,6 +228,7 @@ import { Search, Grid, List, Key, EditPen, Delete, CaretLeft, CaretRight } from 
 import request from '../../utils/request';
 import { formatDateTime } from '@/utils/format';
 import CostPageHeader from '@/components/cost/CostPageHeader.vue'
+import { usePagination } from '@/composables/usePagination'
 import CommonPagination from '@/components/common/CommonPagination.vue';
 import ActionButton from '@/components/common/ActionButton.vue';
 import StatusSwitch from '@/components/common/StatusSwitch.vue';
@@ -246,8 +248,7 @@ const showToolbar = ref(true);
 const searchText = ref('');
 
 // 分页状态
-const currentPage = ref(1)
-const pageSize = ref(12);
+const { currentPage, pageSize } = usePagination('user')
 
 // 筛选后的用户列表
 const filteredUsers = computed(() => {

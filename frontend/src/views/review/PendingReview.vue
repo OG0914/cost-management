@@ -142,6 +142,7 @@ import { Search, View, Delete } from '@element-plus/icons-vue'
 import { useReviewStore } from '@/store/review'
 import { useAuthStore } from '@/store/auth'
 import CostPageHeader from '@/components/cost/CostPageHeader.vue'
+import { usePagination } from '@/composables/usePagination'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import { 
   getStatusType, 
@@ -166,9 +167,7 @@ const searchKeyword = ref('')
 const tableData = ref([])
 
 // 分页状态
-const currentPage = ref(1)
-const pageSize = ref(12)
-const total = ref(0)
+const { currentPage, pageSize, total } = usePagination('reviews_pending')
 
 // 防抖定时器
 let searchTimer = null

@@ -96,6 +96,7 @@ import request from '@/utils/request'
 import { useAuthStore } from '@/store/auth'
 import { formatDateTime, downloadBlob } from '@/utils/format'
 import CostPageHeader from '@/components/cost/CostPageHeader.vue'
+import { usePagination } from '@/composables/usePagination'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
 
@@ -110,9 +111,7 @@ const dialogTitle = ref('新增客户')
 const isEdit = ref(false)
 const loading = ref(false)
 const searchKeyword = ref('')
-const currentPage = ref(1)
-const pageSize = ref(12)
-const total = ref(0)
+const { currentPage, pageSize, total } = usePagination('customer')
 const searchTimer = ref(null)
 
 const form = reactive({ id: null, vc_code: '', name: '', region: '', remark: '', user_id: null })

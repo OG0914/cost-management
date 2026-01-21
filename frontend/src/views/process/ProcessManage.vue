@@ -304,7 +304,7 @@
         <!-- 第三部分：工序明细 -->
         <div class="mb-3 flex justify-between items-end">
           <div>
-            <div class="text-sm font-bold text-slate-900">工序列表</div>
+            <div class="text-lg font-bold text-slate-900">工序列表</div>
             <div class="text-xs text-slate-500 mt-1">配置生产所需的标准工序及单价</div>
           </div>
           <div class="flex gap-2">
@@ -430,7 +430,7 @@
     </el-dialog>
 
     <!-- 一键复制工序弹窗 -->
-    <el-dialog v-model="showProcessCopyDialog" title="从其他配置复制工序" width="550px" append-to-body :close-on-click-modal="false">
+    <el-dialog v-model="showProcessCopyDialog" title="从其他配置复制工序" width="550px" class="minimal-dialog-auto" append-to-body :close-on-click-modal="false">
       <el-form label-width="100px">
         <el-form-item label="源配置" required>
           <el-select v-model="copySourceConfigId" filterable placeholder="选择要复制的源配置" style="width: 100%" @change="handleCopySourceChange" :loading="copyConfigsLoading">
@@ -498,6 +498,7 @@ import {
   calculateTotalFromConfig,
   calculateTotalPerCarton
 } from '../../config/packagingTypes'
+import { usePagination } from '@/composables/usePagination'
 
 defineOptions({ name: 'ProcessManage' })
 
@@ -545,8 +546,7 @@ watch(viewMode, (newMode) => {
 })
 
 // 分页状态
-const currentPage = ref(1)
-const pageSize = ref(12)
+const { currentPage, pageSize } = usePagination('process')
 
 // 分页后的数据
 const paginatedConfigs = computed(() => {

@@ -128,6 +128,7 @@ import { useAuthStore } from '../../store/auth'
 import { useConfigStore } from '../../store/config'
 import { formatNumber, formatDateTime, downloadBlob } from '../../utils/format'
 import CostPageHeader from '@/components/cost/CostPageHeader.vue'
+import { usePagination } from '@/composables/usePagination'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
 
@@ -149,9 +150,7 @@ const loading = ref(false)
 const searchKeyword = ref('')
 
 // 分页状态
-const currentPage = ref(1)
-const pageSize = ref(12)
-const total = ref(0)
+const { currentPage, pageSize, total } = usePagination('material')
 
 // 防抖定时器
 const searchTimer = ref(null)

@@ -155,6 +155,7 @@ import logger from '@/utils/logger'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
 import CostPageHeader from '@/components/cost/CostPageHeader.vue'
+import { usePagination } from '@/composables/usePagination'
 
 defineOptions({ name: 'StandardCost' })
 
@@ -191,9 +192,7 @@ const searchForm = reactive({ model_category: '' })
 const searchKeyword = ref('')
 
 // 分页状态
-const currentPage = ref(1)
-const pageSize = ref(12)
-const total = ref(0)
+const { currentPage, pageSize, total } = usePagination('standard_cost')
 
 // 防抖定时器
 let searchTimer = null

@@ -43,10 +43,13 @@
               </div>
             </div>
             <div class="item-details">
+              <div class="detail-row" v-if="item.model_series">
+                <span class="series-tag"><span class="label">系列:</span> {{ item.model_series }}</span>
+              </div>
               <div class="detail-row">
-                <span v-if="item.model_series" class="series-tag"><span class="label">系列:</span> {{ item.model_series }}</span>
                 <span class="category-tag"><span class="label">分类:</span> {{ item.model_category || '暂无' }}</span>
               </div>
+              <div class="divider"></div>
               <div class="bom-info bom-link" @click="handleConfigBom(item)">
                 BOM: 共 {{ item.bom_count || 0 }} 项
               </div>
@@ -191,6 +194,7 @@ import CommonPagination from '@/components/common/CommonPagination.vue'
 import BomConfigDialog from '@/components/BomConfigDialog.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
 import StatusSwitch from '@/components/common/StatusSwitch.vue'
+import { usePagination } from '@/composables/usePagination'
 
 defineOptions({ name: 'ModelManage' })
 
@@ -211,8 +215,7 @@ const isEdit = ref(false)
 const loading = ref(false)
 const searchKeyword = ref('')
 const viewMode = ref('card')
-const currentPage = ref(1)
-const pageSize = ref(12)
+const { currentPage, pageSize } = usePagination('model')
 const formRef = ref(null)
 const modelImages = ref([])
 const imageList = ref([])
@@ -443,6 +446,7 @@ onMounted(() => { fetchRegulations(); fetchModels(); fetchSeries() })
 .detail-row { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: #606266; }
 .series-tag, .category-tag { display: flex; align-items: center; gap: 4px; }
 .series-tag .label, .category-tag .label { color: #909399; }
+.divider { height: 1px; background-color: #ebeef5; margin: 4px 0; }
 
 .card-actions { display: flex; justify-content: center; gap: 8px; padding: 12px; border-top: 1px solid #ebeef5; background: #fafafa; border-radius: 0 0 8px 8px; }
 .card-actions .el-button { transition: transform 0.2s, box-shadow 0.2s; }

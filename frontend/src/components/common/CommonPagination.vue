@@ -5,7 +5,7 @@
       <el-pagination
         v-model:current-page="currentPageModel"
         v-model:page-size="pageSizeModel"
-        :page-sizes="[12, 20, 50, 100]"
+        :page-sizes="[8, 10, 50, 100]"
         :total="total"
         layout="prev, pager, next, sizes"
       />
@@ -19,7 +19,7 @@ import { computed } from 'vue'
 const props = defineProps({
   total: { type: Number, default: 0 },
   currentPage: { type: Number, default: 1 },
-  pageSize: { type: Number, default: 12 }
+  pageSize: { type: Number, default: 8 }
 })
 
 const emit = defineEmits(['update:currentPage', 'update:pageSize'])

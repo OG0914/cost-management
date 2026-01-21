@@ -1,13 +1,12 @@
 <template>
   <div class="cost-detail-container">
     <!-- 顶部导航栏 -->
-    <div class="cost-page-header">
-      <div class="cost-header-left">
-        <button class="cost-back-btn" type="button" @click="goBack">← 返回</button>
-        <h2 class="cost-page-title">报价单详情</h2>
+    <!-- 顶部导航栏 -->
+    <CostPageHeader title="报价单详情" :show-back="true" @back="goBack">
+      <template #after-title>
         <el-tag :type="getStatusType(quotation.status)" size="large">{{ getStatusText(quotation.status) }}</el-tag>
-      </div>
-      <div class="cost-header-right">
+      </template>
+      <template #actions>
         <ActionButton type="export" @click="handleExport" :disabled="exporting">
           导出 Excel
         </ActionButton>
@@ -23,8 +22,8 @@
           设为标准成本
         </ActionButton>
         <ActionButton type="edit" @click="goToEdit" v-if="canEdit">编辑</ActionButton>
-      </div>
-    </div>
+      </template>
+    </CostPageHeader>
 
     <div v-loading="loading">
       <!-- 基本信息 -->
@@ -400,6 +399,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, InfoFilled, View, Hide, TrendCharts, Download } from '@element-plus/icons-vue'
 import ActionButton from '@/components/common/ActionButton.vue'
+import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import request from '@/utils/request'
 import { formatNumber } from '@/utils/format'
 import { formatQuantity } from '@/utils/review'

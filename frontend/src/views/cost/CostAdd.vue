@@ -1,17 +1,18 @@
 <template>
   <div class="cost-page-wrapper">
     <!-- 顶部导航栏 -->
-    <div class="cost-page-header">
-      <div class="cost-header-left">
-        <button class="cost-back-btn" type="button" @click="goBack">返回</button>
-        <h2 class="cost-page-title">{{ pageTitle }}</h2>
+    <!-- 顶部导航栏 -->
+    <CostPageHeader :title="pageTitle" :show-back="true" @back="goBack">
+      <template #after-title>
         <el-tag v-if="isEditMode" type="warning" size="small">编辑中</el-tag>
-      </div>
-      <div class="cost-header-right" v-if="form.packaging_config_id || form.customer_name">
-        <span v-if="form.packaging_config_id" class="meta-tag">{{ selectedConfigInfo }}</span>
-        <span v-if="form.customer_name" class="meta-tag">{{ form.customer_name }}</span>
-      </div>
-    </div>
+      </template>
+      <template #actions>
+        <div v-if="form.packaging_config_id || form.customer_name">
+          <span v-if="form.packaging_config_id" class="meta-tag">{{ selectedConfigInfo }}</span>
+          <span v-if="form.customer_name" class="meta-tag">{{ form.customer_name }}</span>
+        </div>
+      </template>
+    </CostPageHeader>
 
     <!-- 左右分栏主体 -->
     <div class="cost-page-body">
@@ -193,12 +194,12 @@
                   </div>
                 </div>
 
-                <!-- CBM过大提示 (仅在散货且CBM>15时显示) -->
-                <div v-if="shippingInfo.cbm && parseFloat(shippingInfo.cbm) > 15" class="smart-packing-tip warning">
+                <!-- CBM过大提示 (仅在散货且CBM>58时显示) -->
+                <div v-if="shippingInfo.cbm && parseFloat(shippingInfo.cbm) > 58" class="smart-packing-tip warning">
                   <el-icon><WarningFilled /></el-icon>
                   <div class="tip-content">
                     <div class="tip-title">运输建议:</div>
-                    <div>当前CBM为 <strong>{{ shippingInfo.cbm }}</strong> (超过15)，建议选择整柜运输或联系物流单独确认运费。</div>
+                    <div>当前CBM为 <strong>{{ shippingInfo.cbm }}</strong> (超过58)，建议选择整柜运输或联系物流单独确认运费。</div>
                   </div>
                 </div>
               </div>
@@ -223,6 +224,8 @@
                       </div>
                       <span class="text-gray-300">|</span>
                       <span>汇率 {{ freightCalculation.exchangeRate }}</span>
+                      <span class="text-gray-300">|</span>
+                      <span>CBM <span class="font-medium text-gray-700">{{ shippingInfo.cbm || '-' }}</span></span>
                     </div>
                   </div>
                   <div class="hidden md:block w-px bg-gradient-to-b from-transparent via-blue-200 to-transparent"></div>
@@ -632,6 +635,7 @@ import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { InfoFilled, Document, FolderAdd, Promotion } from '@element-plus/icons-vue'
+import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import { formatNumber } from '@/utils/format'
 import { useConfigStore } from '@/store/config'
 import logger from '@/utils/logger'

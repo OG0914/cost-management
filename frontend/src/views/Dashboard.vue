@@ -23,7 +23,7 @@
       <!-- 右侧日期排版 -->
       <div class="relative z-10 text-right flex-shrink-0 hidden sm:block">
         <div class="flex items-baseline justify-end leading-none text-slate-700">
-          <span class="text-4xl font-extrabold tracking-tighter mr-0.5 text-slate-800">{{ dateDay }}</span>
+          <span class="text-3xl font-extrabold tracking-tighter mr-0.5 text-slate-800">{{ dateDay }}</span>
           <span class="text-2xl font-light text-slate-300 mx-1">/</span>
           <span class="text-xl font-semibold text-slate-500">{{ dateMonth }}</span>
         </div>
