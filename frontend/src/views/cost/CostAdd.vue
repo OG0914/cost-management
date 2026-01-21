@@ -634,7 +634,7 @@
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { InfoFilled, Document, FolderAdd, Promotion } from '@element-plus/icons-vue'
+import { InfoFilled, WarningFilled, Document, FolderAdd, Promotion } from '@element-plus/icons-vue'
 import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import { formatNumber } from '@/utils/format'
 import { useConfigStore } from '@/store/config'
