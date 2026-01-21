@@ -15,6 +15,35 @@ const { matchCategoryFromDB } = require('../../utils/categoryMatcher');
 const path = require('path');
 const fs = require('fs');
 
+// 临时目录路径
+const TEMP_DIR = path.join(__dirname, '../temp');
+
+/**
+ * 确保临时目录存在并返回文件完整路径
+ * @param {string} fileName - 文件名
+ * @returns {string} 完整文件路径
+ */
+const ensureTempFile = (fileName) => {
+    if (!fs.existsSync(TEMP_DIR)) {
+        fs.mkdirSync(TEMP_DIR, { recursive: true });
+    }
+    return path.join(TEMP_DIR, fileName);
+};
+
+/**
+ * 发送文件并在完成后删除
+ * @param {Response} res - Express响应对象
+ * @param {string} filePath - 文件路径
+ * @param {string} fileName - 下载文件名
+ * @param {Function} next - 错误处理函数
+ */
+const sendAndCleanup = (res, filePath, fileName, next) => {
+    res.download(filePath, fileName, (err) => {
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        if (err) next(err);
+    });
+};
+
 /**
  * 获取原料列表（支持分页和搜索）
  * GET /api/materials
@@ -71,14 +100,19 @@ const getMaterialsByIds = async (req, res, next) => {
       return res.json(success([]));
     }
 
-    const idArray = Array.isArray(ids) ? ids : ids.split(',');
-    const materials = await Promise.all(
-      idArray.map(id => Material.findById(parseInt(id)))
+    const idArray = (Array.isArray(ids) ? ids : ids.split(',')).map(id => parseInt(id)).filter(id => !isNaN(id));
+    if (idArray.length === 0) {
+      return res.json(success([]));
+    }
+
+    // 使用批量SQL查询代替逐个查询，提升性能
+    const placeholders = idArray.map((_, i) => `$${i + 1}`).join(', ');
+    const result = await dbManager.query(
+      `SELECT * FROM materials WHERE id IN (${placeholders}) ORDER BY id`,
+      idArray
     );
 
-    // 过滤掉不存在的原料
-    const validMaterials = materials.filter(m => m !== null);
-    res.json(success(validMaterials));
+    res.json(success(result.rows));
   } catch (err) {
     next(err);
   }
@@ -232,12 +266,22 @@ const batchDeleteMaterials = async (req, res, next) => {
 
 // 临时文件存储（用于两阶段导入）
 const pendingImports = new Map(); // importId -> { filePath, expireAt }
+const PENDING_IMPORTS_MAX_SIZE = 100; // 最大容量限制，防止内存溢出
 
 // 清理过期的临时文件
 const cleanupExpiredImports = () => {
   const now = Date.now();
   for (const [id, data] of pendingImports) {
     if (now > data.expireAt) {
+      if (fs.existsSync(data.filePath)) fs.unlinkSync(data.filePath);
+      pendingImports.delete(id);
+    }
+  }
+  // 如果仍超过限制，删除最旧的条目
+  if (pendingImports.size > PENDING_IMPORTS_MAX_SIZE) {
+    const entries = [...pendingImports.entries()].sort((a, b) => a[1].expireAt - b[1].expireAt);
+    const toDelete = entries.slice(0, pendingImports.size - PENDING_IMPORTS_MAX_SIZE);
+    for (const [id, data] of toDelete) {
       if (fs.existsSync(data.filePath)) fs.unlinkSync(data.filePath);
       pendingImports.delete(id);
     }
@@ -409,11 +453,9 @@ const exportMaterials = async (req, res, next) => {
 
     let materials;
     if (ids && ids.length > 0) {
-      // 导出选中的数据
       const materialPromises = ids.map(id => Material.findById(id));
       materials = (await Promise.all(materialPromises)).filter(m => m !== null);
     } else {
-      // 如果没有指定ID，导出所有数据
       materials = await Material.findAll();
     }
 
@@ -422,29 +464,11 @@ const exportMaterials = async (req, res, next) => {
     }
 
     const workbook = await ExcelGenerator.generateMaterialExcel(materials);
-
-    // 生成文件
     const fileName = `原料清单_${Date.now()}.xlsx`;
-    const filePath = path.join(__dirname, '../temp', fileName);
-
-    // 确保 temp 目录存在
-    const tempDir = path.join(__dirname, '../temp');
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
+    const filePath = ensureTempFile(fileName);
 
     await workbook.xlsx.writeFile(filePath);
-
-    // 发送文件
-    res.download(filePath, fileName, (err) => {
-      // 删除临时文件
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-      if (err) {
-        next(err);
-      }
-    });
+    sendAndCleanup(res, filePath, fileName, next);
   } catch (err) {
     next(err);
   }
@@ -454,25 +478,11 @@ const exportMaterials = async (req, res, next) => {
 const downloadTemplate = async (req, res, next) => {
   try {
     const workbook = await ExcelGenerator.generateMaterialTemplate();
-
     const fileName = '原料导入模板.xlsx';
-    const filePath = path.join(__dirname, '../temp', fileName);
-
-    const tempDir = path.join(__dirname, '../temp');
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
+    const filePath = ensureTempFile(fileName);
 
     await workbook.xlsx.writeFile(filePath);
-
-    res.download(filePath, fileName, (err) => {
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-      if (err) {
-        next(err);
-      }
-    });
+    sendAndCleanup(res, filePath, fileName, next);
   } catch (err) {
     next(err);
   }

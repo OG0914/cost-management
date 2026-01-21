@@ -31,7 +31,7 @@ class DatabaseManager {
         min: parseInt(process.env.PG_POOL_MIN) || 2,
         max: parseInt(process.env.PG_POOL_MAX) || 20,
         idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 5000,
+        connectionTimeoutMillis: 2000,
       };
 
       // 优先使用 DATABASE_URL，否则使用独立配置
@@ -71,8 +71,10 @@ class DatabaseManager {
       // 初始化表结构
       await this.initializeTables();
 
-      // 执行迁移
-      await this.runMigrations();
+      // 开发环境可通过 SKIP_MIGRATIONS=true 跳过迁移检查
+      if (process.env.SKIP_MIGRATIONS !== 'true') {
+        await this.runMigrations();
+      }
 
       return this.pool;
     } catch (error) {

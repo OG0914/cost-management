@@ -31,6 +31,80 @@ const validateQuotationData = (data) => {
 };
 
 /**
+ * 计算原料明细总计（提取公共逻辑）
+ * @param {Array} items - 明细数组
+ * @param {number} materialCoefficient - 原料系数
+ * @returns {Object} { materialTotal, afterOverheadMaterialTotal, processTotal, packagingTotal }
+ */
+const calculateItemTotals = (items, materialCoefficient) => {
+    // 计算单项原料小计的辅助函数
+    const calcMaterialSubtotal = (item) => {
+        if (item.coefficient_applied) {
+            return parseFloat(item.subtotal || 0);
+        }
+        return CostCalculator.calculateMaterialSubtotal(
+            parseFloat(item.usage_amount || 0),
+            parseFloat(item.unit_price || 0),
+            materialCoefficient
+        );
+    };
+
+    // 原料总计：不包含管销后算的原料
+    const materialTotal = items
+        .filter(item => item.category === 'material' && !item.after_overhead)
+        .reduce((sum, item) => sum + calcMaterialSubtotal(item), 0);
+
+    // 管销后算的原料总计
+    const afterOverheadMaterialTotal = items
+        .filter(item => item.category === 'material' && item.after_overhead)
+        .reduce((sum, item) => sum + calcMaterialSubtotal(item), 0);
+
+    // 工序和包材直接累加subtotal
+    const processTotal = items
+        .filter(item => item.category === 'process')
+        .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
+
+    const packagingTotal = items
+        .filter(item => item.category === 'packaging')
+        .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
+
+    return { materialTotal, afterOverheadMaterialTotal, processTotal, packagingTotal };
+};
+
+/**
+ * 获取原料系数
+ * @param {number} modelId - 型号ID
+ * @returns {Promise<number>} 原料系数
+ */
+const getMaterialCoefficient = async (modelId) => {
+    if (!modelId) return 1;
+    const model = await Model.findById(modelId);
+    if (model && model.model_category) {
+        const coefficients = await SystemConfig.getValue('material_coefficients') || {};
+        return CostCalculator.getMaterialCoefficient(model.model_category, coefficients);
+    }
+    return 1;
+};
+
+/**
+ * 验证并获取增值税率
+ * @param {number|undefined} vatRate - 请求中的增值税率
+ * @param {Object} calculatorConfig - 计算器配置
+ * @returns {{ valid: boolean, error?: string, vatRateToSave?: number }}
+ */
+const processVatRate = (vatRate, calculatorConfig) => {
+    if (vatRate === undefined || vatRate === null) {
+        return { valid: true, vatRateToSave: null };
+    }
+    const parsed = parseFloat(vatRate);
+    if (isNaN(parsed) || parsed < 0 || parsed > 1) {
+        return { valid: false, error: '增值税率必须在 0 到 1 之间' };
+    }
+    calculatorConfig.vatRate = parsed;
+    return { valid: true, vatRateToSave: parsed };
+};
+
+/**
  * 创建报价单
  * POST /api/cost/quotations
  */
@@ -73,70 +147,23 @@ const createQuotation = async (req, res) => {
         }
 
         // 获取原料系数
-        let materialCoefficient = 1;
-        const model = await Model.findById(model_id);
-        if (model && model.model_category) {
-            const coefficients = await SystemConfig.getValue('material_coefficients') || {};
-            materialCoefficient = CostCalculator.getMaterialCoefficient(model.model_category, coefficients);
-        }
+        const materialCoefficient = await getMaterialCoefficient(model_id);
 
         // 计算运费成本
         const freight_per_unit = freight_total / quantity;
 
-        // 计算明细总计（应用原料系数）
-        // 原料总计：不包含管销后算的原料
-        const materialTotal = items
-            .filter(item => item.category === 'material' && !item.after_overhead)
-            .reduce((sum, item) => {
-                // 如果前端已经传递了应用系数后的subtotal，直接使用
-                if (item.coefficient_applied) {
-                    return sum + parseFloat(item.subtotal || 0);
-                }
-                // 使用原料系数重新计算小计
-                const subtotal = CostCalculator.calculateMaterialSubtotal(
-                    parseFloat(item.usage_amount || 0),
-                    parseFloat(item.unit_price || 0),
-                    materialCoefficient
-                );
-                return sum + subtotal;
-            }, 0);
-
-        // 管销后算的原料总计
-        const afterOverheadMaterialTotal = items
-            .filter(item => item.category === 'material' && item.after_overhead)
-            .reduce((sum, item) => {
-                if (item.coefficient_applied) {
-                    return sum + parseFloat(item.subtotal || 0);
-                }
-                const subtotal = CostCalculator.calculateMaterialSubtotal(
-                    parseFloat(item.usage_amount || 0),
-                    parseFloat(item.unit_price || 0),
-                    materialCoefficient
-                );
-                return sum + subtotal;
-            }, 0);
-
-        const processTotal = items
-            .filter(item => item.category === 'process')
-            .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
-
-        const packagingTotal = items
-            .filter(item => item.category === 'packaging')
-            .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
+        // 计算明细总计
+        const { materialTotal, afterOverheadMaterialTotal, processTotal, packagingTotal } = calculateItemTotals(items, materialCoefficient);
 
         // 获取系统配置并计算报价
         const calculatorConfig = await SystemConfig.getCalculatorConfig();
 
-        // 如果请求中包含 vat_rate，验证并覆盖全局配置
-        let vatRateToSave = null;
-        if (req.body.vat_rate !== undefined && req.body.vat_rate !== null) {
-            const vatRate = parseFloat(req.body.vat_rate);
-            if (isNaN(vatRate) || vatRate < 0 || vatRate > 1) {
-                return res.status(400).json(error('增值税率必须在 0 到 1 之间', 400));
-            }
-            calculatorConfig.vatRate = vatRate;
-            vatRateToSave = vatRate;
+        // 验证增值税率
+        const vatResult = processVatRate(req.body.vat_rate, calculatorConfig);
+        if (!vatResult.valid) {
+            return res.status(400).json(error(vatResult.error, 400));
         }
+        const vatRateToSave = vatResult.vatRateToSave;
 
         const calculator = new CostCalculator(calculatorConfig);
 
@@ -222,7 +249,7 @@ const createQuotation = async (req, res) => {
         }, '报价单创建成功'));
 
     } catch (err) {
-        logger.error('创建报价单失败:', err);
+        logger.error('创建报价单失败:', err.message);
         res.status(500).json(error('创建报价单失败: ' + err.message, 500));
     }
 };
@@ -265,7 +292,7 @@ const getModelStandardData = async (req, res) => {
         }, '获取型号标准数据成功'));
 
     } catch (err) {
-        logger.error('获取型号标准数据失败:', err);
+        logger.error('获取型号标准数据失败:', err.message);
         res.status(500).json(error('获取型号标准数据失败: ' + err.message, 500));
     }
 };
@@ -290,67 +317,16 @@ const calculateQuotation = async (req, res) => {
         }
 
         // 获取原料系数
-        let materialCoefficient = 1;
-        if (model_id) {
-            const model = await Model.findById(model_id);
-            if (model && model.model_category) {
-                const coefficients = await SystemConfig.getValue('material_coefficients') || {};
-                materialCoefficient = CostCalculator.getMaterialCoefficient(model.model_category, coefficients);
-            }
-        }
+        const materialCoefficient = await getMaterialCoefficient(model_id);
 
         // 计算明细总计
-        // 原料总计：不包含管销后算的原料，应用原料系数
-        const materialTotal = items
-            .filter(item => item.category === 'material' && !item.after_overhead)
-            .reduce((sum, item) => {
-                // 如果前端已经传递了应用系数后的subtotal，直接使用
-                // 否则重新计算（兼容旧版本）
-                if (item.coefficient_applied) {
-                    return sum + parseFloat(item.subtotal || 0);
-                }
-                // 使用原料系数重新计算小计
-                const subtotal = CostCalculator.calculateMaterialSubtotal(
-                    parseFloat(item.usage_amount || 0),
-                    parseFloat(item.unit_price || 0),
-                    materialCoefficient
-                );
-                return sum + subtotal;
-            }, 0);
-
-        // 管销后算的原料总计（同样应用原料系数）
-        const afterOverheadMaterialTotal = items
-            .filter(item => item.category === 'material' && item.after_overhead)
-            .reduce((sum, item) => {
-                if (item.coefficient_applied) {
-                    return sum + parseFloat(item.subtotal || 0);
-                }
-                const subtotal = CostCalculator.calculateMaterialSubtotal(
-                    parseFloat(item.usage_amount || 0),
-                    parseFloat(item.unit_price || 0),
-                    materialCoefficient
-                );
-                return sum + subtotal;
-            }, 0);
-
-        const processTotal = items
-            .filter(item => item.category === 'process')
-            .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
-
-        const packagingTotal = items
-            .filter(item => item.category === 'packaging')
-            .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
+        const { materialTotal, afterOverheadMaterialTotal, processTotal, packagingTotal } = calculateItemTotals(items, materialCoefficient);
 
         // 获取系统配置并计算报价
         const calculatorConfig = await SystemConfig.getCalculatorConfig();
 
-        // 如果请求中包含 vat_rate，验证并覆盖全局配置
-        if (req.body.vat_rate !== undefined && req.body.vat_rate !== null) {
-            const vatRate = parseFloat(req.body.vat_rate);
-            if (!isNaN(vatRate) && vatRate >= 0 && vatRate <= 1) {
-                calculatorConfig.vatRate = vatRate;
-            }
-        }
+        // 验证增值税率（计算接口不返回错误，仅静默忽略无效值）
+        processVatRate(req.body.vat_rate, calculatorConfig);
 
         const calculator = new CostCalculator(calculatorConfig);
 
@@ -376,7 +352,7 @@ const calculateQuotation = async (req, res) => {
         res.json(success(calculation, '计算成功'));
 
     } catch (err) {
-        logger.error('计算报价失败:', err);
+        logger.error('计算报价失败:', err.message);
         res.status(500).json(error('计算报价失败: ' + err.message, 500));
     }
 };
@@ -426,68 +402,23 @@ const updateQuotation = async (req, res) => {
         }
 
         // 获取原料系数（使用报价单关联的型号）
-        let materialCoefficient = 1;
-        const model = await Model.findById(quotation.model_id);
-        if (model && model.model_category) {
-            const coefficients = await SystemConfig.getValue('material_coefficients') || {};
-            materialCoefficient = CostCalculator.getMaterialCoefficient(model.model_category, coefficients);
-        }
+        const materialCoefficient = await getMaterialCoefficient(quotation.model_id);
 
         // 计算运费成本
         const freight_per_unit = freight_total / quantity;
 
-        // 计算明细总计（应用原料系数）
-        // 原料总计：不包含管销后算的原料
-        const materialTotal = items
-            .filter(item => item.category === 'material' && !item.after_overhead)
-            .reduce((sum, item) => {
-                if (item.coefficient_applied) {
-                    return sum + parseFloat(item.subtotal || 0);
-                }
-                const subtotal = CostCalculator.calculateMaterialSubtotal(
-                    parseFloat(item.usage_amount || 0),
-                    parseFloat(item.unit_price || 0),
-                    materialCoefficient
-                );
-                return sum + subtotal;
-            }, 0);
-
-        // 管销后算的原料总计
-        const afterOverheadMaterialTotal = items
-            .filter(item => item.category === 'material' && item.after_overhead)
-            .reduce((sum, item) => {
-                if (item.coefficient_applied) {
-                    return sum + parseFloat(item.subtotal || 0);
-                }
-                const subtotal = CostCalculator.calculateMaterialSubtotal(
-                    parseFloat(item.usage_amount || 0),
-                    parseFloat(item.unit_price || 0),
-                    materialCoefficient
-                );
-                return sum + subtotal;
-            }, 0);
-
-        const processTotal = items
-            .filter(item => item.category === 'process')
-            .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
-
-        const packagingTotal = items
-            .filter(item => item.category === 'packaging')
-            .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
+        // 计算明细总计
+        const { materialTotal, afterOverheadMaterialTotal, processTotal, packagingTotal } = calculateItemTotals(items, materialCoefficient);
 
         // 获取系统配置并计算报价
         const calculatorConfig = await SystemConfig.getCalculatorConfig();
 
-        // 如果请求中包含 vat_rate，验证并覆盖全局配置
-        let vatRateToSave = null;
-        if (req.body.vat_rate !== undefined && req.body.vat_rate !== null) {
-            const vatRate = parseFloat(req.body.vat_rate);
-            if (isNaN(vatRate) || vatRate < 0 || vatRate > 1) {
-                return res.status(400).json(error('增值税率必须在 0 到 1 之间', 400));
-            }
-            calculatorConfig.vatRate = vatRate;
-            vatRateToSave = vatRate;
+        // 验证增值税率
+        const vatResult = processVatRate(req.body.vat_rate, calculatorConfig);
+        if (!vatResult.valid) {
+            return res.status(400).json(error(vatResult.error, 400));
         }
+        const vatRateToSave = vatResult.vatRateToSave;
 
         const calculator = new CostCalculator(calculatorConfig);
 
@@ -577,7 +508,7 @@ const updateQuotation = async (req, res) => {
         }, '报价单更新成功'));
 
     } catch (err) {
-        logger.error('更新报价单失败:', err);
+        logger.error('更新报价单失败:', err.message);
         res.status(500).json(error('更新报价单失败: ' + err.message, 500));
     }
 };
@@ -619,7 +550,7 @@ const submitQuotation = async (req, res) => {
         res.json(success(updatedQuotation, '报价单提交成功'));
 
     } catch (err) {
-        logger.error('提交报价单失败:', err);
+        logger.error('提交报价单失败:', err.message);
         res.status(500).json(error('提交报价单失败: ' + err.message, 500));
     }
 };
@@ -659,7 +590,7 @@ const getQuotationList = async (req, res) => {
         const result = await Quotation.findAll(options);
         res.json(paginated(result.data, result.total, result.page, result.pageSize));
     } catch (err) {
-        logger.error('获取报价单列表失败:', err);
+        logger.error('获取报价单列表失败:', err.message);
         res.status(500).json(error('获取报价单列表失败: ' + err.message, 500));
     }
 };
@@ -760,7 +691,7 @@ const getQuotationDetail = async (req, res) => {
         }, '获取报价单详情成功'));
 
     } catch (err) {
-        logger.error('获取报价单详情失败:', err);
+        logger.error('获取报价单详情失败:', err.message);
         res.status(500).json(error('获取报价单详情失败: ' + err.message, 500));
     }
 };
@@ -809,7 +740,7 @@ const deleteQuotation = async (req, res) => {
         }
 
     } catch (err) {
-        logger.error('删除报价单失败:', err);
+        logger.error('删除报价单失败:', err.message);
         res.status(500).json(error('删除报价单失败: ' + err.message, 500));
     }
 };
@@ -850,7 +781,7 @@ const getPackagingConfigs = async (req, res) => {
         res.json(success(configs, '获取包装配置列表成功'));
 
     } catch (err) {
-        logger.error('获取包装配置列表失败:', err);
+        logger.error('获取包装配置列表失败:', err.message);
         res.status(500).json(error('获取包装配置列表失败: ' + err.message, 500));
     }
 };
@@ -922,7 +853,7 @@ const getPackagingConfigDetails = async (req, res) => {
         }, '获取包装配置详情成功'));
 
     } catch (err) {
-        logger.error('获取包装配置详情失败:', err);
+        logger.error('获取包装配置详情失败:', err.message);
         res.status(500).json(error('获取包装配置详情失败: ' + err.message, 500));
     }
 };
@@ -936,7 +867,7 @@ const getMaterialCoefficients = async (req, res) => {
         const coefficients = await SystemConfig.getValue('material_coefficients');
         res.json(success(coefficients || { '口罩': 0.97, '半面罩': 0.99 }));
     } catch (err) {
-        logger.error('获取原料系数配置失败:', err);
+        logger.error('获取原料系数配置失败:', err.message);
         res.status(500).json(error('获取原料系数配置失败: ' + err.message, 500));
     }
 };
@@ -1038,7 +969,7 @@ const exportQuotation = async (req, res) => {
         res.end();
 
     } catch (err) {
-        logger.error('导出报价单失败:', err);
+        logger.error('导出报价单失败:', err.message);
         res.status(500).json(error('导出报价单失败: ' + err.message, 500));
     }
 };

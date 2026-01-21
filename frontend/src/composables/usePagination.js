@@ -6,14 +6,17 @@ export function usePagination(moduleName, defaultSize = 8) {
     const storageKey = moduleName ? `app_page_size_${moduleName}` : 'app_page_size'
 
     const savedSize = localStorage.getItem(storageKey)
-    const initialSize = savedSize ? parseInt(savedSize, 10) : defaultSize
+    const parsedSize = savedSize ? parseInt(savedSize, 10) : NaN
+    const initialSize = !isNaN(parsedSize) && parsedSize > 0 ? parsedSize : defaultSize
 
     const pageSize = ref(initialSize)
     const currentPage = ref(1)
     const total = ref(0)
 
     watch(pageSize, (val) => {
-        localStorage.setItem(storageKey, val.toString())
+        if (val && val > 0) {
+            localStorage.setItem(storageKey, val.toString())
+        }
     })
 
     return {
