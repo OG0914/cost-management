@@ -24,7 +24,7 @@
       <!-- 搜索栏 -->
       <div class="filter-bar">
         <el-select v-model="filterCategory" placeholder="选择类别" clearable @change="handleCategoryChange" style="width: 150px; margin-right: 12px">
-          <el-option v-for="cat in categoryOptions" :key="cat.name" :label="cat.name" :value="cat.name" />
+          <el-option v-for="cat in categoryOptions" :key="cat" :label="cat" :value="cat" />
         </el-select>
         <el-input
           v-model="searchKeyword"
@@ -91,7 +91,7 @@
         </el-form-item>
         <el-form-item label="类别">
           <el-select v-model="form.category" placeholder="请选择类别" clearable style="width: 100%">
-            <el-option v-for="cat in categoryOptions" :key="cat.name" :label="cat.name" :value="cat.name" />
+            <el-option v-for="cat in categoryOptions" :key="cat" :label="cat" :value="cat" />
           </el-select>
         </el-form-item>
         <el-form-item label="单位" prop="unit">
@@ -136,8 +136,8 @@ const authStore = useAuthStore()
 const configStore = useConfigStore()
 const showToolbar = ref(false)
 
-// 类别选项和筛选
-const categoryOptions = computed(() => configStore.config?.material_categories || [])
+// 类别选项（从数据库动态获取）
+const categoryOptions = ref([])
 const filterCategory = ref('')
 
 // 表格数据（从后端获取的当前页数据）
@@ -430,8 +430,17 @@ const handleDownloadTemplate = async () => {
   } catch (error) { ElMessage.error('下载失败') }
 }
 
+// 获取类别列表
+const fetchCategories = async () => {
+  try {
+    const res = await request.get('/materials/categories')
+    if (res.success) categoryOptions.value = res.data || []
+  } catch (e) { /* 忽略错误 */ }
+}
+
 onMounted(async () => {
   await configStore.loadConfig()
+  await fetchCategories()
   fetchMaterials()
 })
 

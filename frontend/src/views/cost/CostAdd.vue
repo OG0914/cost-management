@@ -386,7 +386,7 @@
                   </el-table-column>
                   <el-table-column label="原料名称" min-width="200">
                     <template #default="{ row, $index }">
-                      <el-select v-if="!row.from_standard || editMode.materials" v-model="row.material_id" filterable remote reserve-keyword clearable :remote-method="searchMaterials" :loading="materialSearchLoading" :placeholder="row.item_name || '输入名称或料号搜索'" @change="handleMaterialSelect(row, $index)" style="width: 100%">
+                      <el-select v-if="!row.from_standard || editMode.materials" v-model="row.material_id" filterable remote reserve-keyword clearable :remote-method="searchMaterialsByCategory" :loading="materialSearchLoading" :placeholder="row.item_name || '输入名称或料号搜索'" @change="handleMaterialSelect(row, $index)" style="width: 100%">
                         <el-option v-if="row.material_id && row.item_name && !materialSearchOptions.some(o => o.id === row.material_id)" :label="row.item_name" :value="row.material_id" />
                         <el-option v-for="material in materialSearchOptions" :key="material.id" :label="`${material.name} (${material.item_no})`" :value="material.id">
                           <div class="flex justify-between w-full"><span>{{ material.name }}</span><span class="text-slate-400 text-xs">¥{{ material.price }}/{{ material.unit }}</span></div>
@@ -454,7 +454,7 @@
                 <el-table :data="form.packaging" border size="small">
                   <el-table-column label="包材名称" min-width="180">
                     <template #default="{ row, $index }">
-                      <el-select v-if="!row.from_standard || editMode.packaging" v-model="row.material_id" filterable remote reserve-keyword clearable :remote-method="searchMaterials" :loading="materialSearchLoading" :placeholder="row.item_name || '输入名称或料号搜索'" @change="handlePackagingMaterialSelect(row, $index)" style="width: 100%">
+                      <el-select v-if="!row.from_standard || editMode.packaging" v-model="row.material_id" filterable remote reserve-keyword clearable :remote-method="searchPackagingByCategory" :loading="materialSearchLoading" :placeholder="row.item_name || '输入名称或料号搜索'" @change="handlePackagingMaterialSelect(row, $index)" style="width: 100%">
                         <el-option v-if="row.material_id && row.item_name && !materialSearchOptions.some(o => o.id === row.material_id)" :label="row.item_name" :value="row.material_id" />
                         <el-option v-for="material in materialSearchOptions" :key="material.id" :label="`${material.name} (${material.item_no})`" :value="material.id">
                           <div class="flex justify-between w-full"><span>{{ material.name }}</span><span class="text-slate-400 text-xs">¥{{ material.price }}/{{ material.unit }}</span></div>
@@ -614,9 +614,9 @@
     </div>
 
     <!-- 添加自定义费用对话框 -->
-    <el-dialog v-model="addFeeDialogVisible" title="添加自定义费用" width="400px" :close-on-click-modal="false" append-to-body>
+    <el-dialog v-model="addFeeDialogVisible" title="添加自定义费用" width="400px" class="minimal-dialog-auto" :close-on-click-modal="false" append-to-body>
       <el-form :model="newFee" :rules="feeRules" ref="feeFormRef" label-width="80px">
-        <el-form-item label="费用项" prop="name"><el-input v-model="newFee.name" placeholder="" /></el-form-item>
+        <el-form-item label="费用项" prop="name"><el-input v-model="newFee.name" placeholder="请输入在管销后计算的费用项目" /></el-form-item>
         <el-form-item label="费率" prop="rate">
           <el-input v-model="newFee.rate" placeholder="如 0.04 表示 4%" style="width: 180px;" @blur="newFee.rate = newFee.rate ? parseFloat(newFee.rate) : null" />
           <span v-if="newFee.rate && !isNaN(newFee.rate)" style="margin-left: 10px; color: #409eff;">{{ (parseFloat(newFee.rate) * 100).toFixed(0) }}%</span>
@@ -670,6 +670,10 @@ const { saving, submitting, isSaved, loadRegulations, loadPackagingConfigs, load
 const { isNewCustomer, selectedCustomerId, customerOptions, customerSearchLoading, customerSelectFocused, onCustomerTypeChange, searchCustomers, onCustomerSelect } = useCustomerSearch()
 const { allMaterials, materialSearchOptions, materialSearchLoading, loadAllMaterials, searchMaterials, onMaterialSelect, onPackagingMaterialSelect } = useMaterialSearch()
 const { hasDraft, getDraftInfo, saveDraft, loadDraft, clearDraft, startAutoSave, stopAutoSave } = useQuotationDraft()
+
+// 按类别搜索物料的封装函数
+const searchMaterialsByCategory = (query) => searchMaterials(query, '原料') // 原料明细只搜索类别为"原料"的
+const searchPackagingByCategory = (query) => searchMaterials(query, '包材') // 包材明细只搜索类别为"包材"的
 
 // 数据列表
 const regulations = ref([])

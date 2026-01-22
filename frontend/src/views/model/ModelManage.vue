@@ -136,7 +136,12 @@
           />
         </el-form-item>
         <el-form-item label="型号分类">
-          <el-input v-model="form.model_category" placeholder="请输入型号分类（如：口罩、半面罩）" />
+          <el-select v-model="form.model_category" placeholder="请选择型号分类" clearable style="width: 100%">
+            <el-option label="口罩" value="口罩" />
+            <el-option label="半面罩" value="半面罩" />
+            <el-option label="全面罩" value="全面罩" />
+            <el-option label="PPE产品" value="PPE产品" />
+          </el-select>
         </el-form-item>
         <el-form-item label="状态" v-if="isEdit">
           <StatusSwitch v-model="form.is_active" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="禁用" />

@@ -1,0 +1,249 @@
+/* ========== 现代化 Message (Toast) 样式 ========== */
+
+.el-message {
+    border-radius: 12px !important;
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.08), 0 4px 12px -4px rgba(0, 0, 0, 0.04) !important;
+    border: 1px solid #e5e7eb !important;
+    /* gray-200 */
+    padding: 12px 24px !important;
+    min-width: 320px !important;
+    background-color: #ffffff !important;
+    /* 强制白色背景 */
+    overflow: visible !important;
+    top: 32px !important;
+    /* 稍微靠下一点 */
+}
+
+/* 强制图标绝对定位，不占据文档流空间，确保文字绝对居中 */
+.el-message .el-message__icon {
+    position: absolute !important;
+    left: 24px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    margin-right: 0 !important;
+    /* 移除默认间距 */
+}
+
+.el-message .el-message__content {
+    width: 100% !important;
+    text-align: center !important;
+    padding: 0 32px !important;
+    /* 两侧留出安全距离，防止文字覆盖图标 */
+    background: transparent !important;
+    pointer-events: none;
+    /* 确保文字不阻挡点击 */
+}
+
+/* 重新定义各状态图标颜色，移除之前的 .el-message__icon 样式以避免冲突 */
+
+/* 成功 */
+.el-message--success {
+    background-color: #ecfdf5 !important;
+    /* emerald-50 */
+    border-color: #a7f3d0 !important;
+    /* emerald-200 */
+}
+
+.el-message--success .el-message__content {
+    color: #065f46 !important;
+    /* emerald-800 - 深绿色文字更协调 */
+    font-weight: 500;
+}
+
+.el-message--success .el-message__icon {
+    color: #059669 !important;
+    /* emerald-600 */
+    font-size: 18px !important;
+}
+
+/* 错误 */
+.el-message--error {
+    background-color: #fef2f2 !important;
+    /* red-50 */
+    border-color: #fecaca !important;
+    /* red-200 */
+}
+
+.el-message--error .el-message__content {
+    color: #991b1b !important;
+    /* red-800 */
+    font-weight: 500;
+}
+
+.el-message--error .el-message__icon {
+    color: #dc2626 !important;
+    /* red-600 */
+    font-size: 18px !important;
+}
+
+/* 警告 */
+.el-message--warning {
+    background-color: #fffbeb !important;
+    /* amber-50 */
+    border-color: #fde68a !important;
+    /* amber-200 */
+}
+
+.el-message--warning .el-message__content {
+    color: #92400e !important;
+    /* amber-800 */
+    font-weight: 500;
+}
+
+.el-message--warning .el-message__icon {
+    color: #d97706 !important;
+    /* amber-600 */
+    font-size: 18px !important;
+}
+
+/* 信息 */
+.el-message--info {
+    background-color: #eff6ff !important;
+    /* blue-50 */
+    border-color: #bfdbfe !important;
+    /* blue-200 */
+}
+
+.el-message--info .el-message__content {
+    color: #1e40af !important;
+    /* blue-800 */
+    font-weight: 500;
+}
+
+.el-message--info .el-message__icon {
+    color: #2563eb !important;
+    /* blue-600 */
+    font-size: 18px !important;
+}
+
+/* 
+   移除旧的 .el-message--success .el-message__icon 等选择器，
+   因为上面已经覆盖了。为了保持文件整洁，我们可以不处理旧的，只要上面的权重够高。
+   但为了代码清晰，建议用户如果可能的话清理旧代码。
+   这里我们用覆盖的方式。
+*/
+
+/* 针对关闭按钮的特殊处理 (如果有的话) */
+.el-message .el-message__closeBtn {
+    position: absolute !important;
+    right: 16px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: #9ca3af !important;
+}
+
+
+.el-message .el-message__closeBtn:hover {
+    color: #4b5563 !important;
+}
+
+/* ========== 现代化 MessageBox (Alert/Confirm) 样式 ========== */
+
+.el-message-box {
+    border-radius: 16px !important;
+    /* 更大的圆角 */
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15) !important;
+    /* 更深的阴影 */
+    border: none !important;
+    padding-bottom: 24px !important;
+    background-color: #ffffff !important;
+    width: 440px !important;
+    max-width: 90vw !important;
+}
+
+/* 移除旧版头部边框，采用更通透的布局 */
+.el-message-box__header {
+    padding: 24px 24px 12px 24px !important;
+    border-bottom: none !important;
+}
+
+.el-message-box__title {
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    color: #111827 !important;
+    /* gray-900 */
+    line-height: 1.4 !important;
+}
+
+/* 隐藏默认状态图标，用更现代的方式（可选）或者保留但美化 */
+.el-message-box__status {
+    top: 24px !important;
+}
+
+.el-message-box__content {
+    padding: 0 24px 24px 24px !important;
+    color: #4b5563 !important;
+    /* gray-600 */
+    font-size: 15px !important;
+    line-height: 1.6 !important;
+}
+
+/* 输入框样式优化 (Prompt) */
+.el-message-box__input {
+    padding-top: 8px !important;
+}
+
+.el-message-box__input .el-input__inner {
+    border-radius: 8px !important;
+    padding: 8px 12px !important;
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb !important;
+    transition: all 0.2s;
+}
+
+.el-message-box__input .el-input__inner:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* 按钮区域 */
+.el-message-box__btns {
+    padding: 0 24px !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 12px !important;
+}
+
+.el-message-box__btns .el-button {
+    margin-left: 0 !important;
+    /* 移除默认 margin */
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    padding: 9px 20px !important;
+    height: auto !important;
+    font-size: 14px !important;
+}
+
+/* 取消按钮 */
+.el-message-box__btns .el-button--default {
+    border: 1px solid #d1d5db !important;
+    color: #374151 !important;
+    background-color: white !important;
+}
+
+.el-message-box__btns .el-button--default:hover {
+    background-color: #f9fafb !important;
+    border-color: #9ca3af !important;
+    color: #111827 !important;
+}
+
+/* 确认按钮 - 蓝色主色调，无AI渐变 */
+.el-message-box__btns .el-button--primary {
+    background-color: #2563eb !important;
+    /* blue-600 */
+    border-color: #2563eb !important;
+    color: white !important;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.1) !important;
+}
+
+.el-message-box__btns .el-button--primary:hover {
+    background-color: #1d4ed8 !important;
+    /* blue-700 */
+    border-color: #1d4ed8 !important;
+}
+
+/* 如果是危险操作（红色） - 需要JS侧配合type='danger'，或者CSS覆盖 */
+.el-button--danger {
+    background-color: #dc2626 !important;
+    border-color: #dc2626 !important;
+}

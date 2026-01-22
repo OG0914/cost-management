@@ -32,8 +32,8 @@ export const menuConfig = [
 
   { type: 'divider', label: '基础数据' },
 
-  { id: 'regulation', label: '法规管理', icon: 'ri-government-line', route: '/regulations', roles: ['admin', 'salesperson', 'reviewer', 'readonly'] },
-  { id: 'model', label: '型号管理', icon: 'ri-price-tag-3-line', route: '/models', roles: ['admin', 'salesperson', 'reviewer', 'readonly'] },
+  { id: 'regulation', label: '法规管理', icon: 'ri-government-line', route: '/regulations', roles: ['admin', 'salesperson', 'reviewer', 'purchaser', 'producer', 'readonly'] },
+  { id: 'model', label: '型号管理', icon: 'ri-price-tag-3-line', route: '/models', roles: ['admin', 'salesperson', 'reviewer', 'purchaser', 'producer', 'readonly'] },
   { id: 'customer', label: '客户管理', icon: 'ri-user-3-line', route: '/customers', roles: ['admin', 'purchaser', 'salesperson'] },
   { id: 'material', label: '原料管理', icon: 'ri-stack-line', route: '/materials' },
   { id: 'packaging', label: '包材管理', icon: 'ri-box-3-line', route: '/packaging' },

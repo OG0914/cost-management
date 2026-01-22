@@ -26,6 +26,8 @@ const getAllMaterials = async (req, res, next) => {
   try {
     const { page = 1, pageSize = 20, keyword, category } = req.query;
 
+
+
     // 参数校验和规范化
     const pageNum = Math.max(1, parseInt(page) || 1);
     const pageSizeNum = Math.min(100, Math.max(1, parseInt(pageSize) || 20));
@@ -41,7 +43,7 @@ const getAllMaterials = async (req, res, next) => {
 
     // 类别筛选
     if (category && category.trim()) {
-      query.where('category', category.trim());
+      query.where('category', '=', category.trim());
     }
 
     // 排序
@@ -478,6 +480,17 @@ const downloadTemplate = async (req, res, next) => {
   }
 };
 
+// 获取所有类别（去重）
+const getCategories = async (req, res, next) => {
+  try {
+    const result = await dbManager.query(`SELECT DISTINCT category FROM materials WHERE category IS NOT NULL AND category != '' ORDER BY category`);
+    const categories = result.rows.map(row => row.category);
+    res.json(success(categories));
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getAllMaterials,
   getMaterialsByIds,
@@ -492,5 +505,6 @@ module.exports = {
   confirmImport,
   checkOrCreate,
   exportMaterials,
-  downloadTemplate
+  downloadTemplate,
+  getCategories
 };

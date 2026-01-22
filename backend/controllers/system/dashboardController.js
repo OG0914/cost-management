@@ -22,6 +22,87 @@ const formatLocalDate = (date) => {
  */
 const getStats = async (req, res) => {
   try {
+    const { role, id: userId } = req.user;
+
+    // 1. 业务员和审核员看到新的成本统计
+    if (['salesperson', 'reviewer'].includes(role)) {
+      let totalQuery = 'SELECT COUNT(*) as count FROM quotations';
+      let pendingQuery = "SELECT COUNT(*) as count FROM quotations WHERE status = 'submitted'";
+      let approvedQuery = "SELECT COUNT(*) as count FROM quotations WHERE status = 'approved'";
+      let returnedQuery = "SELECT COUNT(*) as count FROM quotations WHERE status = 'rejected'";
+      let params = [];
+
+      // 业务员只看自己的数据
+      if (role === 'salesperson') {
+        totalQuery += ' WHERE created_by = $1';
+        pendingQuery += ' AND created_by = $1';
+        approvedQuery += ' AND created_by = $1';
+        returnedQuery += ' AND created_by = $1';
+        params.push(userId);
+      }
+
+      const [totalRes, pendingRes, approvedRes, returnedRes] = await Promise.all([
+        dbManager.query(totalQuery, params),
+        dbManager.query(pendingQuery, params),
+        dbManager.query(approvedQuery, params),
+        dbManager.query(returnedQuery, params)
+      ]);
+
+      const stats = {
+        totalCostRecords: parseInt(totalRes.rows[0]?.count || 0),
+        pendingReview: parseInt(pendingRes.rows[0]?.count || 0),
+        approved: parseInt(approvedRes.rows[0]?.count || 0),
+        returned: parseInt(returnedRes.rows[0]?.count || 0)
+      };
+
+      return res.json(success(stats, '获取统计数据成功'));
+    }
+
+    // 2. 采购和生产看到基础数据统计 (原料、型号、包材、工序)
+    if (['purchaser', 'producer'].includes(role)) {
+      // 有效原料 SKU
+      const materialsResult = await dbManager.query(
+        `SELECT COUNT(*) as count, MAX(updated_at) as last_updated FROM materials`
+      );
+      const activeMaterials = parseInt(materialsResult.rows[0]?.count || 0);
+      const materialsLastUpdated = materialsResult.rows[0]?.last_updated || null;
+
+      // 在售型号
+      const modelsResult = await dbManager.query(
+        `SELECT COUNT(*) as count FROM models WHERE is_active = true`
+      );
+      const activeModels = parseInt(modelsResult.rows[0]?.count || 0);
+
+      // 包材配置 (已配置包材的型号数量)
+      const packagingResult = await dbManager.query(
+        `SELECT COUNT(DISTINCT pc.model_id) as count 
+         FROM packaging_materials pm
+         JOIN packaging_configs pc ON pm.packaging_config_id = pc.id
+         WHERE pm.is_active = true`
+      );
+      const packagingCount = parseInt(packagingResult.rows[0]?.count || 0);
+
+      // 工序配置 (已配置工序的型号数量)
+      const processResult = await dbManager.query(
+        `SELECT COUNT(DISTINCT pc.model_id) as count 
+         FROM process_configs pr
+         JOIN packaging_configs pc ON pr.packaging_config_id = pc.id
+         WHERE pr.is_active = true`
+      );
+      const processCount = parseInt(processResult.rows[0]?.count || 0);
+
+      const stats = {
+        activeMaterials,
+        activeModels,
+        materialsLastUpdated,
+        packagingCount,
+        processCount
+      };
+
+      return res.json(success(stats, '获取统计数据成功'));
+    }
+
+    // 3. 管理员和其他角色看到原本的运营统计 (本月报价、法规、原料、型号)
     // 获取本月开始日期
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -62,13 +143,15 @@ const getStats = async (req, res) => {
     );
     const activeModels = parseInt(modelsResult.rows[0]?.count || 0);
 
-    res.json(success({
+    const stats = {
       monthlyQuotations,
       activeMaterials,
       activeModels,
       growthRate,
       materialsLastUpdated
-    }, '获取统计数据成功'));
+    };
+
+    res.json(success(stats, '获取统计数据成功'));
 
   } catch (err) {
     logger.error('获取仪表盘统计数据失败:', err);

@@ -11,6 +11,7 @@ import './styles/tailwind.css'
 import './styles/index.css'
 import './styles/dialog.css'
 import './styles/cost-form.css'
+import './styles/message-overrides.css'
 
 const app = createApp(App)
 const pinia = createPinia()

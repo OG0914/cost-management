@@ -22,14 +22,16 @@ export function useMaterialSearch() {
     }
   }
 
-  const searchMaterials = async (query) => {
+  const searchMaterials = async (query, category = null) => { // category: 可选，按类别筛选（如 '原料'、'包材'）
     if (!query || query.length < 1) {
       materialSearchOptions.value = []
       return
     }
     materialSearchLoading.value = true
     try {
-      const res = await request.get('/materials', { params: { keyword: query, pageSize: 50 } })
+      const params = { keyword: query, pageSize: 50 }
+      if (category) params.category = category // 传递类别参数给后端
+      const res = await request.get('/materials', { params })
       if (res.success) {
         materialSearchOptions.value = res.data || []
       }

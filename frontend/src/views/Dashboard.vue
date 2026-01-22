@@ -223,11 +223,10 @@ const subGreeting = computed(() => {
 
 // 统计数据
 const stats = ref({
-  monthlyQuotations: 0,
-  activeMaterials: 0,
-  activeModels: 0,
-  growthRate: null,
-  materialsLastUpdated: null
+  totalCostRecords: 0,
+  pendingReview: 0,
+  approved: 0,
+  returned: 0
 })
 
 // 型号排行
@@ -359,16 +358,36 @@ const loadDashboardData = async () => {
 
     // 统计数据
     if (statsRes.success) {
-      stats.value = {
-        monthlyQuotations: statsRes.data.monthlyQuotations || 0,
-        activeMaterials: statsRes.data.activeMaterials || 0,
-        activeModels: statsRes.data.activeModels || 0,
-        growthRate: statsRes.data.growthRate,
-        materialsLastUpdated: statsRes.data.materialsLastUpdated
+      if (statsRes.data.totalCostRecords !== undefined) {
+         // 新版统计 (业务员/审核员)
+         stats.value = {
+            totalCostRecords: statsRes.data.totalCostRecords || 0,
+            pendingReview: statsRes.data.pendingReview || 0,
+            approved: statsRes.data.approved || 0,
+            returned: statsRes.data.returned || 0
+         }
+      } else if (statsRes.data.packagingCount !== undefined) {
+         // 采购/生产 (基础数据统计)
+         stats.value = {
+            activeMaterials: statsRes.data.activeMaterials || 0,
+            activeModels: statsRes.data.activeModels || 0,
+            materialsLastUpdated: statsRes.data.materialsLastUpdated,
+            packagingCount: statsRes.data.packagingCount || 0,
+            processCount: statsRes.data.processCount || 0
+         }
+      } else {
+         // 管理员 (运营统计)
+         stats.value = {
+            monthlyQuotations: statsRes.data.monthlyQuotations || 0,
+            activeMaterials: statsRes.data.activeMaterials || 0,
+            activeModels: statsRes.data.activeModels || 0,
+            growthRate: statsRes.data.growthRate,
+            materialsLastUpdated: statsRes.data.materialsLastUpdated
+         }
       }
     }
 
-    // 法规总览
+    // 法规总览 (主要用于旧版)
     if (regulationsRes.success) {
       regulations.value = regulationsRes.data || []
     }
