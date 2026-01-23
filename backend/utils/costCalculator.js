@@ -21,6 +21,9 @@ class CostCalculator {
     this.exchangeRate = config.exchangeRate || 7.2;
     this.processCoefficient = config.processCoefficient || 1.56;
     this.profitTiers = config.profitTiers || [0.05, 0.10, 0.25, 0.50];
+    // 参数校验：防止除零
+    if (this.overheadRate >= 1) this.overheadRate = 0.99;
+    if (this.exchangeRate <= 0) this.exchangeRate = 7.2;
   }
 
   /**
@@ -158,8 +161,11 @@ class CostCalculator {
       customFees = []
     } = params;
 
+    // 参数校验：防止除零
+    const safeQuantity = quantity > 0 ? quantity : 1;
+
     // 计算运费成本（每片）
-    const freightCost = freightTotal / quantity;
+    const freightCost = freightTotal / safeQuantity;
 
     // 计算基础成本价（不含管销后算的原料）
     const baseCost = this.calculateBaseCost({

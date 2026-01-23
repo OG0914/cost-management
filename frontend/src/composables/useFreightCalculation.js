@@ -3,10 +3,14 @@
  * 处理 FOB 深圳整柜、散货运费计算逻辑
  */
 
-import { ref, reactive, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, reactive } from 'vue'
 import request from '@/utils/request'
 import logger from '@/utils/logger'
+
+// 常量定义
+const CBM_DIVISOR = 35.32  // 立方英寸转CBM的除数
+const FCL_20_VOLUME = 950  // 20尺柜容积(立方英寸)
+const FCL_40_VOLUME = 1950 // 40尺柜容积(立方英寸)
 
 export function useFreightCalculation() {
   const freightCalculation = ref(null)
@@ -54,7 +58,7 @@ export function useFreightCalculation() {
         systemConfig.value.lclDocumentFee = response.data.lcl_document_fee || 500
       }
     } catch (error) {
-      logger.error('加载系统配置失败:', error)
+      logger.error('加载系统配置失败:', error.message || error)
     }
   }
 
@@ -80,7 +84,7 @@ export function useFreightCalculation() {
     // 计算 CBM
     if (shippingInfo.cartonVolume && shippingInfo.cartonVolume > 0) {
       const totalVolume = shippingInfo.cartonVolume * cartons
-      const cbm = (totalVolume / 35.32).toFixed(1)
+      const cbm = (totalVolume / CBM_DIVISOR).toFixed(1)
       shippingInfo.cbm = cbm
 
       // 内销：自动计算运费
@@ -103,7 +107,7 @@ export function useFreightCalculation() {
 
     // 整柜（FCL）
     if (form.shipping_method === 'fcl_20' || form.shipping_method === 'fcl_40') {
-      const containerVolume = form.shipping_method === 'fcl_40' ? 1950 : 950
+      const containerVolume = form.shipping_method === 'fcl_40' ? FCL_40_VOLUME : FCL_20_VOLUME
       const freightUSD = form.shipping_method === 'fcl_40'
         ? systemConfig.value.fcl40FreightUsd
         : systemConfig.value.fcl20FreightUsd
@@ -124,7 +128,7 @@ export function useFreightCalculation() {
           quantityUnit.value = 'carton'
           quantityInput.value = maxCartons
           shippingInfo.cartons = maxCartons
-          shippingInfo.cbm = (cartonVolume * maxCartons / 35.32).toFixed(1) // 计算整柜总CBM
+          shippingInfo.cbm = (cartonVolume * maxCartons / CBM_DIVISOR).toFixed(1)
         }
       }
 
@@ -161,7 +165,9 @@ export function useFreightCalculation() {
       } else if (ceiledCBM > 40 && ceiledCBM <= 58) {
         baseFreight = systemConfig.value.lclBaseFreight40_58
       } else if (ceiledCBM > 58) {
-        // CBM超过58的提示逻辑已移至UI层显示，此处不再弹窗
+        // CBM超过58，清空运费并返回
+        form.freight_total = null
+        freightCalculation.value = null
         return
       }
 

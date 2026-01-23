@@ -98,7 +98,7 @@ export function useCostCalculation() {
     if (!basePrice) return
 
     const rate = parseFloat(tier.profitRate)
-    if (isNaN(rate) || rate < 0 || rate > 10) {
+    if (isNaN(rate) || rate < 0 || rate >= 1) { // 利润率必须小于100%，否则会导致负价格
       tier.price = 0
       tier.profitPercentage = ''
       return
