@@ -161,12 +161,13 @@
                       <el-button :type="form.shipping_method === 'fcl_20' ? 'primary' : 'default'" @click="form.shipping_method = 'fcl_20'; handleShippingMethodChange()">20GP 小柜</el-button>
                       <el-button :type="form.shipping_method === 'fcl_40' ? 'primary' : 'default'" @click="form.shipping_method = 'fcl_40'; handleShippingMethodChange()">40GP 大柜</el-button>
                       <el-button :type="form.shipping_method === 'lcl' ? 'primary' : 'default'" @click="form.shipping_method = 'lcl'; handleShippingMethodChange()">LCL 散货</el-button>
+                      <el-button :type="form.shipping_method === 'cif_lcl' ? 'primary' : 'default'" @click="form.shipping_method = 'cif_lcl'; handleShippingMethodChange()">CIF 深圳</el-button>
                     </div>
                   </div>
                 </el-col>
               </el-row>
 
-              <el-row :gutter="24" v-if="form.shipping_method">
+              <el-row :gutter="24" v-if="form.shipping_method && form.shipping_method !== 'cif_lcl'">
                 <el-col :span="12">
                   <div class="freight-field">
                     <span class="freight-label">起运港口:</span>
@@ -184,7 +185,7 @@
               </el-row>
 
               <!-- 散货 (LCL) 数量输入区域 (仿内销布局) -->
-              <div v-if="form.shipping_method === 'lcl'" class="lcl-quantity-section mt-4">
+              <div v-if="form.shipping_method === 'lcl' || form.shipping_method === 'cif_lcl'" class="lcl-quantity-section mt-4">
                 <el-row :gutter="24">
                   <el-col :span="12">
                     <el-form-item label="数量单位">
@@ -299,8 +300,44 @@
                 </div>
               </div>
 
-              <!-- 运费总价（非FOB深圳时手动输入） -->
-              <el-row :gutter="24" v-if="form.port_type !== 'fob_shenzhen'">
+              <!-- CIF 深圳运费详情卡片 -->
+              <div v-else-if="form.port_type === 'cif_shenzhen' && freightCalculation" class="mt-4 mb-2 bg-gradient-to-br from-purple-50 to-white rounded-xl border border-purple-100 shadow-sm overflow-hidden relative group transition-all duration-300 hover:shadow-md">
+                <div class="absolute right-0 top-0 w-32 h-32 bg-purple-100/40 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+                <div class="p-5 relative z-10 flex flex-col md:flex-row md:items-stretch gap-6">
+                  <div class="flex-1 flex flex-col justify-center min-w-[200px]">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="text-xs font-semibold text-purple-600 uppercase tracking-wider bg-purple-100/50 px-2 py-0.5 rounded">CIF 深圳运费</span>
+                      <el-tag size="small" type="info">{{ freightCalculation.factory === 'hubei_zhiteng' ? '湖北知腾工厂' : '东莞迅安工厂' }}</el-tag>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                       <h3 class="text-3xl font-bold text-gray-900 font-mono tracking-tight">
+                        <span class="text-lg text-gray-500 font-normal mr-1">¥</span>{{ Math.round(freightCalculation.totalFreight).toLocaleString() }}
+                      </h3>
+                    </div>
+                     <div class="mt-2 text-sm text-gray-500">
+                      <span class="bg-white/60 px-2 py-1 rounded border border-gray-100">计费体积: <span class="font-bold text-gray-800">{{ freightCalculation.ceiledCBM }}</span> CBM</span>
+                    </div>
+                  </div>
+                  <div class="hidden md:block w-px bg-gradient-to-b from-transparent via-purple-200 to-transparent"></div>
+                  <div class="flex-1 grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
+                    <div class="flex justify-between"><span class="text-gray-500">CFS费:</span><span class="font-medium text-gray-700">¥{{ freightCalculation.cfs }}</span></div>
+                    <div class="flex justify-between"><span class="text-gray-500">文件费:</span><span class="font-medium text-gray-700">¥{{ freightCalculation.docFee }}</span></div>
+                    <div class="flex justify-between"><span class="text-gray-500">报关费:</span><span class="font-medium text-gray-700">¥{{ freightCalculation.customsFee }}</span></div>
+                    <div class="flex justify-between"><span class="text-gray-500">仓库费:</span><span class="font-medium text-gray-700">¥{{ freightCalculation.warehouseFee }}</span></div>
+                    <div class="flex justify-between items-center col-span-2 border-t border-purple-100 pt-1 mt-1">
+                        <span class="text-gray-500">海运费 ({{ freightCalculation.seaFreightUSDPerCbm }} USD/CBM):</span>
+                        <span class="font-medium text-gray-700">¥{{ Math.round(freightCalculation.seaFreightCNY) }} ({{ freightCalculation.seaFreightUSDEstimated }} USD)</span>
+                    </div>
+                    <div class="flex justify-between items-center col-span-2 border-t border-purple-100 pt-1">
+                        <span class="text-gray-500">国内运费 ({{ freightCalculation.factory === 'hubei_zhiteng' ? '湖北卡车' : '东莞分档' }}):</span>
+                        <span class="font-medium text-gray-700">¥{{ freightCalculation.domesticTransportFee }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 运费总价（非FOB深圳/CIF深圳时手动输入） -->
+              <el-row :gutter="24" v-if="form.port_type !== 'fob_shenzhen' && form.port_type !== 'cif_shenzhen'">
                 <el-col :span="12">
                   <el-form-item label="运费总价" prop="freight_total" :rules="[{ required: true, message: '请输入运费总价', trigger: 'blur' }]">
                     <el-input-number v-model="form.freight_total" :min="0" :precision="4" :controls="false" @change="handleCalculateCost" style="width: 200px" />
@@ -432,7 +469,17 @@
                   <el-table-column label="单价(CNY)" width="100"><template #default="{ row }">{{ formatNumber(row.unit_price) || '-' }}</template></el-table-column>
                   <el-table-column label="小计" width="100"><template #default="{ row }">{{ formatNumber(row.subtotal) || '-' }}</template></el-table-column>
                   <el-table-column label="操作" width="70" fixed="right">
-                    <template #default="{ $index, row }"><el-button type="danger" size="small" link @click="removeMaterialRow($index)" :disabled="!!row.from_standard && !editMode.materials">删除</el-button></template>
+                    <template #default="{ $index, row }">
+                      <el-button 
+                        v-if="!row.from_standard || editMode.materials"
+                        size="small" 
+                        link 
+                        class="text-gray-400 hover:text-red-500 transition-colors"
+                        @click="removeMaterialRow($index)"
+                      >
+                        <el-icon><Delete /></el-icon>
+                      </el-button>
+                    </template>
                   </el-table-column>
                 </el-table>
                 <div class="tab-pane-footer">
@@ -463,7 +510,17 @@
                   </el-table-column>
                   <el-table-column label="小计" width="100"><template #default="{ row }">{{ formatNumber(row.subtotal) }}</template></el-table-column>
                   <el-table-column label="操作" width="70" fixed="right">
-                    <template #default="{ $index, row }"><el-button type="danger" size="small" link @click="removeProcessRow($index)" :disabled="!!row.from_standard && !editMode.processes">删除</el-button></template>
+                    <template #default="{ $index, row }">
+                      <el-button 
+                        v-if="!row.from_standard || editMode.processes"
+                        size="small" 
+                        link 
+                        class="text-gray-400 hover:text-red-500 transition-colors"
+                        @click="removeProcessRow($index)"
+                      >
+                        <el-icon><Delete /></el-icon>
+                      </el-button>
+                    </template>
                   </el-table-column>
                 </el-table>
                 <div class="tab-pane-footer">
@@ -506,7 +563,17 @@
                   <el-table-column label="单价(CNY)" width="100"><template #default="{ row }">{{ formatNumber(row.unit_price) || '-' }}</template></el-table-column>
                   <el-table-column label="小计" width="100"><template #default="{ row }">{{ formatNumber(row.subtotal) || '-' }}</template></el-table-column>
                   <el-table-column label="操作" width="70" fixed="right">
-                    <template #default="{ $index, row }"><el-button type="danger" size="small" link @click="removePackagingRow($index)" :disabled="!!row.from_standard && !editMode.packaging">删除</el-button></template>
+                    <template #default="{ $index, row }">
+                      <el-button 
+                        v-if="!row.from_standard || editMode.packaging"
+                        size="small" 
+                        link 
+                        class="text-gray-400 hover:text-red-500 transition-colors"
+                        @click="removePackagingRow($index)"
+                      >
+                        <el-icon><Delete /></el-icon>
+                      </el-button>
+                    </template>
                   </el-table-column>
                 </el-table>
                 <div class="tab-pane-footer"><span>∑ 包材小计: <strong>{{ formatNumber(packagingTotal) }}</strong></span></div>
@@ -545,11 +612,16 @@
                 <span class="preview-cost-value">{{ formatNumber(calculation.overheadPrice) }}</span>
               </div>
             </div>
-            <el-button size="small" type="primary" link @click="showAddFeeDialog" class="mt-2">+ 添加费用项</el-button>
+            <el-button size="small" type="primary" link @click="showAddFeeDialog" class="mt-2">+ 添加管销后费用项</el-button>
             <div v-if="customFeesWithValues.length > 0" class="preview-fee-list">
               <div v-for="(fee, index) in customFeesWithValues" :key="'fee-' + index" class="preview-fee-item">
-                <span>{{ fee.name }} ({{ (fee.rate * 100).toFixed(0) }}%)</span>
-                <div class="flex items-center gap-2"><span class="font-medium">{{ formatNumber(fee.calculatedValue) }}</span><el-button size="small" type="danger" link @click="handleRemoveCustomFee(index)">删除</el-button></div>
+                <span>{{ fee.name }} ({{ parseFloat((fee.rate * 100).toFixed(2)) }}%)</span>
+                <div class="flex items-center gap-2">
+                  <span class="font-medium">{{ formatNumber(fee.calculatedValue) }}</span>
+                  <el-button size="small" link @click="handleRemoveCustomFee(index)" class="p-0 text-gray-400 hover:text-red-500 transition-colors" style="font-size: 14px;">
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </div>
               </div>
             </div>
             <div v-if="calculation.afterOverheadMaterialTotal > 0" class="preview-tip">管销后原料: <strong>{{ formatNumber(calculation.afterOverheadMaterialTotal) }}</strong></div>
@@ -645,12 +717,12 @@
     </div>
 
     <!-- 添加自定义费用对话框 -->
-    <el-dialog v-model="addFeeDialogVisible" title="添加自定义费用" width="400px" class="minimal-dialog-auto" :close-on-click-modal="false" append-to-body>
+    <el-dialog v-model="addFeeDialogVisible" title="添加管销后费用项" width="400px" class="minimal-dialog-auto" :close-on-click-modal="false" append-to-body>
       <el-form :model="newFee" :rules="feeRules" ref="feeFormRef" label-width="80px">
-        <el-form-item label="费用项" prop="name"><el-input v-model="newFee.name" placeholder="请输入在管销后计算的费用项目" /></el-form-item>
+        <el-form-item label="费用项" prop="name"><el-input v-model="newFee.name" placeholder="输入在管销后计算的费用项目" /></el-form-item>
         <el-form-item label="费率" prop="rate">
-          <el-input v-model="newFee.rate" placeholder="如 0.04 表示 4%" style="width: 180px;" @blur="newFee.rate = newFee.rate ? parseFloat(newFee.rate) : null" />
-          <span v-if="newFee.rate && !isNaN(newFee.rate)" style="margin-left: 10px; color: #409eff;">{{ (parseFloat(newFee.rate) * 100).toFixed(0) }}%</span>
+          <el-input-number v-model="customFeeRatePercent" :controls="false" :precision="2" :min="0" :max="100" placeholder="输入数字" style="width: 180px;" />
+          <span style="margin-left: 10px; color: #409eff;">%</span>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -665,7 +737,7 @@
 import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { InfoFilled, WarningFilled, Document, FolderAdd, Promotion } from '@element-plus/icons-vue'
+import { InfoFilled, WarningFilled, Document, FolderAdd, Promotion, Delete } from '@element-plus/icons-vue'
 import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import { formatNumber } from '@/utils/format'
 import { useConfigStore } from '@/store/config'
@@ -708,7 +780,7 @@ const selectedNewProductCategory = computed(() => {
 })
 
 // Composables
-const { freightCalculation, systemConfig, shippingInfo, quantityUnit, quantityInput, domesticCbmPrice, loadSystemConfig, setShippingInfoFromConfig, calculateShippingInfo, calculateFOBFreight, onQuantityUnitChange, onQuantityInputChange, onDomesticCbmPriceChange, onShippingMethodChange, onPortTypeChange, resetShippingInfo } = useFreightCalculation()
+const { freightCalculation, systemConfig, shippingInfo, quantityUnit, quantityInput, domesticCbmPrice, currentFactory, loadSystemConfig, setShippingInfoFromConfig, calculateShippingInfo, calculateFOBFreight, calculateCIFShenzhen, onQuantityUnitChange, onQuantityInputChange, onDomesticCbmPriceChange, onShippingMethodChange, onPortTypeChange, resetShippingInfo } = useFreightCalculation()
 const { calculation, customProfitTiers, materialCoefficient, materialCoefficientsCache, loadMaterialCoefficients, calculateItemSubtotal, calculateCost, addCustomProfitTier, updateCustomTierPrice, removeCustomProfitTier, prepareCustomProfitTiersForSave, getAllProfitTiers } = useCostCalculation()
 const { saving, submitting, isSaved, loadRegulations, loadPackagingConfigs, loadBomMaterials, loadPackagingConfigDetails, loadQuotationData, loadStandardCostData, saveQuotation, submitQuotation } = useQuotationData()
 const { isNewCustomer, selectedCustomerId, customerOptions, customerSearchLoading, customerSelectFocused, onCustomerTypeChange, searchCustomers, onCustomerSelect } = useCustomerSearch()
@@ -778,6 +850,20 @@ const setSliderFromTier = (tier) => {
 
 // 自定义费用
 const { addFeeDialogVisible, feeFormRef, newFee, feeRules, customFeeSummary, customFeesWithValues, showAddFeeDialog, confirmAddFee, removeCustomFee } = useCustomFees(form, calculation)
+
+const customFeeRatePercent = computed({
+  get: () => {
+    if (newFee.rate === null || newFee.rate === undefined) return undefined
+    return parseFloat((newFee.rate * 100).toFixed(4))
+  },
+  set: (val) => {
+    if (val === null || val === undefined || val === '') {
+      newFee.rate = null
+    } else {
+      newFee.rate = val / 100
+    }
+  }
+})
 
 // 表单验证规则
 const rules = {
@@ -1003,6 +1089,10 @@ const onPackagingConfigChange = async () => {
     if (!data) return
     const { config, processes, materials } = data
     form.model_id = config.model_id
+    
+    // Set factory for CIF Shenzhen calculation
+    currentFactory.value = config.factory || 'dongguan_xunan'
+
     const selectedConfig = packagingConfigs.value.find(c => c.id === form.packaging_config_id)
     if (selectedConfig?.model_category) {
       currentModelCategory.value = selectedConfig.model_category
@@ -1099,6 +1189,10 @@ const fillQuotationData = async (data, isCopy = false) => {
   const { quotation, items, customFees: fees } = data
   form.regulation_id = quotation.regulation_id
   form.packaging_config_id = quotation.packaging_config_id || null
+  if (form.packaging_config_id) {
+    const config = packagingConfigs.value.find(c => c.id === form.packaging_config_id)
+    if (config) currentFactory.value = config.factory || 'dongguan_xunan'
+  }
   form.model_id = quotation.model_id
   form.customer_name = isCopy ? `${quotation.customer_name}（复制）` : quotation.customer_name
   form.customer_region = quotation.customer_region
@@ -1141,6 +1235,10 @@ const fillStandardCostData = async (data) => {
   form.regulation_id = standardCost.regulation_id || null
   await nextTick()
   form.packaging_config_id = standardCost.packaging_config_id || null
+  if (form.packaging_config_id) {
+    const config = packagingConfigs.value.find(c => c.id === form.packaging_config_id)
+    if (config) currentFactory.value = config.factory || 'dongguan_xunan'
+  }
   form.model_id = standardCost.model_id || null
   form.customer_name = ''
   form.customer_region = ''

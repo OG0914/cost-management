@@ -169,6 +169,55 @@
         </div>
       </section>
 
+      <!-- CIF 深圳运费设置 -->
+      <section class="config-section">
+        <h2 class="config-section-title">CIF 深圳运费设置</h2>
+        <div class="config-grid config-grid-3">
+          <div class="config-item">
+            <label class="config-label">海运费 Sea Freight</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.cif_shenzhen_seafreight_usd" :min="0" :precision="2" :controls="false" class="config-input" />
+              <span class="config-suffix">USD/CBM</span>
+            </div>
+          </div>
+          <div class="config-item">
+            <label class="config-label">CFS 费用</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.cif_shenzhen_cfs_per_cbm" :min="0" :precision="0" :controls="false" class="config-input" />
+              <span class="config-suffix">CNY/CBM</span>
+            </div>
+          </div>
+          <div class="config-item">
+            <label class="config-label">文件费 DOC FEE</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.cif_shenzhen_doc_fee" :min="0" :precision="0" :controls="false" class="config-input" />
+              <span class="config-suffix">CNY</span>
+            </div>
+          </div>
+          <div class="config-item">
+            <label class="config-label">报关费 Customs</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.cif_shenzhen_customs_fee" :min="0" :precision="0" :controls="false" class="config-input" />
+              <span class="config-suffix">CNY</span>
+            </div>
+          </div>
+          <div class="config-item">
+            <label class="config-label">仓库费 Warehouse</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.cif_shenzhen_warehouse_fee" :min="0" :precision="0" :controls="false" class="config-input" />
+              <span class="config-suffix">CNY</span>
+            </div>
+          </div>
+          <div class="config-item">
+            <label class="config-label">湖北知腾卡车费</label>
+            <div class="config-input-group">
+              <el-input-number v-model="configForm.cif_hubei_truck_per_cbm" :min="0" :precision="0" :controls="false" class="config-input" />
+              <span class="config-suffix">CNY/CBM</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- 利润区间 -->
       <section class="config-section">
         <h2 class="config-section-title">利润档位</h2>
@@ -268,6 +317,15 @@ const configForm = reactive({
   lcl_base_freight_1_3: 800, lcl_base_freight_3_10: 1000, lcl_base_freight_10_18: 1500,
   lcl_base_freight_18_28: 2000, lcl_base_freight_28_40: 2500, lcl_base_freight_40_58: 3000,
   lcl_handling_charge: 500, lcl_cfs_per_cbm: 170, lcl_document_fee: 500,
+  
+  // CIF 深圳配置
+  cif_shenzhen_cfs_per_cbm: 60,
+  cif_shenzhen_doc_fee: 500,
+  cif_shenzhen_customs_fee: 400,
+  cif_shenzhen_warehouse_fee: 130,
+  cif_shenzhen_seafreight_usd: 10,
+  cif_hubei_truck_per_cbm: 400,
+
   profit_tiers: [0.05, 0.10, 0.25, 0.50]
 });
 

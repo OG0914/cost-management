@@ -100,6 +100,9 @@
             <div class="header-info">
               <div class="model-name">{{ config.model_name }}</div>
               <div class="config-name">{{ config.config_name }}</div>
+              <div class="factory-info mb-1">
+                 <el-tag size="small" type="info" effect="plain">{{ getFactoryName(config.factory) }}</el-tag>
+              </div>
               <div class="packaging-method">
                 {{ formatPackagingMethodFromConfig(config) }}
               </div>
@@ -147,6 +150,11 @@
         <el-table-column prop="model_category" label="产品类别" width="110" sortable />
         <el-table-column prop="model_name" label="型号" width="150" sortable />
         <el-table-column prop="config_name" label="配置名称" width="160" sortable />
+        <el-table-column label="生产工厂" width="120" sortable sort-by="factory">
+          <template #default="{ row }">
+            {{ getFactoryName(row.factory) }}
+          </template>
+        </el-table-column>
         <!-- 包装类型列 -->
         <el-table-column label="包装类型" width="120" sortable sort-by="packaging_type">
           <template #default="{ row }">
@@ -210,7 +218,7 @@
       <el-form :model="form" ref="formRef" label-position="top" class="px-2">
         
         <!-- 第一部分：基础信息 -->
-        <div class="grid grid-cols-2 gap-6 mb-6">
+        <div class="grid grid-cols-3 gap-6 mb-6">
           <el-form-item label="产品型号" required class="mb-0">
             <el-select 
               v-model="form.model_id" 
@@ -230,6 +238,13 @@
           
           <el-form-item label="配置名称" required class="mb-0">
             <el-input v-model="form.config_name" placeholder="例如：C5标准包装" />
+          </el-form-item>
+
+          <el-form-item label="生产工厂" required class="mb-0">
+            <el-select v-model="form.factory" placeholder="选择工厂" class="w-full">
+              <el-option label="东莞迅安" value="dongguan_xunan" />
+              <el-option label="湖北知腾" value="hubei_zhiteng" />
+            </el-select>
           </el-form-item>
         </div>
 
@@ -500,6 +515,14 @@ import {
 } from '../../config/packagingTypes'
 import { usePagination } from '@/composables/usePagination'
 
+const getFactoryName = (factory) => {
+  const map = {
+    'dongguan_xunan': '东莞迅安',
+    'hubei_zhiteng': '湖北知腾'
+  }
+  return map[factory] || factory || '-'
+}
+
 defineOptions({ name: 'ProcessManage' })
 
 const router = useRouter()
@@ -570,6 +593,7 @@ const form = reactive({
   layer1_qty: null,
   layer2_qty: null,
   layer3_qty: null,
+  factory: 'dongguan_xunan',
   is_active: 1,
   processes: []
 })
@@ -815,6 +839,7 @@ const editConfig = async (row) => {
       form.layer1_qty = data.layer1_qty ?? data.pc_per_bag
       form.layer2_qty = data.layer2_qty ?? data.bags_per_box
       form.layer3_qty = data.layer3_qty ?? data.boxes_per_carton
+      form.factory = data.factory || 'dongguan_xunan'
       form.is_active = data.is_active ? 1 : 0
       // 将工序单价转为数字类型
       form.processes = (data.processes || []).map(p => ({ ...p, unit_price: Number(p.unit_price) || 0 }))
@@ -913,6 +938,10 @@ const submitForm = async () => {
     ElMessage.warning('请选择包装类型')
     return
   }
+  if (!form.factory) {
+    ElMessage.warning('请选择工厂')
+    return
+  }
   
   const typeConfig = getPackagingTypeByKey(form.packaging_type)
   if (!form.layer1_qty || !form.layer2_qty) {
@@ -933,6 +962,7 @@ const submitForm = async () => {
       layer1_qty: form.layer1_qty,
       layer2_qty: form.layer2_qty,
       layer3_qty: typeConfig && typeConfig.layers === 3 ? form.layer3_qty : null,
+      factory: form.factory,
       is_active: form.is_active,
       processes: form.processes
     }
@@ -963,6 +993,7 @@ const resetForm = () => {
   form.layer1_qty = null
   form.layer2_qty = null
   form.layer3_qty = null
+  form.factory = 'dongguan_xunan'
   form.is_active = 1
   form.processes = []
 }

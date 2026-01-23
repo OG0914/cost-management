@@ -22,6 +22,7 @@ class PackagingConfig {
       SELECT pc.id, pc.model_id, pc.config_name, pc.packaging_type,
              pc.layer1_qty, pc.layer2_qty, pc.layer3_qty,
              pc.pc_per_bag, pc.bags_per_box, pc.boxes_per_carton,
+             pc.factory,
              pc.is_active, pc.created_at, pc.updated_at,
              m.model_name, m.model_category, r.name as regulation_name
       FROM packaging_configs pc
@@ -54,6 +55,7 @@ class PackagingConfig {
       SELECT pc.id, pc.model_id, pc.config_name, pc.packaging_type,
              pc.layer1_qty, pc.layer2_qty, pc.layer3_qty,
              pc.pc_per_bag, pc.bags_per_box, pc.boxes_per_carton,
+             pc.factory,
              pc.is_active, pc.created_at, pc.updated_at,
              m.model_name, m.model_category, r.name as regulation_name
       FROM packaging_configs pc
@@ -85,6 +87,7 @@ class PackagingConfig {
       `SELECT pc.id, pc.model_id, pc.config_name, pc.packaging_type,
               pc.layer1_qty, pc.layer2_qty, pc.layer3_qty,
               pc.pc_per_bag, pc.bags_per_box, pc.boxes_per_carton,
+              pc.factory,
               pc.is_active, pc.created_at, pc.updated_at,
               m.model_name, m.model_category, r.name as regulation_name
        FROM packaging_configs pc
@@ -110,6 +113,7 @@ class PackagingConfig {
       `SELECT pc.id, pc.model_id, pc.config_name, pc.packaging_type,
               pc.layer1_qty, pc.layer2_qty, pc.layer3_qty,
               pc.pc_per_bag, pc.bags_per_box, pc.boxes_per_carton,
+              pc.factory,
               pc.is_active, pc.created_at, pc.updated_at,
               m.model_name, m.model_category, r.name as regulation_name
        FROM packaging_configs pc
@@ -133,6 +137,7 @@ class PackagingConfig {
       SELECT pc.id, pc.model_id, pc.config_name, pc.packaging_type,
              pc.layer1_qty, pc.layer2_qty, pc.layer3_qty,
              pc.pc_per_bag, pc.bags_per_box, pc.boxes_per_carton,
+             pc.factory,
              pc.is_active, pc.created_at, pc.updated_at,
              m.model_name, m.model_category, r.name as regulation_name
       FROM packaging_configs pc
@@ -192,6 +197,7 @@ class PackagingConfig {
    * @param {number} data.layer1_qty - 第一层数量
    * @param {number} data.layer2_qty - 第二层数量
    * @param {number} [data.layer3_qty] - 第三层数量（2层类型可为空）
+   * @param {string} [data.factory='dongguan_xunan'] - 工厂/供应商
    * @returns {Promise<number>} 新配置的 ID
    */
   static async create(data) {
@@ -202,6 +208,7 @@ class PackagingConfig {
       layer1_qty,
       layer2_qty,
       layer3_qty,
+      factory = 'dongguan_xunan',
       // 兼容旧字段名
       pc_per_bag,
       bags_per_box,
@@ -223,10 +230,10 @@ class PackagingConfig {
 
     const result = await dbManager.query(
       `INSERT INTO packaging_configs 
-       (model_id, config_name, packaging_type, layer1_qty, layer2_qty, layer3_qty, pc_per_bag, bags_per_box, boxes_per_carton)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       (model_id, config_name, packaging_type, layer1_qty, layer2_qty, layer3_qty, factory, pc_per_bag, bags_per_box, boxes_per_carton)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING id`,
-      [model_id, config_name, packaging_type, l1, l2, l3, l1, l2, l3ForOldField]
+      [model_id, config_name, packaging_type, l1, l2, l3, factory, l1, l2, l3ForOldField]
     );
 
     return result.rows[0].id;
@@ -245,6 +252,7 @@ class PackagingConfig {
       layer1_qty,
       layer2_qty,
       layer3_qty,
+      factory,
       is_active,
       // 兼容旧字段名
       pc_per_bag,
@@ -270,10 +278,11 @@ class PackagingConfig {
        SET config_name = $1, 
            packaging_type = COALESCE($2, packaging_type),
            layer1_qty = $3, layer2_qty = $4, layer3_qty = $5,
-           pc_per_bag = $3, bags_per_box = $4, boxes_per_carton = $6,
-           is_active = $7, updated_at = NOW()
-       WHERE id = $8`,
-      [config_name, packaging_type, l1, l2, l3, l3ForOldField, is_active, id]
+           factory = COALESCE($6, factory),
+           pc_per_bag = $3, bags_per_box = $4, boxes_per_carton = $8,
+           is_active = $9, updated_at = NOW()
+       WHERE id = $7`,
+      [config_name, packaging_type, l1, l2, l3, factory, id, l3ForOldField, is_active]
     );
 
     return { rowCount: result.rowCount };

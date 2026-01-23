@@ -113,7 +113,7 @@ exports.createPackagingConfig = async (req, res) => {
       model_id, config_name, packaging_type = 'standard_box',
       layer1_qty, layer2_qty, layer3_qty,
       pc_per_bag, bags_per_box, boxes_per_carton, // 兼容旧字段
-      processes, materials
+      processes, materials, factory
     } = req.body;
 
     if (!isValidPackagingType(packaging_type)) {
@@ -136,7 +136,7 @@ exports.createPackagingConfig = async (req, res) => {
     }
 
     const configId = await PackagingConfig.create({
-      model_id, config_name, packaging_type, layer1_qty: l1, layer2_qty: l2, layer3_qty: l3
+      model_id, config_name, packaging_type, layer1_qty: l1, layer2_qty: l2, layer3_qty: l3, factory
     });
 
     if (processes && processes.length > 0) {
@@ -168,7 +168,7 @@ exports.updatePackagingConfig = async (req, res) => {
     const {
       config_name, packaging_type, layer1_qty, layer2_qty, layer3_qty,
       pc_per_bag, bags_per_box, boxes_per_carton, // 兼容旧字段
-      is_active, processes, materials
+      is_active, processes, materials, factory
     } = req.body;
 
     if (packaging_type !== undefined && !isValidPackagingType(packaging_type)) {
@@ -184,7 +184,7 @@ exports.updatePackagingConfig = async (req, res) => {
 
     await PackagingConfig.update(id, {
       config_name, packaging_type, layer1_qty: l1, layer2_qty: l2, layer3_qty: l3,
-      is_active: is_active !== undefined ? is_active : true
+      is_active: is_active !== undefined ? is_active : true, factory
     });
 
     if (processes) {
@@ -216,12 +216,12 @@ const checkDeleteConstraints = async (id) => {
   if (parseInt(quotationCheck.rows[0].count) > 0) {
     return '被报价单引用';
   }
-  
+
   const hasStandardCost = await StandardCost.findCurrentByPackagingConfigId(id);
   if (hasStandardCost) {
     return '已设置标准成本';
   }
-  
+
   return null; // 可删除
 };
 
@@ -237,7 +237,7 @@ const cascadeSoftDelete = async (id) => {
 exports.deletePackagingConfig = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const reason = await checkDeleteConstraints(id);
     if (reason) {
       const messages = {
@@ -246,7 +246,7 @@ exports.deletePackagingConfig = async (req, res) => {
       };
       return res.status(400).json({ success: false, message: messages[reason] });
     }
-    
+
     await cascadeSoftDelete(id);
     await PackagingConfig.delete(id);
     res.json({ success: true, message: '包装配置删除成功' });
@@ -263,24 +263,24 @@ exports.batchDeletePackagingConfigs = async (req, res) => {
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ success: false, message: '请提供要删除的配置ID' });
     }
-    
+
     const results = { deleted: 0, failed: [] };
-    
+
     for (const id of ids) {
       const config = await PackagingConfig.findById(id);
       if (!config) continue;
-      
+
       const reason = await checkDeleteConstraints(id);
       if (reason) {
         results.failed.push({ id, name: config.config_name, reason });
         continue;
       }
-      
+
       await cascadeSoftDelete(id);
       await PackagingConfig.delete(id);
       results.deleted++;
     }
-    
+
     const msg = results.deleted > 0 ? `成功删除 ${results.deleted} 条` : '无可删除项';
     res.json({ success: true, data: results, message: msg });
   } catch (error) {

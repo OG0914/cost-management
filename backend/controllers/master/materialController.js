@@ -24,10 +24,10 @@ const TEMP_DIR = path.join(__dirname, '../temp');
  * @returns {string} 完整文件路径
  */
 const ensureTempFile = (fileName) => {
-    if (!fs.existsSync(TEMP_DIR)) {
-        fs.mkdirSync(TEMP_DIR, { recursive: true });
-    }
-    return path.join(TEMP_DIR, fileName);
+  if (!fs.existsSync(TEMP_DIR)) {
+    fs.mkdirSync(TEMP_DIR, { recursive: true });
+  }
+  return path.join(TEMP_DIR, fileName);
 };
 
 /**
@@ -38,10 +38,10 @@ const ensureTempFile = (fileName) => {
  * @param {Function} next - 错误处理函数
  */
 const sendAndCleanup = (res, filePath, fileName, next) => {
-    res.download(filePath, fileName, (err) => {
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        if (err) next(err);
-    });
+  res.download(filePath, fileName, (err) => {
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    if (err) next(err);
+  });
 };
 
 /**
@@ -152,7 +152,7 @@ const createMaterial = async (req, res, next) => {
   try {
     const { item_no, name, unit, price, currency, manufacturer, usage_amount, category } = req.body;
 
-    if (!item_no || !name || !unit || !price) {
+    if (!item_no || !name || !unit || price === undefined || price === null || price === '') {
       return res.status(400).json(error('品号、原料名称、单位和单价不能为空', 400));
     }
 
@@ -180,7 +180,7 @@ const updateMaterial = async (req, res, next) => {
       return res.status(404).json(error('原料不存在', 404));
     }
 
-    if (!item_no || !name || !unit || !price) {
+    if (!item_no || !name || !unit || price === undefined || price === null || price === '') {
       return res.status(400).json(error('品号、原料名称、单位和单价不能为空', 400));
     }
 

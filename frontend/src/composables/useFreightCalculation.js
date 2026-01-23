@@ -17,6 +17,7 @@ export function useFreightCalculation() {
   const quantityUnit = ref('pcs')
   const quantityInput = ref(null)
   const domesticCbmPrice = ref(null)
+  const currentFactory = ref('dongguan_xunan')
 
   const systemConfig = ref({
     fobShenzhenExchangeRate: 7.1,
@@ -30,7 +31,14 @@ export function useFreightCalculation() {
     lclBaseFreight40_58: 3000,
     lclHandlingCharge: 500,
     lclCfsPerCbm: 170,
-    lclDocumentFee: 500
+    lclDocumentFee: 500,
+    // CIF 深圳配置
+    cifShenzhenCfsPerCbm: 60,
+    cifShenzhenDocFee: 500,
+    cifShenzhenCustomsFee: 400,
+    cifShenzhenWarehouseFee: 130,
+    cifShenzhenSeafreightUsd: 10,
+    cifHubeiTruckPerCbm: 400
   })
 
   const shippingInfo = reactive({
@@ -56,6 +64,13 @@ export function useFreightCalculation() {
         systemConfig.value.lclHandlingCharge = response.data.lcl_handling_charge || 500
         systemConfig.value.lclCfsPerCbm = response.data.lcl_cfs_per_cbm || 170
         systemConfig.value.lclDocumentFee = response.data.lcl_document_fee || 500
+
+        systemConfig.value.cifShenzhenCfsPerCbm = response.data.cif_shenzhen_cfs_per_cbm || 60
+        systemConfig.value.cifShenzhenDocFee = response.data.cif_shenzhen_doc_fee || 500
+        systemConfig.value.cifShenzhenCustomsFee = response.data.cif_shenzhen_customs_fee || 400
+        systemConfig.value.cifShenzhenWarehouseFee = response.data.cif_shenzhen_warehouse_fee || 130
+        systemConfig.value.cifShenzhenSeafreightUsd = response.data.cif_shenzhen_seafreight_usd || 10
+        systemConfig.value.cifHubeiTruckPerCbm = response.data.cif_hubei_truck_per_cbm || 400
       }
     } catch (error) {
       logger.error('加载系统配置失败:', error.message || error)
@@ -95,8 +110,12 @@ export function useFreightCalculation() {
     }
 
     // FOB 深圳自动计算运费
-    if (form.sales_type === 'export' && form.port_type === 'fob_shenzhen') {
-      calculateFOBFreight(form, onCalculateCost)
+    if (form.sales_type === 'export') {
+      if (form.port_type === 'fob_shenzhen') {
+        calculateFOBFreight(form, onCalculateCost)
+      } else if (form.port_type === 'cif_shenzhen') {
+        calculateCIFShenzhen(form, onCalculateCost)
+      }
     }
   }
 
@@ -186,6 +205,63 @@ export function useFreightCalculation() {
     }
   }
 
+  const calculateCIFShenzhen = (form, onCalculateCost) => {
+    freightCalculation.value = null
+    if (form.sales_type !== 'export' || form.port_type !== 'cif_shenzhen') return
+    if (!shippingInfo.cbm || shippingInfo.cbm <= 0) return
+
+    const cbm = parseFloat(shippingInfo.cbm)
+    const ceiledCBM = Math.ceil(cbm)
+    if (ceiledCBM > 58) {
+      // CBM超过58，清空运费并返回 (保持与LCL一致限制)
+      form.freight_total = null
+      freightCalculation.value = null
+      return
+    }
+
+    const factory = currentFactory.value
+
+    // 1. 海上运输费
+    const cfs = systemConfig.value.cifShenzhenCfsPerCbm * ceiledCBM
+    const docFee = systemConfig.value.cifShenzhenDocFee
+    const customsFee = systemConfig.value.cifShenzhenCustomsFee
+    const warehouseFee = systemConfig.value.cifShenzhenWarehouseFee
+
+    const seaFreightUSDPerCbm = systemConfig.value.cifShenzhenSeafreightUsd
+    const seaFreightUSDEstimated = seaFreightUSDPerCbm * ceiledCBM
+    const exchangeRate = systemConfig.value.fobShenzhenExchangeRate
+    const seaFreightCNY = seaFreightUSDEstimated * exchangeRate
+
+    // 2. 运送到深圳港口费用
+    let domesticTransportFee = 0
+    if (factory === 'hubei_zhiteng') {
+      const truckRate = systemConfig.value.cifHubeiTruckPerCbm
+      domesticTransportFee = truckRate * ceiledCBM // 按 CBM 计算
+    } else {
+      // 东莞迅安，使用 LCL 分档基础运费
+      if (ceiledCBM >= 1 && ceiledCBM <= 3) domesticTransportFee = systemConfig.value.lclBaseFreight1_3
+      else if (ceiledCBM > 3 && ceiledCBM <= 10) domesticTransportFee = systemConfig.value.lclBaseFreight3_10
+      else if (ceiledCBM > 10 && ceiledCBM <= 18) domesticTransportFee = systemConfig.value.lclBaseFreight10_18
+      else if (ceiledCBM > 18 && ceiledCBM <= 28) domesticTransportFee = systemConfig.value.lclBaseFreight18_28
+      else if (ceiledCBM > 28 && ceiledCBM <= 40) domesticTransportFee = systemConfig.value.lclBaseFreight28_40
+      else if (ceiledCBM > 40 && ceiledCBM <= 58) domesticTransportFee = systemConfig.value.lclBaseFreight40_58
+    }
+
+    // 总运费
+    const totalFreight = cfs + docFee + customsFee + warehouseFee + seaFreightCNY + domesticTransportFee
+
+    freightCalculation.value = {
+      cbm: cbm.toFixed(1), ceiledCBM, factory,
+      cfs, docFee, customsFee, warehouseFee,
+      seaFreightUSDPerCbm, seaFreightUSDEstimated, exchangeRate, seaFreightCNY,
+      domesticTransportFee,
+      totalFreight
+    }
+
+    form.freight_total = totalFreight
+    if (onCalculateCost) onCalculateCost()
+  }
+
   const onQuantityUnitChange = (form, onCalculateCost) => {
     if (!shippingInfo.pcsPerCarton) {
       quantityUnit.value = 'pcs'
@@ -229,8 +305,14 @@ export function useFreightCalculation() {
     form.port = ''
     freightCalculation.value = null
     calculateShippingInfo(form, onCalculateCost)
-    if (form.sales_type === 'export' && (form.shipping_method === 'fcl_20' || form.shipping_method === 'fcl_40')) {
-      calculateFOBFreight(form, onCalculateCost)
+    if (form.sales_type === 'export') {
+      if (form.shipping_method === 'fcl_20' || form.shipping_method === 'fcl_40') {
+        calculateFOBFreight(form, onCalculateCost)
+      } else if (form.shipping_method === 'cif_lcl') {
+        form.port_type = 'cif_shenzhen'
+        form.port = 'CIF深圳'
+        calculateCIFShenzhen(form, onCalculateCost)
+      }
     }
   }
 
@@ -240,6 +322,12 @@ export function useFreightCalculation() {
       calculateShippingInfo(form, onCalculateCost)
       if (form.sales_type === 'export' && (form.shipping_method === 'fcl_20' || form.shipping_method === 'fcl_40')) {
         calculateFOBFreight(form, onCalculateCost)
+      }
+    } else if (form.port_type === 'cif_shenzhen') {
+      form.port = 'CIF深圳'
+      calculateShippingInfo(form, onCalculateCost)
+      if (form.sales_type === 'export') {
+        calculateCIFShenzhen(form, onCalculateCost)
       }
     } else {
       form.port = ''
@@ -261,10 +349,12 @@ export function useFreightCalculation() {
     quantityUnit,
     quantityInput,
     domesticCbmPrice,
+    currentFactory,
     loadSystemConfig,
     setShippingInfoFromConfig,
     calculateShippingInfo,
     calculateFOBFreight,
+    calculateCIFShenzhen,
     onQuantityUnitChange,
     onQuantityInputChange,
     onDomesticCbmPriceChange,

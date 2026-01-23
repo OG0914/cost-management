@@ -101,6 +101,9 @@
             <div class="header-info">
               <div class="model-name">{{ config.model_name }}</div>
               <div class="config-name">{{ config.config_name }}</div>
+              <div class="factory-info mb-1">
+                 <el-tag size="small" type="info" effect="plain">{{ getFactoryName(config.factory) }}</el-tag>
+              </div>
               <div class="packaging-method">
                 {{ formatPackagingMethodFromConfig(config) }}
               </div>
@@ -148,6 +151,11 @@
         <el-table-column prop="model_category" label="产品类别" width="110" sortable />
         <el-table-column prop="model_name" label="型号" width="120" sortable />
         <el-table-column prop="config_name" label="配置名称" width="150" sortable />
+        <el-table-column label="生产工厂" width="120" sortable sort-by="factory">
+          <template #default="{ row }">
+            {{ getFactoryName(row.factory) }}
+          </template>
+        </el-table-column>
         <!-- 包装类型列（只读） -->
         <el-table-column label="包装类型" width="120" sortable sort-by="packaging_type">
           <template #default="{ row }">
@@ -163,7 +171,7 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="每箱数量" width="100" align="right">
+        <el-table-column label="每箱数量(pcs)" width="120" align="right">
           <template #default="{ row }">
             {{ calculateTotalFromConfig(row) }}
           </template>
@@ -215,7 +223,7 @@
       <el-form :model="form" ref="formRef" label-position="top" class="px-2">
         
         <!-- 第一部分：基础信息 -->
-        <div class="grid grid-cols-2 gap-6 mb-6">
+        <div class="grid grid-cols-3 gap-6 mb-6">
           <el-form-item label="产品型号" required class="mb-0">
             <el-select 
               v-model="form.model_id" 
@@ -235,6 +243,13 @@
           
           <el-form-item label="配置名称" required class="mb-0">
             <el-input v-model="form.config_name" placeholder="例如：美规标准包装" :disabled="isEdit" />
+          </el-form-item>
+
+          <el-form-item label="生产工厂" required class="mb-0">
+             <el-select v-model="form.factory" placeholder="选择工厂" class="w-full" :disabled="isEdit">
+              <el-option label="东莞迅安" value="dongguan_xunan" />
+              <el-option label="湖北知腾" value="hubei_zhiteng" />
+            </el-select>
           </el-form-item>
         </div>
 
@@ -545,6 +560,14 @@ import CommonPagination from '../../components/common/CommonPagination.vue';
 import ActionButton from '../../components/common/ActionButton.vue';
 import StatusSwitch from '../../components/common/StatusSwitch.vue';
 
+const getFactoryName = (factory) => {
+  const map = {
+    'dongguan_xunan': '东莞迅安',
+    'hubei_zhiteng': '湖北知腾'
+  }
+  return map[factory] || factory || '-'
+}
+
 defineOptions({ name: 'PackagingManage' })
 
 const router = useRouter();
@@ -635,6 +658,12 @@ const form = reactive({
   pc_per_bag: null,
   bags_per_box: null,
   boxes_per_carton: null,
+  is_active: 1,
+  // 兼容旧字段名
+  pc_per_bag: null,
+  bags_per_box: null,
+  boxes_per_carton: null,
+  factory: 'dongguan_xunan',
   is_active: 1,
   materials: []
 });
@@ -908,6 +937,7 @@ const editConfig = async (row) => {
       form.layer1_qty = data.layer1_qty ?? data.pc_per_bag;
       form.layer2_qty = data.layer2_qty ?? data.bags_per_box;
       form.layer3_qty = data.layer3_qty ?? data.boxes_per_carton;
+      form.factory = data.factory || 'dongguan_xunan';
       // 兼容旧字段名
       form.pc_per_bag = data.pc_per_bag;
       form.bags_per_box = data.bags_per_box;
@@ -1036,6 +1066,7 @@ const submitForm = async () => {
       layer1_qty: l1,
       layer2_qty: l2,
       layer3_qty: typeConfig && typeConfig.layers === 3 ? l3 : null,
+      factory: form.factory,
       is_active: form.is_active,
       materials: form.materials
     };
@@ -1069,6 +1100,8 @@ const resetForm = () => {
   form.pc_per_bag = null;
   form.bags_per_box = null;
   form.boxes_per_carton = null;
+  form.boxes_per_carton = null;
+  form.factory = 'dongguan_xunan';
   form.is_active = 1;
   form.materials = [];
 };
