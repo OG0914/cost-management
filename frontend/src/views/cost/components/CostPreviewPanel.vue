@@ -27,7 +27,7 @@
       <div v-if="customFeesWithValues.length > 0" class="preview-fee-list">
         <div v-for="(fee, index) in customFeesWithValues" :key="'fee-' + index" class="preview-fee-item">
           <span>{{ fee.name }} ({{ (fee.rate * 100).toFixed(0) }}%)</span>
-          <div class="flex items-center gap-2"><span class="font-medium">{{ formatNumber(fee.calculatedValue) }}</span><el-button size="small" type="danger" link @click="$emit('removeCustomFee', index)">删除</el-button></div>
+          <div class="flex items-center gap-2"><span class="font-medium">{{ formatNumber(fee.calculatedValue) }}</span><el-button size="small" link class="delete-btn" @click="$emit('removeCustomFee', index)"><el-icon><Delete /></el-icon></el-button></div>
         </div>
       </div>
       <div v-if="calculation.afterOverheadMaterialTotal > 0" class="preview-tip">管销后原料: <strong>{{ formatNumber(calculation.afterOverheadMaterialTotal) }}</strong></div>
@@ -66,12 +66,12 @@
         <div v-for="tier in allProfitTiers" :key="tier.isCustom ? 'custom-' + tier.customIndex : 'system-' + tier.profitPercentage" class="preview-tier-item" :class="{ custom: tier.isCustom }" @click="!tier.isCustom && setSliderFromTier(tier)">
           <div class="preview-tier-left">
             <span v-if="!tier.isCustom" class="preview-tier-rate">{{ tier.profitPercentage }}</span>
-            <el-input v-else v-model="tier.originalTier.profitRate" placeholder="0.35" size="small" style="width: 50px" @input="$emit('updateCustomTierPrice', tier.originalTier)" @click.stop />
+            <el-input v-else v-model="tier.originalTier.profitRate" placeholder="<100" size="small" style="width: 50px" @input="$emit('updateCustomTierPrice', tier.originalTier)" @change="$emit('updateTierSort', tier.originalTier)" @click.stop />
           </div>
           <div class="preview-tier-right">
             <span class="preview-tier-price">{{ formatNumber(tier.price) }}</span>
             <span v-if="!tier.isCustom" class="preview-tier-profit">+{{ formatNumber(tier.price - basePrice) }}</span>
-            <el-button v-if="tier.isCustom" type="danger" size="small" link @click.stop="$emit('removeCustomProfitTier', tier.customIndex)">删除</el-button>
+            <el-button v-if="tier.isCustom" size="small" link class="delete-btn" @click.stop="$emit('removeCustomProfitTier', tier.customIndex)"><el-icon><Delete /></el-icon></el-button>
           </div>
         </div>
       </div>
@@ -101,7 +101,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { InfoFilled, Document, FolderAdd, Promotion } from '@element-plus/icons-vue'
+import { InfoFilled, Document, FolderAdd, Promotion, Delete } from '@element-plus/icons-vue'
 import { formatNumber } from '@/utils/format'
 
 defineOptions({ name: 'CostPreviewPanel' })
@@ -118,7 +118,7 @@ const props = defineProps({
   submitting: { type: Boolean, default: false }
 })
 
-defineEmits(['submit', 'saveDraft', 'cancel', 'showAddFeeDialog', 'removeCustomFee', 'addCustomProfitTier', 'removeCustomProfitTier', 'updateCustomTierPrice'])
+defineEmits(['submit', 'saveDraft', 'cancel', 'showAddFeeDialog', 'removeCustomFee', 'addCustomProfitTier', 'removeCustomProfitTier', 'updateCustomTierPrice', 'updateTierSort'])
 
 const sliderProfitRate = ref(25)
 const overheadRatePercent = computed(() => ((props.overheadRate || 0.2) * 100).toFixed(0))
@@ -169,4 +169,6 @@ const setSliderFromTier = (tier) => { sliderProfitRate.value = parseInt(tier.pro
 .action-cancel { color: #94a3b8; font-size: 13px; }
 .action-cancel:hover { color: #64748b; }
 .cursor-help { cursor: help; }
+.delete-btn { color: #9ca3af !important; padding: 0 !important; }
+.delete-btn:hover { color: #ef4444 !important; }
 </style>

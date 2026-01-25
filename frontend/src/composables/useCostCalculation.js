@@ -78,7 +78,7 @@ export function useCostCalculation() {
 
   const addCustomProfitTier = () => {
     if (!calculation.value) return false
-    customProfitTiers.value.push({ profitRate: null, profitPercentage: '', price: 0 })
+    customProfitTiers.value.push({ profitRate: null, profitPercentage: '', price: 0, sortKey: 9999 })
     return true
   }
 
@@ -98,14 +98,19 @@ export function useCostCalculation() {
     if (!basePrice) return
 
     const rate = parseFloat(tier.profitRate)
-    if (isNaN(rate) || rate < 0 || rate >= 1) { // 利润率必须小于100%，否则会导致负价格
+    if (isNaN(rate) || rate < 0 || rate >= 100) { // 利润率必须小于100%，否则会导致负价格
       tier.price = 0
       tier.profitPercentage = ''
       return
     }
 
-    tier.profitPercentage = `${(rate * 100).toFixed(0)}%`
-    tier.price = basePrice / (1 - rate)
+    tier.profitPercentage = `${rate}%`
+    tier.price = basePrice / (1 - rate / 100)
+  }
+
+  const updateTierSort = (tier) => {
+    const rate = parseFloat(tier.profitRate)
+    tier.sortKey = isNaN(rate) ? 9999 : rate
   }
 
   const removeCustomProfitTier = (customIndex) => {
@@ -125,7 +130,9 @@ export function useCostCalculation() {
     if (!calculation.value || !calculation.value.profitTiers) return []
 
     const systemTiers = calculation.value.profitTiers.map(tier => ({
-      ...tier, isCustom: false, originalTier: null, customIndex: -1
+      ...tier, isCustom: false, originalTier: null, customIndex: -1,
+      // 解析排序值: "25%" -> 25
+      sortValue: parseFloat(tier.profitPercentage)
     }))
 
     const customTiersFormatted = customProfitTiers.value.map((tier, index) => ({
@@ -134,10 +141,12 @@ export function useCostCalculation() {
       price: tier.price,
       isCustom: true,
       originalTier: tier,
-      customIndex: index
+      customIndex: index,
+      // 解析排序值: 优先使用sortKey，否则退化到profitRate，默认为极大值放在最后
+      sortValue: (tier.sortKey !== undefined && tier.sortKey !== null) ? tier.sortKey : (tier.profitRate ? parseFloat(tier.profitRate) : 9999)
     }))
 
-    return [...systemTiers, ...customTiersFormatted]
+    return [...systemTiers, ...customTiersFormatted].sort((a, b) => a.sortValue - b.sortValue)
   })
 
   return {
@@ -150,6 +159,7 @@ export function useCostCalculation() {
     calculateCost,
     addCustomProfitTier,
     updateCustomTierPrice,
+    updateTierSort,
     removeCustomProfitTier,
     prepareCustomProfitTiersForSave,
     getAllProfitTiers

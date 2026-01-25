@@ -341,266 +341,50 @@
       </div>
 
       <!-- 成本明细 -->
-      <div class="cost-section">
-        <div class="cost-section-header">
-          <h3 class="cost-section-title">成本明细</h3>
-        </div>
-        <div class="cost-section-body p-0">
-          <el-tabs v-model="activeDetailTab" class="cost-detail-tabs">
-            <!-- 原料明细 Tab -->
-            <el-tab-pane name="materials">
-              <template #label><span class="tab-label">原料 <el-badge :value="form.materials.length" :max="99" class="tab-badge" /></span></template>
-              <div class="tab-pane-content">
-                <div class="tab-pane-actions">
-                  <el-button v-if="!editMode.materials && form.materials.some(p => p.from_standard)" type="warning" size="small" @click="toggleEditMode('materials')">解锁编辑</el-button>
-                  <el-button v-if="editMode.materials" type="success" size="small" @click="toggleEditMode('materials')">锁定编辑</el-button>
-                  <el-button type="primary" size="small" @click="addMaterialRow">添加原料</el-button>
-                </div>
-                <el-table :data="form.materials" border size="small">
-                  <el-table-column width="60" align="center">
-                    <template #header><el-tooltip content="勾选后，该原料将在管销价计算后再加入成本" placement="top"><span class="cursor-help text-xs whitespace-nowrap">管销后</span></el-tooltip></template>
-                    <template #default="{ row }"><el-checkbox v-model="row.after_overhead" @change="handleCalculateCost" :disabled="!!row.from_standard && !editMode.materials" /></template>
-                  </el-table-column>
-                  <el-table-column label="原料名称" min-width="200">
-                    <template #default="{ row, $index }">
-                      <el-select v-if="!row.from_standard || editMode.materials" v-model="row.material_id" filterable remote reserve-keyword clearable :remote-method="searchMaterialsByCategory" :loading="materialSearchLoading" :placeholder="row.item_name || '输入名称或料号搜索'" @change="handleMaterialSelect(row, $index)" style="width: 100%">
-                        <el-option v-if="row.material_id && row.item_name && !materialSearchOptions.some(o => o.id === row.material_id)" :label="row.item_name" :value="row.material_id" />
-                        <el-option v-for="material in materialSearchOptions" :key="material.id" :label="`${material.name} (${material.item_no})`" :value="material.id">
-                          <div class="flex justify-between w-full"><span>{{ material.name }}</span><span class="text-slate-400 text-xs">¥{{ material.price }}/{{ material.unit }}</span></div>
-                        </el-option>
-                      </el-select>
-                      <span v-else>{{ row.item_name }}</span>
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="基本用量" width="100">
-                    <template #default="{ row }"><el-input-number v-model="row.usage_amount" :min="0" :precision="4" :controls="false" @change="handleItemSubtotalChange(row)" size="small" style="width: 100%" :disabled="!!row.from_standard && !editMode.materials" /></template>
-                  </el-table-column>
-                  <el-table-column label="单价(CNY)" width="100"><template #default="{ row }">{{ formatNumber(row.unit_price) || '-' }}</template></el-table-column>
-                  <el-table-column label="小计" width="100"><template #default="{ row }">{{ formatNumber(row.subtotal) || '-' }}</template></el-table-column>
-                  <el-table-column label="操作" width="70" fixed="right">
-                    <template #default="{ $index, row }">
-                      <el-button 
-                        v-if="!row.from_standard || editMode.materials"
-                        size="small" 
-                        link 
-                        class="text-gray-400 hover:text-red-500 transition-colors"
-                        @click="removeMaterialRow($index)"
-                      >
-                        <el-icon><Delete /></el-icon>
-                      </el-button>
-                    </template>
-                  </el-table-column>
-                </el-table>
-                <div class="tab-pane-footer">
-                  <span>∑ 管销前原料: <strong>{{ formatNumber(materialBeforeOverheadTotal) }}</strong></span>
-                  <span>管销后原料: <strong class="text-amber-600">{{ formatNumber(materialAfterOverheadTotal) }}</strong></span>
-                </div>
-              </div>
-            </el-tab-pane>
-
-            <!-- 工序明细 Tab -->
-            <el-tab-pane name="processes">
-              <template #label><span class="tab-label">工序 <el-badge :value="form.processes.length" :max="99" class="tab-badge" /></span></template>
-              <div class="tab-pane-content">
-                <div class="tab-pane-actions">
-                  <el-button v-if="!editMode.processes && form.processes.some(p => p.from_standard)" type="warning" size="small" @click="toggleEditMode('processes')">解锁编辑</el-button>
-                  <el-button v-if="editMode.processes" type="success" size="small" @click="toggleEditMode('processes')">锁定编辑</el-button>
-                  <el-button type="primary" size="small" @click="addProcessRow">添加工序</el-button>
-                </div>
-                <el-table :data="form.processes" border size="small">
-                  <el-table-column label="工序名称" min-width="150">
-                    <template #default="{ row }"><el-input v-model="row.item_name" @change="handleItemSubtotalChange(row)" size="small" :disabled="!!row.from_standard && !editMode.processes" /></template>
-                  </el-table-column>
-                  <el-table-column label="基本用量" width="100">
-                    <template #default="{ row }"><el-input-number v-model="row.usage_amount" :min="0" :precision="4" :controls="false" @change="handleItemSubtotalChange(row)" size="small" style="width: 100%" :disabled="!!row.from_standard && !editMode.processes" /></template>
-                  </el-table-column>
-                  <el-table-column label="工价(CNY)" width="100">
-                    <template #default="{ row }"><el-input-number v-model="row.unit_price" :min="0" :precision="4" :controls="false" @change="handleItemSubtotalChange(row)" size="small" style="width: 100%" :disabled="!!row.from_standard && !editMode.processes" /></template>
-                  </el-table-column>
-                  <el-table-column label="小计" width="100"><template #default="{ row }">{{ formatNumber(row.subtotal) }}</template></el-table-column>
-                  <el-table-column label="操作" width="70" fixed="right">
-                    <template #default="{ $index, row }">
-                      <el-button 
-                        v-if="!row.from_standard || editMode.processes"
-                        size="small" 
-                        link 
-                        class="text-gray-400 hover:text-red-500 transition-colors"
-                        @click="removeProcessRow($index)"
-                      >
-                        <el-icon><Delete /></el-icon>
-                      </el-button>
-                    </template>
-                  </el-table-column>
-                </el-table>
-                <div class="tab-pane-footer">
-                  <span>∑ 工序小计: <strong>{{ formatNumber(processSubtotal) }}</strong></span>
-                  <span>工价系数({{ configStore.config.process_coefficient || 1.56 }}): <strong class="text-emerald-600">{{ formatNumber(processSubtotal * (configStore.config.process_coefficient || 1.56)) }}</strong></span>
-                </div>
-              </div>
-            </el-tab-pane>
-
-            <!-- 包材明细 Tab -->
-            <el-tab-pane name="packaging">
-              <template #label><span class="tab-label">包材 <el-badge :value="form.packaging.length" :max="99" class="tab-badge" /></span></template>
-              <div class="tab-pane-content">
-                <div class="tab-pane-actions">
-                  <el-button v-if="!editMode.packaging && form.packaging.some(p => p.from_standard)" type="warning" size="small" @click="toggleEditMode('packaging')">解锁编辑</el-button>
-                  <el-button v-if="editMode.packaging" type="success" size="small" @click="toggleEditMode('packaging')">锁定编辑</el-button>
-                  <el-button type="primary" size="small" @click="addPackagingRow">添加包材</el-button>
-                </div>
-                <el-table :data="form.packaging" border size="small">
-                  <el-table-column label="包材名称" min-width="180">
-                    <template #default="{ row, $index }">
-                      <el-select v-if="!row.from_standard || editMode.packaging" v-model="row.material_id" filterable remote reserve-keyword clearable :remote-method="searchPackagingByCategory" :loading="materialSearchLoading" :placeholder="row.item_name || '输入名称或料号搜索'" @change="handlePackagingMaterialSelect(row, $index)" style="width: 100%">
-                        <el-option v-if="row.material_id && row.item_name && !materialSearchOptions.some(o => o.id === row.material_id)" :label="row.item_name" :value="row.material_id" />
-                        <el-option v-for="material in materialSearchOptions" :key="material.id" :label="`${material.name} (${material.item_no})`" :value="material.id">
-                          <div class="flex justify-between w-full"><span>{{ material.name }}</span><span class="text-slate-400 text-xs">¥{{ material.price }}/{{ material.unit }}</span></div>
-                        </el-option>
-                      </el-select>
-                      <span v-else>{{ row.item_name }}</span>
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="基本用量" width="100">
-                    <template #default="{ row }"><el-input-number v-model="row.usage_amount" :min="0" :precision="4" :controls="false" @change="handleItemSubtotalChange(row)" size="small" style="width: 100%" :disabled="!!row.from_standard && !editMode.packaging" /></template>
-                  </el-table-column>
-                  <el-table-column label="外箱材积" width="100">
-                    <template #default="{ row }">
-                      <span v-if="row.carton_volume">{{ row.carton_volume }}</span>
-                      <span v-else class="text-gray-400">-</span>
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="单价(CNY)" width="100"><template #default="{ row }">{{ formatNumber(row.unit_price) || '-' }}</template></el-table-column>
-                  <el-table-column label="小计" width="100"><template #default="{ row }">{{ formatNumber(row.subtotal) || '-' }}</template></el-table-column>
-                  <el-table-column label="操作" width="70" fixed="right">
-                    <template #default="{ $index, row }">
-                      <el-button 
-                        v-if="!row.from_standard || editMode.packaging"
-                        size="small" 
-                        link 
-                        class="text-gray-400 hover:text-red-500 transition-colors"
-                        @click="removePackagingRow($index)"
-                      >
-                        <el-icon><Delete /></el-icon>
-                      </el-button>
-                    </template>
-                  </el-table-column>
-                </el-table>
-                <div class="tab-pane-footer"><span>∑ 包材小计: <strong>{{ formatNumber(packagingTotal) }}</strong></span></div>
-              </div>
-            </el-tab-pane>
-          </el-tabs>
-        </div>
-      </div>
+      <CostDetailTabs
+        :materials="form.materials"
+        :processes="form.processes"
+        :packaging="form.packaging"
+        :edit-mode="editMode"
+        :material-search-options="materialSearchOptions"
+        :material-search-loading="materialSearchLoading"
+        :process-coefficient="configStore.config.process_coefficient || 1.56"
+        :default-tab="activeDetailTab"
+        @toggle-edit-mode="toggleEditMode"
+        @add-row="handleAddRow"
+        @remove-row="handleRemoveRow"
+        @item-change="handleItemSubtotalChange"
+        @calculate="handleCalculateCost"
+        @search-material="handleSearchMaterial"
+        @select-material="handleMaterialSelect"
+        @select-packaging="handlePackagingMaterialSelect"
+      />
 
         </el-form>
       </div>
 
       <!-- 右侧成本预览面板 -->
-      <div class="cost-preview-panel">
-        <div class="cost-preview-sticky">
-          <!-- 成本计算 -->
-          <div class="preview-section" v-if="calculation">
-            <div class="preview-section-title">成本计算</div>
-            <div class="preview-cost-grid">
-              <div class="preview-cost-item">
-                <el-tooltip content="原料 + 工序×系数 + 包材" placement="top">
-                  <span class="preview-cost-label cursor-help">基础成本 <el-icon class="text-gray-400"><InfoFilled /></el-icon></span>
-                </el-tooltip>
-                <span class="preview-cost-value">{{ formatNumber(calculation.baseCost) }}</span>
-              </div>
-              <div class="preview-cost-item">
-                <el-tooltip content="运费总价 ÷ 数量" placement="top">
-                  <span class="preview-cost-label cursor-help">运费成本 <el-icon class="text-gray-400"><InfoFilled /></el-icon></span>
-                </el-tooltip>
-                <span class="preview-cost-value">{{ calculation.freightCost > 0.001 ? formatNumber(calculation.freightCost) : '-' }}</span>
-              </div>
-              <div class="preview-cost-item">
-                <el-tooltip :content="`(基础成本${form.include_freight_in_base ? '+运费' : ''}) ÷ (1-${((configStore.config.overhead_rate || 0.2) * 100).toFixed(0)}%)`" placement="top">
-                  <span class="preview-cost-label cursor-help">管销价 <span class="text-blue-500">{{ ((configStore.config.overhead_rate || 0.2) * 100).toFixed(0) }}%</span></span>
-                </el-tooltip>
-                <span class="preview-cost-value">{{ formatNumber(calculation.overheadPrice) }}</span>
-              </div>
-            </div>
-            <el-button size="small" type="primary" link @click="showAddFeeDialog" class="mt-2">+ 添加管销后费用项</el-button>
-            <div v-if="customFeesWithValues.length > 0" class="preview-fee-list">
-              <div v-for="(fee, index) in customFeesWithValues" :key="'fee-' + index" class="preview-fee-item">
-                <span>{{ fee.name }} ({{ parseFloat((fee.rate * 100).toFixed(2)) }}%)</span>
-                <div class="flex items-center gap-2">
-                  <span class="font-medium">{{ formatNumber(fee.calculatedValue) }}</span>
-                  <el-button size="small" link @click="handleRemoveCustomFee(index)" class="p-0 text-gray-400 hover:text-red-500 transition-colors" style="font-size: 14px;">
-                    <el-icon><Delete /></el-icon>
-                  </el-button>
-                </div>
-              </div>
-            </div>
-            <div v-if="calculation.afterOverheadMaterialTotal > 0" class="preview-tip">管销后原料: <strong>{{ formatNumber(calculation.afterOverheadMaterialTotal) }}</strong></div>
-          </div>
-
-          <!-- 最终成本价 -->
-          <div class="preview-final-box" v-if="calculation">
-            <div class="preview-final-label">最终成本价</div>
-            <div class="preview-final-value">
-              <span v-if="form.sales_type === 'domestic'">{{ formatNumber(calculation.domesticPrice) }}</span>
-              <span v-else>{{ formatNumber(calculation.insurancePrice) }}</span>
-              <span class="preview-final-currency">{{ form.sales_type === 'domestic' ? 'CNY' : 'USD' }}</span>
-            </div>
-            <div class="preview-final-info">
-              <span v-if="form.sales_type === 'export'">汇率 {{ formatNumber(calculation.exchangeRate) }} | 保险 0.3%</span>
-              <span v-else>含 {{ ((form.vat_rate || 0.13) * 100).toFixed(0) }}% 增值税</span>
-            </div>
-          </div>
-
-          <!-- 利润区间 -->
-          <div class="preview-section" v-if="calculation && calculation.profitTiers">
-            <div class="preview-section-header">
-              <span class="preview-section-title">利润区间</span>
-              <el-button type="primary" size="small" link @click="handleAddCustomProfitTier">+ 添加</el-button>
-            </div>
-            <!-- 滑块 -->
-            <div class="preview-slider">
-              <div class="preview-slider-header">
-                <span class="text-xs text-gray-400">{{ sliderProfitRate }}%</span>
-                <span class="text-sm font-semibold text-blue-600">{{ formatNumber(sliderPrice) }} {{ calculation.currency }}</span>
-              </div>
-              <el-slider v-model="sliderProfitRate" :min="0" :max="100" :step="1" :show-tooltip="false" @input="updateSliderPrice" />
-            </div>
-            <!-- 档位 -->
-            <div class="preview-tier-list">
-              <div v-for="tier in allProfitTiers" :key="tier.isCustom ? 'custom-' + tier.customIndex : 'system-' + tier.profitPercentage" class="preview-tier-item" :class="{ custom: tier.isCustom }" @click="!tier.isCustom && setSliderFromTier(tier)">
-                <div class="preview-tier-left">
-                  <span v-if="!tier.isCustom" class="preview-tier-rate">{{ tier.profitPercentage }}</span>
-                  <el-input v-else v-model="tier.originalTier.profitRate" placeholder="0.35" size="small" style="width: 50px" @input="handleUpdateCustomTierPrice(tier.originalTier)" @click.stop />
-                </div>
-                <div class="preview-tier-right">
-                  <span class="preview-tier-price">{{ formatNumber(tier.price) }}</span>
-                  <span v-if="!tier.isCustom" class="preview-tier-profit">+{{ formatNumber(tier.price - (form.sales_type === 'domestic' ? calculation.domesticPrice : calculation.insurancePrice)) }}</span>
-                  <el-button v-if="tier.isCustom" type="danger" size="small" link @click.stop="handleRemoveCustomProfitTier(tier.customIndex)">删除</el-button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 空状态 -->
-          <div v-if="!calculation" class="preview-empty">
-            <el-icon class="text-4xl text-gray-300 mb-2"><Document /></el-icon>
-            <p class="text-sm text-gray-400">选择型号配置后</p>
-            <p class="text-sm text-gray-400">将实时显示成本计算</p>
-          </div>
-
-          <!-- 操作按钮 -->
-          <div class="preview-actions">
-            <div class="preview-actions-row">
-              <el-button @click="handleSaveDraft" :loading="saving" class="action-draft">
-                <el-icon><FolderAdd /></el-icon>草稿
-              </el-button>
-              <el-button type="primary" @click="handleSubmitQuotation" :loading="submitting" class="action-submit">
-                <el-icon><Promotion /></el-icon>提交审核
-              </el-button>
-            </div>
-            <el-button text @click="handleCancel" class="action-cancel">取消</el-button>
-          </div>
-        </div>
-      </div>
+      <CostPreviewPanel
+        :calculation="calculation"
+        :sales-type="form.sales_type"
+        :vat-rate="form.vat_rate"
+        :overhead-rate="configStore.config.overhead_rate"
+        :include-freight-in-base="form.include_freight_in_base"
+        :custom-fees-with-values="customFeesWithValues"
+        :all-profit-tiers="allProfitTiers"
+        :slider-profit-rate="sliderProfitRate"
+        :saving="saving"
+        :submitting="submitting"
+        @show-add-fee-dialog="showAddFeeDialog"
+        @remove-custom-fee="handleRemoveCustomFee"
+        @add-custom-profit-tier="handleAddCustomProfitTier"
+        @remove-custom-profit-tier="handleRemoveCustomProfitTier"
+        @update-custom-tier-price="handleUpdateCustomTierPrice"
+        @update-tier-sort="handleUpdateTierSort"
+        @submit="handleSubmitQuotation"
+        @save-draft="handleSaveDraft"
+        @cancel="handleCancel"
+      />
     </div>
 
     <!-- 移动端底部栏 -->
@@ -651,7 +435,8 @@ import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import FreightCardFCL from './components/FreightCardFCL.vue'
 import FreightCardLCL from './components/FreightCardLCL.vue'
 import FreightCardCIF from './components/FreightCardCIF.vue'
-import QuantityInputSection from './components/QuantityInputSection.vue'
+import CostPreviewPanel from './components/CostPreviewPanel.vue'
+import CostDetailTabs from './components/CostDetailTabs.vue'
 import { formatNumber } from '@/utils/format'
 import { useConfigStore } from '@/store/config'
 import logger from '@/utils/logger'
@@ -696,7 +481,7 @@ const selectedNewProductCategory = computed(() => {
 
 // Composables
 const { freightCalculation, systemConfig, shippingInfo, quantityUnit, quantityInput, domesticCbmPrice, currentFactory, loadSystemConfig, setShippingInfoFromConfig, calculateShippingInfo, calculateFOBFreight, calculateCIFShenzhen, onQuantityUnitChange, onQuantityInputChange, onDomesticCbmPriceChange, onShippingMethodChange, onPortTypeChange, resetShippingInfo } = useFreightCalculation()
-const { calculation, customProfitTiers, materialCoefficient, materialCoefficientsCache, loadMaterialCoefficients, calculateItemSubtotal, calculateCost, addCustomProfitTier, updateCustomTierPrice, removeCustomProfitTier, prepareCustomProfitTiersForSave, getAllProfitTiers } = useCostCalculation()
+const { calculation, customProfitTiers, materialCoefficient, materialCoefficientsCache, loadMaterialCoefficients, calculateItemSubtotal, calculateCost, addCustomProfitTier, updateCustomTierPrice, updateTierSort, removeCustomProfitTier, prepareCustomProfitTiersForSave, getAllProfitTiers } = useCostCalculation()
 const { saving, submitting, isSaved, loadRegulations, loadPackagingConfigs, loadBomMaterials, loadPackagingConfigDetails, loadQuotationData, loadStandardCostData, saveQuotation, submitQuotation } = useQuotationData()
 const { isNewCustomer, selectedCustomerId, customerOptions, customerSearchLoading, customerSelectFocused, onCustomerTypeChange, searchCustomers, onCustomerSelect } = useCustomerSearch()
 const { allMaterials, materialSearchOptions, materialSearchLoading, loadAllMaterials, searchMaterials, onMaterialSelect, onPackagingMaterialSelect } = useMaterialSearch()
@@ -839,8 +624,12 @@ const { suggestRegions } = useRegionSuggestion(COMMON_REGIONS)
 const handleMaterialSelect = (row, index) => { onMaterialSelect(row, materialCoefficient.value, (r) => { calculateItemSubtotal(r); handleCalculateCost() }) }
 const handlePackagingMaterialSelect = (row, index) => { onPackagingMaterialSelect(row, (r) => { calculateItemSubtotal(r); handleCalculateCost() }) }
 const handleItemSubtotalChange = (row) => { calculateItemSubtotal(row); handleCalculateCost() }
+const handleAddRow = (type) => { if (type === 'materials') addMaterialRow(); else if (type === 'processes') addProcessRow(); else if (type === 'packaging') addPackagingRow() }
+const handleRemoveRow = (type, index) => { if (type === 'materials') removeMaterialRow(index); else if (type === 'processes') removeProcessRow(index); else if (type === 'packaging') removePackagingRow(index) }
+const handleSearchMaterial = (query, category) => searchMaterials(query, category)
 const handleAddCustomProfitTier = () => { if (!addCustomProfitTier()) ElMessage.warning('请先完成基础信息填写') }
 const handleUpdateCustomTierPrice = (tier) => updateCustomTierPrice(tier)
+const handleUpdateTierSort = (tier) => updateTierSort(tier)
 const handleRemoveCustomProfitTier = (index) => removeCustomProfitTier(index)
 const handleConfirmAddFee = () => confirmAddFee(handleCalculateCost)
 const handleRemoveCustomFee = (index) => removeCustomFee(index, handleCalculateCost)
@@ -1160,7 +949,7 @@ const fillQuotationData = async (data, isCopy = false) => {
   }
   if (!quantityInput.value && form.quantity) { quantityInput.value = form.quantity; quantityUnit.value = 'pcs' }
   if (quotation.custom_profit_tiers) {
-    try { const parsed = JSON.parse(quotation.custom_profit_tiers); customProfitTiers.value = parsed.map(t => ({ profitRate: t.profitRate, profitPercentage: t.profitPercentage, price: t.price })) }
+    try { const parsed = JSON.parse(quotation.custom_profit_tiers); customProfitTiers.value = parsed.map(t => ({ profitRate: t.profitRate, profitPercentage: t.profitPercentage, price: t.price, sortKey: t.profitRate ? parseFloat(t.profitRate) : 9999 })) }
     catch (e) { customProfitTiers.value = [] }
   }
   if (fees?.length > 0) form.customFees = fees.map((fee, i) => ({ name: fee.name, rate: fee.rate, sortOrder: fee.sortOrder ?? i }))
@@ -1340,251 +1129,8 @@ onBeforeRouteLeave(async (to, from, next) => {
 /* 左侧表单面板 */
 .cost-form-panel { min-width: 0; }
 
-/* 右侧预览面板 */
+/* 右侧预览面板 - 样式已移至 CostPreviewPanel.vue */
 .cost-preview-panel { position: relative; }
-
-.cost-preview-sticky {
-  position: sticky;
-  top: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* ========== 右侧预览区块 ========== */
-.preview-section {
-  background: #fff;
-  border: 1px solid #e4e7ed;
-  border-radius: 10px;
-  padding: 14px;
-}
-
-.preview-section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.preview-section-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #303133;
-}
-
-/* 成本网格 */
-.preview-cost-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.preview-cost-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 10px;
-  background: #f8fafc;
-  border-radius: 6px;
-}
-
-.preview-cost-label {
-  font-size: 12px;
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.preview-cost-value {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1e293b;
-}
-
-/* 自定义费用 */
-.preview-fee-list { margin-top: 10px; }
-
-.preview-fee-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 10px;
-  background: #fef3c7;
-  border-radius: 4px;
-  font-size: 12px;
-  color: #92400e;
-  margin-bottom: 6px;
-}
-
-.preview-tip {
-  margin-top: 8px;
-  padding: 8px 10px;
-  background: #fef3c7;
-  border-radius: 4px;
-  font-size: 12px;
-  color: #92400e;
-}
-
-/* 最终成本框 */
-.preview-final-box {
-  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-  border-radius: 10px;
-  padding: 16px;
-  text-align: center;
-  color: #fff;
-}
-
-.preview-final-label {
-  font-size: 12px;
-  opacity: 0.9;
-  margin-bottom: 4px;
-}
-
-.preview-final-value {
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.preview-final-currency {
-  font-size: 14px;
-  font-weight: 500;
-  margin-left: 4px;
-  opacity: 0.9;
-}
-
-.preview-final-info {
-  font-size: 11px;
-  opacity: 0.8;
-  margin-top: 6px;
-}
-
-/* 利润滑块 */
-.preview-slider { margin-bottom: 12px; }
-
-.preview-slider-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-}
-
-/* 利润档位列表 */
-.preview-tier-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.preview-tier-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 10px;
-  background: #f8fafc;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.preview-tier-item:not(.custom):hover {
-  border-color: #3b82f6;
-  background: #eff6ff;
-}
-
-.preview-tier-item.custom {
-  background: #fef3c7;
-  border-color: #fbbf24;
-}
-
-.preview-tier-left { display: flex; align-items: center; gap: 6px; }
-
-.preview-tier-rate {
-  font-size: 12px;
-  font-weight: 500;
-  color: #64748b;
-  min-width: 36px;
-}
-
-.preview-tier-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.preview-tier-price {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.preview-tier-profit {
-  font-size: 11px;
-  color: #22c55e;
-  font-weight: 500;
-}
-
-/* 空状态 */
-.preview-empty {
-  background: #fff;
-  border: 1px dashed #e4e7ed;
-  border-radius: 10px;
-  padding: 40px 20px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-/* 操作按钮 */
-.preview-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  background: #fff;
-  border: 1px solid #e4e7ed;
-  border-radius: 10px;
-}
-
-.preview-actions-row {
-  display: flex;
-  gap: 8px;
-}
-
-.action-draft {
-  flex: 1;
-  height: 40px;
-  border: 1px solid #dcdfe6;
-  background: #f8fafc;
-  color: #475569;
-  font-weight: 500;
-}
-.action-draft:hover {
-  background: #f1f5f9;
-  border-color: #c0c4cc;
-}
-
-.action-submit {
-  flex: 2;
-  height: 40px;
-  font-weight: 600;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  border: none;
-}
-.action-submit:hover {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-}
-
-.action-cancel {
-  color: #94a3b8;
-  font-size: 13px;
-}
-.action-cancel:hover {
-  color: #64748b;
-}
 
 /* ========== 智能客户搜索 ========== */
 .customer-suggestion {
