@@ -44,6 +44,9 @@ router.get('/batch', materialController.getMaterialsByIds);
 // 获取所有类别（动态从数据库读取）
 router.get('/categories', materialController.getCategories);
 
+// 获取原料分类结构（树形）
+router.get('/structure', materialController.getCategoryStructure);
+
 // 根据厂商获取原料
 router.get('/manufacturer/:manufacturer', materialController.getMaterialsByManufacturer);
 

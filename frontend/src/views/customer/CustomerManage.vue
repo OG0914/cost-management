@@ -148,9 +148,23 @@ watch([currentPage, pageSize], fetchCustomers)
 const handleAdd = () => { isEdit.value = false; dialogTitle.value = '新增客户'; Object.assign(form, { id: null, vc_code: '', name: '', region: '', remark: '', user_id: null }); dialogVisible.value = true }
 const handleEdit = (row) => { isEdit.value = true; dialogTitle.value = '编辑客户'; Object.assign(form, { ...row, user_id: row.user_id || null }); dialogVisible.value = true }
 
+const fieldLabels = {
+  vc_code: 'VC号',
+  name: '客户名称'
+}
+
 const handleSubmit = async () => {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
+  try {
+    await formRef.value.validate()
+  } catch (error) {
+    if (error && typeof error === 'object') {
+       const invalidFields = Object.keys(error).map(key => fieldLabels[key] || key).join('、')
+       logger.warn('表单校验失败', error)
+       ElMessage.error(`保存失败：请完善以下红色必填项：${invalidFields}`)
+    }
+    return
+  }
+  
   loading.value = true
   try {
     if (isEdit.value) { await request.put(`/customers/${form.id}`, form); ElMessage.success('更新成功') }

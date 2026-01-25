@@ -35,7 +35,15 @@ export const menuConfig = [
   { id: 'regulation', label: '法规管理', icon: 'ri-government-line', route: '/regulations', roles: ['admin', 'salesperson', 'reviewer', 'purchaser', 'producer', 'readonly'] },
   { id: 'model', label: '型号管理', icon: 'ri-price-tag-3-line', route: '/models', roles: ['admin', 'salesperson', 'reviewer', 'purchaser', 'producer', 'readonly'] },
   { id: 'customer', label: '客户管理', icon: 'ri-user-3-line', route: '/customers', roles: ['admin', 'purchaser', 'salesperson'] },
-  { id: 'material', label: '原料管理', icon: 'ri-stack-line', route: '/materials' },
+  {
+    id: 'material',
+    label: '原料管理',
+    icon: 'ri-stack-line',
+    children: [
+      { id: 'material_half_mask', label: '半面罩类', route: '/materials?type=half_mask', icon: 'ri-cpu-line' },
+      { id: 'material_general', label: '口罩类', route: '/materials?type=general', icon: 'ri-file-list-2-line' }
+    ]
+  },
   { id: 'packaging', label: '包材管理', icon: 'ri-box-3-line', route: '/packaging' },
   { id: 'process', label: '工序管理', icon: 'ri-settings-4-line', route: '/processes' },
 

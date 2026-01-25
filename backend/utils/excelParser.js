@@ -39,108 +39,65 @@ function parsePackagingType(value) {
 
 class ExcelParser {
   /**
-   * 解析原料 Excel
-   * 期望列：品号、原料名称、单位、单价、币别、厂商
+   * 解析原料 Excel，支持三种格式：通用、半面罩类、非半面罩类
    */
   static async parseMaterialExcel(filePath) {
     try {
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.readFile(filePath);
       const worksheet = workbook.worksheets[0];
-
-      // 转换为 JSON
-      const data = [];
-      const headers = [];
+      const data = [], headers = [];
 
       worksheet.eachRow((row, rowNumber) => {
-        if (rowNumber === 1) {
-          // 读取表头
-          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-            headers[colNumber] = cell.value;
-          });
-        } else {
-          // 读取数据行
+        if (rowNumber === 1) { row.eachCell({ includeEmpty: true }, (cell, colNumber) => { headers[colNumber] = cell.value; }); }
+        else {
           const rowData = {};
-          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-            if (headers[colNumber]) {
-              rowData[headers[colNumber]] = cell.value;
-            }
-          });
-          // 只添加非空行
-          if (Object.keys(rowData).length > 0) {
-            data.push(rowData);
-          }
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => { if (headers[colNumber]) rowData[headers[colNumber]] = cell.value; });
+          if (Object.keys(rowData).length > 0) data.push(rowData);
         }
       });
 
-      // 验证和转换数据
-      const materials = [];
-      const errors = [];
+      const materials = [], errors = [];
+      const getValue = (value) => (value && typeof value === 'object' && value.richText) ? value.richText.map(t => t.text).join('') : value; // 处理富文本
+      const isHalfMaskFormat = headers.includes('产品描述') || headers.includes('供应商') || headers.includes('MOQ'); // 检测表头格式
+      const isGeneralFormat = headers.includes('厂商') && headers.includes('原料品名') && !isHalfMaskFormat;
 
       data.forEach((row, index) => {
-        const rowNum = index + 2; // Excel 行号（从 2 开始，因为第 1 行是表头）
+        const rowNum = index + 2;
+        const itemNo = getValue(row['品号']) || getValue(row['item_no']);
+        const name = getValue(row['原料名称']) || getValue(row['品名/规格']) || getValue(row['原料品名']) || getValue(row['name']);
+        const unit = getValue(row['单位']) || getValue(row['unit']);
+        const price = getValue(row['单价']) || getValue(row['单价RMB']) || getValue(row['price']);
 
-        // 验证必填字段
-        if (!row['品号'] && !row['item_no']) {
-          errors.push(`第 ${rowNum} 行：缺少品号`);
-          return;
-        }
-        if (!row['原料名称'] && !row['name']) {
-          errors.push(`第 ${rowNum} 行：缺少原料名称`);
-          return;
-        }
-        if (!row['单位'] && !row['unit']) {
-          errors.push(`第 ${rowNum} 行：缺少单位`);
-          return;
-        }
-        if (!row['单价'] && !row['price']) {
-          errors.push(`第 ${rowNum} 行：缺少单价`);
-          return;
-        }
+        if (!itemNo) { errors.push(`第 ${rowNum} 行：缺少品号`); return; }
+        if (!name) { errors.push(`第 ${rowNum} 行：缺少原料名称`); return; }
+        if (!unit) { errors.push(`第 ${rowNum} 行：缺少单位`); return; }
+        if (price === undefined && price !== 0) { errors.push(`第 ${rowNum} 行：缺少单价`); return; }
 
-        // 处理富文本对象
-        const getValue = (value) => {
-          if (value && typeof value === 'object' && value.richText) {
-            return value.richText.map(t => t.text).join('');
-          }
-          return value;
-        };
+        const priceNum = parseFloat(price);
+        if (isNaN(priceNum)) { errors.push(`第 ${rowNum} 行：单价必须是数字`); return; }
 
         const material = {
-          item_no: String(getValue(row['品号']) || getValue(row['item_no']) || '').trim(),
-          name: String(getValue(row['原料名称']) || getValue(row['name']) || ''),
+          item_no: String(itemNo).trim(), name: String(name).trim(), unit: String(unit).trim(), price: priceNum,
           category: String(getValue(row['类别']) || getValue(row['category']) || '').trim() || null,
-          unit: String(getValue(row['单位']) || getValue(row['unit']) || ''),
-          price: parseFloat(getValue(row['单价']) || getValue(row['price']) || 0),
           currency: String(getValue(row['币别']) || getValue(row['currency']) || 'CNY'),
-          manufacturer: String(getValue(row['厂商']) || getValue(row['manufacturer']) || '').trim() || null,
-          usage_amount: null
+          material_type: isHalfMaskFormat ? 'half_mask' : (String(getValue(row['原料类型']) || getValue(row['material_type']) || 'general').trim()),
+          subcategory: String(getValue(row['子分类']) || getValue(row['subcategory']) || '').trim() || null,
+          manufacturer: String(getValue(row['厂商']) || getValue(row['manufacturer']) || '').trim() || null, // 非半面罩类使用
+          supplier: String(getValue(row['供应商']) || getValue(row['supplier']) || '').trim() || null, // 半面罩类使用
+          product_desc: String(getValue(row['产品描述']) || getValue(row['product_desc']) || '').trim() || null,
+          packaging_mode: String(getValue(row['包装方式']) || getValue(row['packaging_mode']) || '').trim() || null,
+          usage_amount: parseFloat(getValue(row['用量']) || getValue(row['usage_amount'])) || null,
+          production_date: getValue(row['生产日期']) || getValue(row['production_date']) || null,
+          moq: parseInt(getValue(row['MOQ']) || getValue(row['moq'])) || null,
+          remark: String(getValue(row['备注']) || getValue(row['remark']) || '').trim() || null
         };
-
-        // 验证数据类型
-        if (isNaN(material.price)) {
-          errors.push(`第 ${rowNum} 行：单价必须是数字`);
-          return;
-        }
-
         materials.push(material);
       });
 
-      return {
-        success: errors.length === 0,
-        data: materials,
-        errors,
-        total: data.length,
-        valid: materials.length
-      };
+      return { success: errors.length === 0, data: materials, errors, total: data.length, valid: materials.length };
     } catch (error) {
-      return {
-        success: false,
-        data: [],
-        errors: [error.message],
-        total: 0,
-        valid: 0
-      };
+      return { success: false, data: [], errors: [error.message], total: 0, valid: 0 };
     }
   }
 

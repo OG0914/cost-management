@@ -53,45 +53,65 @@ const sendAndCleanup = (res, filePath, fileName, next) => {
  */
 const getAllMaterials = async (req, res, next) => {
   try {
-    const { page = 1, pageSize = 20, keyword, category } = req.query;
+    const { page = 1, pageSize = 20, keyword, category, material_type, subcategory } = req.query;
 
-
-
-    // 参数校验和规范化
     const pageNum = Math.max(1, parseInt(page) || 1);
     const pageSizeNum = Math.min(100, Math.max(1, parseInt(pageSize) || 20));
     const offset = (pageNum - 1) * pageSizeNum;
 
-    // 构建查询
     const query = new QueryBuilder('materials');
 
-    // 关键词搜索（品号或原料名称）
     if (keyword && keyword.trim()) {
-      query.whereLikeOr(['item_no', 'name'], keyword);
+      query.whereLikeOr(['item_no', 'name', 'manufacturer', 'supplier'], keyword);
     }
 
-    // 类别筛选
-    if (category && category.trim()) {
-      query.where('category', '=', category.trim());
-    }
+    // 兼容旧版 category (如果前端还在传)
+    if (category && category.trim()) query.where('category', '=', category.trim());
 
-    // 排序
+    // 新增筛选
+    if (material_type && material_type.trim()) query.where('material_type', '=', material_type.trim());
+    if (subcategory && subcategory.trim()) query.where('subcategory', '=', subcategory.trim());
+
     query.orderByDesc('updated_at');
 
-    // 获取总数
     const countResult = query.clone().buildCount();
     const countData = await dbManager.query(countResult.sql, countResult.params);
     const total = parseInt(countData.rows[0].total);
 
-    // 分页查询
     query.limit(pageSizeNum).offset(offset);
     const selectResult = query.buildSelect();
     const data = await dbManager.query(selectResult.sql, selectResult.params);
 
     res.json(paginated(data.rows, total, pageNum, pageSizeNum));
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
+};
+
+// 获取原料分类结构（用于前端生成侧边栏树）
+const getCategoryStructure = async (req, res, next) => {
+  try {
+    // 获取所有非空的类型和子分类
+    const result = await dbManager.query(`
+      SELECT DISTINCT material_type, subcategory 
+      FROM materials 
+      WHERE material_type IS NOT NULL 
+      ORDER BY material_type, subcategory
+    `);
+
+    // 组装成树形结构
+    const structure = {
+      half_mask: [], // 半面罩类
+      general: []    // 口罩类/其他
+    };
+
+    result.rows.forEach(row => {
+      const type = row.material_type === 'half_mask' ? 'half_mask' : 'general';
+      if (row.subcategory && !structure[type].includes(row.subcategory)) {
+        structure[type].push(row.subcategory);
+      }
+    });
+
+    res.json(success(structure));
+  } catch (err) { next(err); }
 };
 
 // 批量获取原料（根据ID列表）
@@ -150,45 +170,33 @@ const getMaterialById = async (req, res, next) => {
 // 创建原料
 const createMaterial = async (req, res, next) => {
   try {
-    const { item_no, name, unit, price, currency, manufacturer, usage_amount, category } = req.body;
+    const { item_no, name, unit, price, currency, manufacturer, usage_amount, category, material_type, subcategory, product_desc, packaging_mode, supplier, production_date, production_cycle, moq, remark } = req.body;
 
     if (!item_no || !name || !unit || price === undefined || price === null || price === '') {
       return res.status(400).json(error('品号、原料名称、单位和单价不能为空', 400));
     }
 
-    // 检查品号唯一性
-    const existing = await Material.findByItemNo(item_no);
-    if (existing) {
-      return res.status(400).json(error('品号已存在', 400));
-    }
+    const existing = await Material.findByItemNo(item_no); // 检查品号唯一性
+    if (existing) return res.status(400).json(error('品号已存在', 400));
 
-    const id = await Material.create({ item_no, name, unit, price, currency, manufacturer, usage_amount, category });
+    const id = await Material.create({ item_no, name, unit, price, currency, manufacturer, usage_amount, category, material_type, subcategory, product_desc, packaging_mode, supplier, production_date, production_cycle, moq, remark });
     res.status(201).json(success({ id }, '创建成功'));
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
 // 更新原料
 const updateMaterial = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { item_no, name, unit, price, currency, manufacturer, usage_amount, category } = req.body;
+    const { item_no, name, unit, price, currency, manufacturer, usage_amount, category, material_type, subcategory, product_desc, packaging_mode, supplier, production_date, production_cycle, moq, remark } = req.body;
 
     const material = await Material.findById(id);
-    if (!material) {
-      return res.status(404).json(error('原料不存在', 404));
-    }
+    if (!material) return res.status(404).json(error('原料不存在', 404));
+    if (!item_no || !name || !unit || price === undefined || price === null || price === '') return res.status(400).json(error('品号、原料名称、单位和单价不能为空', 400));
 
-    if (!item_no || !name || !unit || price === undefined || price === null || price === '') {
-      return res.status(400).json(error('品号、原料名称、单位和单价不能为空', 400));
-    }
-
-    await Material.update(id, { item_no, name, unit, price, currency, manufacturer, usage_amount, category }, req.user?.id);
+    await Material.update(id, { item_no, name, unit, price, currency, manufacturer, usage_amount, category, material_type, subcategory, product_desc, packaging_mode, supplier, production_date, production_cycle, moq, remark }, req.user?.id);
     res.json(success(null, '更新成功'));
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
 // 删除原料
@@ -516,5 +524,6 @@ module.exports = {
   checkOrCreate,
   exportMaterials,
   downloadTemplate,
-  getCategories
+  getCategories,
+  getCategoryStructure
 };

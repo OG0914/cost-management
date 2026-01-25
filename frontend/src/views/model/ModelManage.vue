@@ -126,7 +126,7 @@
         <el-form-item label="型号名称" prop="model_name">
           <el-input v-model="form.model_name" placeholder="请输入型号名称" />
         </el-form-item>
-        <el-form-item label="产品系列">
+        <el-form-item label="产品系列" prop="model_series">
           <el-autocomplete
             v-model="form.model_series"
             :fetch-suggestions="querySearchSeries"
@@ -135,7 +135,7 @@
             style="width: 100%"
           />
         </el-form-item>
-        <el-form-item label="型号分类">
+        <el-form-item label="型号分类" prop="model_category">
           <el-select v-model="form.model_category" placeholder="请选择型号分类" clearable style="width: 100%">
             <el-option label="口罩" value="口罩" />
             <el-option label="半面罩" value="半面罩" />
@@ -235,7 +235,9 @@ watch(viewMode, (newMode) => { if (newMode === 'card') selectedModels.value = []
 const form = reactive({ id: null, regulation_id: null, model_name: '', model_category: '', model_series: '', is_active: 1 })
 const formRules = {
   regulation_id: [{ required: true, message: '请选择法规类别', trigger: 'change' }],
-  model_name: [{ required: true, message: '请输入型号名称', trigger: 'blur' }]
+  model_name: [{ required: true, message: '请输入型号名称', trigger: 'blur' }],
+  model_series: [{ required: true, message: '请输入产品系列', trigger: 'change' }],
+  model_category: [{ required: true, message: '请选择型号分类', trigger: 'change' }]
 }
 
 const fetchRegulations = async () => {
@@ -342,9 +344,25 @@ const handleConfigBom = (row) => {
   bomDialogVisible.value = true
 }
 
+const fieldLabels = {
+  regulation_id: '法规类别',
+  model_name: '型号名称',
+  model_category: '型号分类',
+  model_series: '产品系列'
+}
+
 const handleSubmit = async () => {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
+  try {
+    await formRef.value.validate()
+  } catch (error) {
+    if (error && typeof error === 'object') {
+      const invalidFields = Object.keys(error).map(key => fieldLabels[key] || key).join('、')
+      logger.warn('表单校验失败', error)
+      ElMessage.error(`保存失败：请完善以下红色必填项：${invalidFields}`)
+    }
+    return
+  }
+  
   loading.value = true
   try {
     if (isEdit.value) { await request.put(`/models/${form.id}`, form); ElMessage.success('更新成功') }

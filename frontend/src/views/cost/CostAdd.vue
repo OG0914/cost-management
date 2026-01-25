@@ -237,104 +237,13 @@
               </div>
 
               <!-- FOB深圳运费计算明细 - 整柜 (FCL) 卡片 -->
-              <div v-if="form.port_type === 'fob_shenzhen' && freightCalculation && (form.shipping_method === 'fcl_20' || form.shipping_method === 'fcl_40')" class="mt-4 mb-2 bg-gradient-to-br from-blue-50 to-white rounded-xl border border-blue-100 shadow-sm overflow-hidden relative group transition-all duration-300 hover:shadow-md">
-                <div class="absolute right-0 top-0 w-32 h-32 bg-blue-100/40 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
-                <div class="p-5 relative z-10 flex flex-col md:flex-row md:items-stretch gap-6">
-                  <div class="flex-1 flex flex-col justify-center min-w-[200px]">
-                    <div class="flex items-center gap-2 mb-1">
-                      <span class="text-xs font-semibold text-blue-600 uppercase tracking-wider bg-blue-100/50 px-2 py-0.5 rounded">整柜运费 ({{ form.shipping_method === 'fcl_40' ? '40GP' : '20GP' }})</span>
-                    </div>
-                    <div class="flex items-baseline gap-2">
-                      <h3 class="text-3xl font-bold text-gray-900 font-mono tracking-tight">
-                        <span class="text-lg text-gray-500 font-normal mr-1">¥</span>{{ Math.round(freightCalculation.totalFreight).toLocaleString() }}
-                      </h3>
-                    </div>
-                    <div class="mt-2 flex items-center gap-3 text-sm text-gray-500">
-                      <div class="flex items-center gap-1 bg-white/60 px-2 py-1 rounded border border-gray-100">
-                        <span class="font-medium text-gray-700">${{ freightCalculation.freightUSD }}</span>
-                        <span class="text-xs">USD</span>
-                      </div>
-                      <span class="text-gray-300">|</span>
-                      <span>汇率 {{ freightCalculation.exchangeRate }}</span>
-                      <span class="text-gray-300">|</span>
-                      <span>CBM <span class="font-medium text-gray-700">{{ shippingInfo.cbm || '-' }}</span></span>
-                    </div>
-                  </div>
-                  <div class="hidden md:block w-px bg-gradient-to-b from-transparent via-blue-200 to-transparent"></div>
-                  <div class="flex-1 grid grid-cols-2 gap-y-3 gap-x-4">
-                    <div class="space-y-1"><div class="text-xs text-gray-400">单箱材积</div><div class="font-medium text-gray-700">{{ freightCalculation.cartonVolume || '-' }} ft³</div></div>
-                    <div class="space-y-1"><div class="text-xs text-gray-400">最大可装</div><div class="font-medium text-blue-700">{{ freightCalculation.maxCartons ? Number(freightCalculation.maxCartons).toLocaleString() : '-' }} 箱</div></div>
-                    <div class="space-y-1"><div class="text-xs text-gray-400">每箱只数</div><div class="font-medium text-gray-700">{{ freightCalculation.pcsPerCarton || '-' }} pcs</div></div>
-                    <div class="space-y-1"><div class="text-xs text-gray-400">本次数量</div><div class="font-medium text-gray-700">{{ form.quantity ? Number(form.quantity).toLocaleString() : '-' }} pcs</div></div>
-                  </div>
-                </div>
-              </div>
+              <FreightCardFCL v-if="form.port_type === 'fob_shenzhen' && freightCalculation && (form.shipping_method === 'fcl_20' || form.shipping_method === 'fcl_40')" :freight-calculation="freightCalculation" :shipping-method="form.shipping_method" :cbm="shippingInfo.cbm" :quantity="form.quantity" />
 
               <!-- 散货 (LCL) 卡片 -->
-              <div v-else-if="form.port_type === 'fob_shenzhen' && freightCalculation && form.shipping_method === 'lcl'" class="mt-4 mb-2 bg-gradient-to-br from-orange-50 to-white rounded-xl border border-orange-100 shadow-sm overflow-hidden relative group transition-all duration-300 hover:shadow-md">
-                <div class="absolute right-0 top-0 w-32 h-32 bg-orange-100/40 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
-                <div class="p-5 relative z-10 flex flex-col md:flex-row md:items-stretch gap-6">
-                  <div class="flex-1 flex flex-col justify-center min-w-[200px]">
-                    <div class="flex items-center gap-2 mb-1">
-                      <span class="text-xs font-semibold text-orange-600 uppercase tracking-wider bg-orange-100/50 px-2 py-0.5 rounded">散货拼箱运费</span>
-                    </div>
-                    <div class="flex items-baseline gap-2">
-                      <h3 class="text-3xl font-bold text-gray-900 font-mono tracking-tight">
-                        <span class="text-lg text-gray-500 font-normal mr-1">¥</span>{{ freightCalculation.totalFreight }}
-                      </h3>
-                    </div>
-                    <div class="mt-2 text-sm text-gray-500">
-                      <span class="bg-white/60 px-2 py-1 rounded border border-gray-100">计费体积: <span class="font-bold text-gray-800">{{ freightCalculation.ceiledCBM }}</span> CBM</span>
-                    </div>
-                  </div>
-                  <div class="hidden md:block w-px bg-gradient-to-b from-transparent via-orange-200 to-transparent"></div>
-                  <div class="flex-1 grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
-                    <div class="flex justify-between"><span class="text-gray-500">基础运费:</span><span class="font-medium text-gray-700">¥{{ freightCalculation.baseFreight }}</span></div>
-                    <div class="flex justify-between"><span class="text-gray-500">操作费:</span><span class="font-medium text-gray-700">¥{{ freightCalculation.handlingCharge }}</span></div>
-                    <div class="flex justify-between"><span class="text-gray-500">拼箱费:</span><span class="font-medium text-gray-700">¥{{ freightCalculation.cfs }}</span></div>
-                    <div class="flex justify-between"><span class="text-gray-500">文件费:</span><span class="font-medium text-gray-700">¥{{ freightCalculation.documentFee }}</span></div>
-                    <div class="col-span-2 mt-1 pt-2 border-t border-orange-100 flex justify-between items-center">
-                      <span class="text-xs text-gray-400">实际CBM: {{ freightCalculation.cbm }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <FreightCardLCL v-else-if="form.port_type === 'fob_shenzhen' && freightCalculation && form.shipping_method === 'lcl'" :freight-calculation="freightCalculation" />
 
               <!-- CIF 深圳运费详情卡片 -->
-              <div v-else-if="form.port_type === 'cif_shenzhen' && freightCalculation" class="mt-4 mb-2 bg-gradient-to-br from-purple-50 to-white rounded-xl border border-purple-100 shadow-sm overflow-hidden relative group transition-all duration-300 hover:shadow-md">
-                <div class="absolute right-0 top-0 w-32 h-32 bg-purple-100/40 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
-                <div class="p-5 relative z-10 flex flex-col md:flex-row md:items-stretch gap-6">
-                  <div class="flex-1 flex flex-col justify-center min-w-[200px]">
-                    <div class="flex items-center gap-2 mb-1">
-                      <span class="text-xs font-semibold text-purple-600 uppercase tracking-wider bg-purple-100/50 px-2 py-0.5 rounded">CIF 深圳运费</span>
-                      <el-tag size="small" type="info">{{ freightCalculation.factory === 'hubei_zhiteng' ? '湖北知腾工厂' : '东莞迅安工厂' }}</el-tag>
-                    </div>
-                    <div class="flex items-baseline gap-2">
-                       <h3 class="text-3xl font-bold text-gray-900 font-mono tracking-tight">
-                        <span class="text-lg text-gray-500 font-normal mr-1">¥</span>{{ Math.round(freightCalculation.totalFreight).toLocaleString() }}
-                      </h3>
-                    </div>
-                     <div class="mt-2 text-sm text-gray-500">
-                      <span class="bg-white/60 px-2 py-1 rounded border border-gray-100">计费体积: <span class="font-bold text-gray-800">{{ freightCalculation.ceiledCBM }}</span> CBM</span>
-                    </div>
-                  </div>
-                  <div class="hidden md:block w-px bg-gradient-to-b from-transparent via-purple-200 to-transparent"></div>
-                  <div class="flex-1 grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
-                    <div class="flex justify-between"><span class="text-gray-500">CFS费:</span><span class="font-medium text-gray-700">¥{{ freightCalculation.cfs }}</span></div>
-                    <div class="flex justify-between"><span class="text-gray-500">文件费:</span><span class="font-medium text-gray-700">¥{{ freightCalculation.docFee }}</span></div>
-                    <div class="flex justify-between"><span class="text-gray-500">报关费:</span><span class="font-medium text-gray-700">¥{{ freightCalculation.customsFee }}</span></div>
-                    <div class="flex justify-between"><span class="text-gray-500">仓库费:</span><span class="font-medium text-gray-700">¥{{ freightCalculation.warehouseFee }}</span></div>
-                    <div class="flex justify-between items-center col-span-2 border-t border-purple-100 pt-1 mt-1">
-                        <span class="text-gray-500">海运费 ({{ freightCalculation.seaFreightUSDPerCbm }} USD/CBM):</span>
-                        <span class="font-medium text-gray-700">¥{{ Math.round(freightCalculation.seaFreightCNY) }} ({{ freightCalculation.seaFreightUSDEstimated }} USD)</span>
-                    </div>
-                    <div class="flex justify-between items-center col-span-2 border-t border-purple-100 pt-1">
-                        <span class="text-gray-500">国内运费 ({{ freightCalculation.factory === 'hubei_zhiteng' ? '湖北卡车' : '东莞分档' }}):</span>
-                        <span class="font-medium text-gray-700">¥{{ freightCalculation.domesticTransportFee }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <FreightCardCIF v-else-if="form.port_type === 'cif_shenzhen' && freightCalculation" :freight-calculation="freightCalculation" />
 
               <!-- 运费总价（非FOB深圳/CIF深圳时手动输入） -->
               <el-row :gutter="24" v-if="form.port_type !== 'fob_shenzhen' && form.port_type !== 'cif_shenzhen'">
@@ -739,11 +648,17 @@ import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { InfoFilled, WarningFilled, Document, FolderAdd, Promotion, Delete } from '@element-plus/icons-vue'
 import CostPageHeader from '@/components/cost/CostPageHeader.vue'
+import FreightCardFCL from './components/FreightCardFCL.vue'
+import FreightCardLCL from './components/FreightCardLCL.vue'
+import FreightCardCIF from './components/FreightCardCIF.vue'
+import QuantityInputSection from './components/QuantityInputSection.vue'
 import { formatNumber } from '@/utils/format'
 import { useConfigStore } from '@/store/config'
 import logger from '@/utils/logger'
 import { getPackagingTypeName, formatPackagingMethodFromConfig, calculateTotalFromConfig, PACKAGING_TYPES } from '@/config/packagingTypes'
 import { useFreightCalculation, useCostCalculation, useQuotationData, useCustomerSearch, useMaterialSearch, useCustomFees, useQuotationDraft } from '@/composables'
+import { AUTO_SAVE_INTERVAL, DEFAULT_FORM_DATA, COMMON_REGIONS } from './config/costAddConfig'
+import { useDetailRows, useRegionSuggestion } from './composables/useDetailRows'
 
 defineOptions({ name: 'CostAdd' })
 
@@ -919,12 +834,8 @@ const handleCustomerClear = () => {
   isOtherSalespersonCustomer.value = false
   selectedCustomerOwner.value = ''
 }
-// 常用地区建议
-const commonRegions = ['广东', '浙江', '江苏', '上海', '北京', '福建', '山东', '四川', '湖北', '河南', '美国', '欧洲', '东南亚', '日本', '韩国']
-const suggestRegions = (queryString, cb) => {
-  const results = queryString ? commonRegions.filter(r => r.includes(queryString)).map(v => ({ value: v })) : commonRegions.map(v => ({ value: v }))
-  cb(results)
-}
+// 常用地区建议 - 使用导入的常量
+const { suggestRegions } = useRegionSuggestion(COMMON_REGIONS)
 const handleMaterialSelect = (row, index) => { onMaterialSelect(row, materialCoefficient.value, (r) => { calculateItemSubtotal(r); handleCalculateCost() }) }
 const handlePackagingMaterialSelect = (row, index) => { onPackagingMaterialSelect(row, (r) => { calculateItemSubtotal(r); handleCalculateCost() }) }
 const handleItemSubtotalChange = (row) => { calculateItemSubtotal(row); handleCalculateCost() }
@@ -1123,12 +1034,8 @@ const onPackagingConfigChange = async () => {
 }
 
 const toggleEditMode = (section) => { editMode[section] = !editMode[section]; if (editMode[section]) ElMessage.success(`${section === 'materials' ? '原料' : section === 'processes' ? '工序' : '包材'}名称已解锁，编辑后请锁定保存`) }
-const addMaterialRow = () => form.materials.push({ category: 'material', material_id: null, item_name: '', usage_amount: null, unit_price: null, subtotal: 0, is_changed: 1, from_standard: false, after_overhead: false })
-const addProcessRow = () => form.processes.push({ category: 'process', item_name: '', usage_amount: null, unit_price: null, subtotal: 0, is_changed: 1, from_standard: false })
-const addPackagingRow = () => form.packaging.push({ category: 'packaging', material_id: null, item_name: '', usage_amount: null, unit_price: null, carton_volume: null, subtotal: 0, is_changed: 1, from_standard: false })
-const removeMaterialRow = (index) => { form.materials.splice(index, 1); handleCalculateCost() }
-const removeProcessRow = (index) => { form.processes.splice(index, 1); handleCalculateCost() }
-const removePackagingRow = (index) => { form.packaging.splice(index, 1); handleCalculateCost() }
+// 使用通用明细行操作函数
+const { addMaterialRow, addProcessRow, addPackagingRow, removeMaterialRow, removeProcessRow, removePackagingRow } = useDetailRows(form, handleCalculateCost)
 const goBack = () => router.back()
 
 const handleCancel = async () => {
@@ -1167,13 +1074,37 @@ const prepareData = () => ({
   items: [...form.materials, ...form.processes, ...form.packaging]
 })
 
+const fieldLabels = {
+  regulation_id: '法规标准',
+  model_id: '新产品型号',
+  packaging_config_id: '型号配置',
+  customer_name: '客户名称',
+  customer_region: '客户地区',
+  sales_type: '销售类型',
+  port: '港口名称',
+  quantity: '数量',
+  freight_total: '运费总价',
+  vat_rate: '增值税率'
+}
+
 const handleSaveDraft = async () => {
   try {
     await formRef.value.validate()
     if ([...form.materials, ...form.processes, ...form.packaging].length === 0) { ElMessage.warning('请至少添加一项明细'); return }
     const res = await saveQuotation(route.params.id, prepareData())
     if (res) { clearDraft(); stopAutoSave(); router.push('/cost/records') }
-  } catch (error) { logger.error('保存失败:', error); ElMessage.error('保存失败') }
+  } catch (error) {
+    // Element Plus validate throws an error when validation fails
+    if (error && typeof error === 'object' && !error.message) {
+      // Validation failed (error object contains invalid fields)
+      const invalidFields = Object.keys(error).map(key => fieldLabels[key] || key).join('、')
+      logger.warn('表单校验失败', error)
+      ElMessage.error(`保存失败：请完善以下红色必填项：${invalidFields}`)
+    } else {
+      logger.error('保存失败:', error)
+      ElMessage.error(error.message || '保存失败')
+    }
+  }
 }
 
 const handleSubmitQuotation = async () => {
@@ -1182,7 +1113,16 @@ const handleSubmitQuotation = async () => {
     if ([...form.materials, ...form.processes, ...form.packaging].length === 0) { ElMessage.warning('请至少添加一项明细'); return }
     const res = await submitQuotation(route.params.id, prepareData())
     if (res) { clearDraft(); stopAutoSave(); router.push('/cost/records') }
-  } catch (error) { logger.error('提交失败:', error); ElMessage.error('提交失败') }
+  } catch (error) {
+    if (error && typeof error === 'object' && !error.message) {
+      const invalidFields = Object.keys(error).map(key => fieldLabels[key] || key).join('、')
+      logger.warn('表单校验失败', error)
+      ElMessage.error(`提交失败：请完善以下红色必填项：${invalidFields}`)
+    } else {
+      logger.error('提交失败:', error)
+      ElMessage.error(error.message || '提交失败')
+    }
+  }
 }
 
 const fillQuotationData = async (data, isCopy = false) => {
@@ -1353,7 +1293,7 @@ onMounted(async () => {
   } else {
     await checkAndRestoreDraft()
   }
-  if (!route.params.id) startAutoSave(getFormDataForDraft, 30000)
+  if (!route.params.id) startAutoSave(getFormDataForDraft, AUTO_SAVE_INTERVAL)
 })
 
 // 监听路由模式变化，切换时重置表单

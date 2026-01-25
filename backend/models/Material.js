@@ -52,24 +52,18 @@ class Material {
    * @returns {Promise<number>} 新原料的 ID
    */
   static async create(data) {
-    const { item_no, name, unit, price, currency, manufacturer, usage_amount, category } = data;
-    
+    const { item_no, name, unit, price, currency, manufacturer, usage_amount, category, material_type, subcategory, product_desc, packaging_mode, supplier, production_date, production_cycle, moq, remark } = data;
+
     const result = await dbManager.query(
-      `INSERT INTO materials (item_no, name, unit, price, currency, manufacturer, usage_amount, category)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO materials (item_no, name, unit, price, currency, manufacturer, usage_amount, category, material_type, subcategory, product_desc, packaging_mode, supplier, production_date, production_cycle, moq, remark)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
        RETURNING id`,
       [
-        item_no,
-        name,
-        unit,
-        price,
-        currency || 'CNY',
-        manufacturer || null,
-        usage_amount || null,
-        category || null
+        item_no, name, unit, price, currency || 'CNY', manufacturer || null, usage_amount || null, category || null,
+        material_type || 'general', subcategory || null, product_desc || null, packaging_mode || null, supplier || null, production_date || null, production_cycle || null, moq || null, remark || null
       ]
     );
-    
+
     return result.rows[0].id;
   }
 
@@ -81,25 +75,17 @@ class Material {
   static async batchCreate(materials) {
     return await dbManager.transaction(async (client) => {
       let insertedCount = 0;
-      
       for (const item of materials) {
         await client.query(
-          `INSERT INTO materials (item_no, name, unit, price, currency, manufacturer, usage_amount, category)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          `INSERT INTO materials (item_no, name, unit, price, currency, manufacturer, usage_amount, category, material_type, subcategory, product_desc, packaging_mode, supplier, production_date, production_cycle, moq, remark)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
           [
-            item.item_no,
-            item.name,
-            item.unit,
-            item.price,
-            item.currency || 'CNY',
-            item.manufacturer || null,
-            item.usage_amount || null,
-            item.category || null
+            item.item_no, item.name, item.unit, item.price, item.currency || 'CNY', item.manufacturer || null, item.usage_amount || null, item.category || null,
+            item.material_type || 'general', item.subcategory || null, item.product_desc || null, item.packaging_mode || null, item.supplier || null, item.production_date || null, item.production_cycle || null, item.moq || null, item.remark || null
           ]
         );
         insertedCount++;
       }
-      
       return insertedCount;
     });
   }
@@ -112,22 +98,15 @@ class Material {
    * @returns {Promise<Object>} 更新结果 { rowCount }
    */
   static async update(id, data, userId = null) {
-    const { item_no, name, unit, price, currency, manufacturer, usage_amount, category } = data;
-    
-    // 记录价格历史
-    const oldMaterial = await this.findById(id);
-    if (oldMaterial && oldMaterial.price !== price && userId) {
-      await this.recordPriceHistory(id, oldMaterial.price, price, userId);
-    }
-    
+    const { item_no, name, unit, price, currency, manufacturer, usage_amount, category, material_type, subcategory, product_desc, packaging_mode, supplier, production_date, production_cycle, moq, remark } = data;
+    const oldMaterial = await this.findById(id); // 记录价格历史
+    if (oldMaterial && oldMaterial.price !== price && userId) await this.recordPriceHistory(id, oldMaterial.price, price, userId);
+
     const result = await dbManager.query(
-      `UPDATE materials
-       SET item_no = $1, name = $2, unit = $3, price = $4, currency = $5, 
-           manufacturer = $6, usage_amount = $7, category = $8, updated_at = NOW()
-       WHERE id = $9`,
-      [item_no, name, unit, price, currency, manufacturer, usage_amount, category || null, id]
+      `UPDATE materials SET item_no = $1, name = $2, unit = $3, price = $4, currency = $5, manufacturer = $6, usage_amount = $7, category = $8,
+       material_type = $9, subcategory = $10, product_desc = $11, packaging_mode = $12, supplier = $13, production_date = $14, production_cycle = $15, moq = $16, remark = $17, updated_at = NOW() WHERE id = $18`,
+      [item_no, name, unit, price, currency, manufacturer, usage_amount, category || null, material_type || 'general', subcategory || null, product_desc || null, packaging_mode || null, supplier || null, production_date || null, production_cycle || null, moq || null, remark || null, id]
     );
-    
     return { rowCount: result.rowCount };
   }
 

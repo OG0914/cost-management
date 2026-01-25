@@ -121,7 +121,8 @@ export function useQuotationData() {
       return null
     } catch (error) {
       logger.error('保存失败:', error)
-      ElMessage.error('保存失败')
+      const errorMsg = error.response?.data?.message || error.message || '保存失败'
+      ElMessage.error(errorMsg)
       return null
     } finally {
       saving.value = false
@@ -151,7 +152,8 @@ export function useQuotationData() {
       return null
     } catch (error) {
       logger.error('提交失败:', error)
-      ElMessage.error('提交失败')
+      const errorMsg = error.response?.data?.message || error.message || '提交失败'
+      ElMessage.error(errorMsg)
       return null
     } finally {
       submitting.value = false
