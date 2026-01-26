@@ -99,11 +99,11 @@
           <!-- 卡片头部 -->
           <div class="card-header-section">
             <div class="header-info">
-              <div class="model-name">{{ config.model_name }}</div>
-              <div class="config-name">{{ config.config_name }}</div>
-              <div class="factory-info mb-1">
-                 <el-tag size="small" type="info" effect="plain">{{ getFactoryName(config.factory) }}</el-tag>
+              <div class="flex items-center gap-2">
+                <div class="model-name">{{ config.model_name }}</div>
+                <el-tag size="small" type="info" effect="plain">{{ getFactoryName(config.factory) }}</el-tag>
               </div>
+              <div class="config-name">{{ config.config_name }}</div>
               <div class="packaging-method">
                 {{ formatPackagingMethodFromConfig(config) }}
               </div>
@@ -117,15 +117,12 @@
           </div>
           
           <div class="card-body">
-            <el-tag :type="getPackagingTypeTagType(config.packaging_type)" size="small">
-              {{ config.packaging_type_name || getPackagingTypeName(config.packaging_type) }}
-            </el-tag>
+            <StatusBadge type="packaging_type" :value="config.packaging_type" />
             <div class="price">
               包材总价: ¥{{ formatNumber(config.material_total_price || 0) }}
             </div>
             <div class="status">
-              <span :class="config.is_active ? 'status-active' : 'status-inactive'"></span>
-              {{ config.is_active ? '已启用' : '已禁用' }}
+              <StatusBadge type="active_status" :value="config.is_active" mode="text" />
             </div>
           </div>
           
@@ -159,9 +156,7 @@
         <!-- 包装类型列（只读） -->
         <el-table-column label="包装类型" width="120" sortable sort-by="packaging_type">
           <template #default="{ row }">
-            <el-tag :type="getPackagingTypeTagType(row.packaging_type)">
-              {{ row.packaging_type_name || getPackagingTypeName(row.packaging_type) }}
-            </el-tag>
+            <StatusBadge type="packaging_type" :value="row.packaging_type" />
           </template>
         </el-table-column>
         <el-table-column label="包装方式" min-width="280" sortable>
@@ -183,9 +178,7 @@
         </el-table-column>
         <el-table-column label="状态" width="100" align="center" sortable sort-by="is_active">
           <template #default="{ row }">
-            <el-tag :type="row.is_active ? 'success' : 'danger'" class="status-tag">
-              {{ row.is_active ? '启用' : '禁用' }}
-            </el-tag>
+            <StatusBadge type="active_status" :value="row.is_active" mode="text" />
           </template>
         </el-table-column>
         <el-table-column label="创建时间" width="180" sortable>
@@ -444,12 +437,10 @@
     <el-dialog v-model="materialDialogVisible" title="包材列表" width="700px" class="view-dialog" append-to-body>
       <div class="mb-4">
         <p class="text-lg font-bold">{{ currentConfig?.model_name }} - {{ currentConfig?.config_name }}</p>
-        <p class="text-gray-600">
-          <el-tag size="small" :type="getPackagingTypeTagType(currentConfig?.packaging_type)" style="margin-right: 8px">
-            {{ getPackagingTypeName(currentConfig?.packaging_type) }}
-          </el-tag>
-          {{ formatPackagingMethodFromConfig(currentConfig) }}
-          （每箱 {{ calculateTotalFromConfig(currentConfig) }} pcs）
+        <p class="text-gray-600 flex items-center gap-2">
+          <StatusBadge type="packaging_type" :value="currentConfig?.packaging_type" />
+          <span>{{ formatPackagingMethodFromConfig(currentConfig) }}
+          （每箱 {{ calculateTotalFromConfig(currentConfig) }} pcs）</span>
         </p>
       </div>
       
@@ -559,6 +550,7 @@ import CostPageHeader from '@/components/cost/CostPageHeader.vue';
 import CommonPagination from '../../components/common/CommonPagination.vue';
 import ActionButton from '../../components/common/ActionButton.vue';
 import StatusSwitch from '../../components/common/StatusSwitch.vue';
+import StatusBadge from '@/components/common/StatusBadge.vue';
 
 const getFactoryName = (factory) => {
   const map = {
@@ -1206,8 +1198,8 @@ onMounted(() => {
   margin-left: auto;
 }
 
-.packaging-info { color: #409EFF; font-weight: 500; }
-.price-info { color: #E6A23C; font-weight: 600; font-size: 14px; }
+.packaging-info { color: #606266; font-weight: 500; }
+.price-info { color: #409EFF; font-weight: 600; font-size: 14px; }
 .subtotal-text { color: #67C23A; font-weight: 500; }
 .status-tag { min-width: 48px; text-align: center; }
 .mb-4 { margin-bottom: 16px; }
@@ -1324,7 +1316,7 @@ onMounted(() => {
 }
 
 .packaging-method {
-  color: #303133;
+  color: #606266;
   font-weight: 500;
   font-size: 14px;
 }
@@ -1336,7 +1328,7 @@ onMounted(() => {
 
 .price {
   font-size: 14px;
-  color: #303133;
+  color: #409EFF;
   font-weight: 500;
 }
 

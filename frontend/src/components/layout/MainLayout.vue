@@ -35,7 +35,7 @@
       <main class="flex-1 flex flex-col min-w-0 pt-14 lg:pt-0 h-full">
         <!-- 内容滚动区 -->
         <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-50">
-          <div class="max-w-7xl mx-auto animate-fade-in pb-10">
+          <div class="w-full animate-fade-in pb-10">
             <router-view />
           </div>
         </div>

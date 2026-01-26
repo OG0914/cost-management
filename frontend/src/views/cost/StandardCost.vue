@@ -36,9 +36,7 @@
         </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.is_current ? 'success' : 'info'" size="small">
-              {{ row.is_current ? '当前版本' : '历史版本' }}
-            </el-tag>
+            <StatusBadge type="version_status" :value="row.is_current ? 'current' : 'history'" />
           </template>
         </el-table-column>
         <el-table-column label="操作" width="100">
@@ -105,9 +103,7 @@
         </el-table-column>
         <el-table-column prop="sales_type" label="销售类型" width="90">
           <template #default="{ row }">
-            <el-tag :type="row.sales_type === 'domestic' ? 'success' : 'primary'" size="small">
-              {{ row.sales_type === 'domestic' ? '内销' : '外销' }}
-            </el-tag>
+            <StatusBadge type="sales_type" :value="row.sales_type" />
           </template>
         </el-table-column>
         <el-table-column label="最终价格" width="120">
@@ -156,6 +152,7 @@ import CommonPagination from '@/components/common/CommonPagination.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
 import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import { usePagination } from '@/composables/usePagination'
+import StatusBadge from '@/components/common/StatusBadge.vue'
 
 defineOptions({ name: 'StandardCost' })
 

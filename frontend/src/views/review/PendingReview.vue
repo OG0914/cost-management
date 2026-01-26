@@ -25,16 +25,12 @@
         <el-table-column prop="quotation_no" label="报价单编号" width="160" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)">
-              {{ getStatusName(row.status) }}
-            </el-tag>
+            <StatusBadge type="status" :value="row.status" />
           </template>
         </el-table-column>
         <el-table-column prop="sales_type" label="类型" width="90">
           <template #default="{ row }">
-            <el-tag :type="row.sales_type === 'domestic' ? 'success' : 'warning'" size="small">
-              {{ getSalesTypeName(row.sales_type) }}
-            </el-tag>
+            <StatusBadge type="sales_type" :value="row.sales_type" />
           </template>
         </el-table-column>
         <el-table-column prop="customer_name" label="客户名称" width="150" />
@@ -93,15 +89,15 @@
         </div>
         <div v-for="row in tableData" :key="row.id" class="mobile-card" @click="canReview ? handleReview(row) : handleView(row)">
           <div class="mobile-card-header">
-            <span class="mobile-card-title">{{ row.quotation_no }}</span>
-            <el-tag :type="getStatusType(row.status)" size="small">{{ getStatusName(row.status) }}</el-tag>
+            <div class="mobile-card-title flex items-center">
+              <span>{{ row.quotation_no }}</span>
+              <StatusBadge type="status" :value="row.status" :show-dot="true" />
+            </div>
           </div>
           <div class="mobile-card-body">
             <div class="flex justify-between">
               <span class="text-slate-500">{{ row.customer_name }}</span>
-              <el-tag :type="row.sales_type === 'domestic' ? 'success' : 'warning'" size="small">
-                {{ getSalesTypeName(row.sales_type) }}
-              </el-tag>
+              <StatusBadge type="sales_type" :value="row.sales_type" :show-dot="true" />
             </div>
             <div class="flex justify-between mt-1">
               <span class="text-slate-600">{{ row.model_name }}</span>
@@ -144,10 +140,8 @@ import { useAuthStore } from '@/store/auth'
 import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import { usePagination } from '@/composables/usePagination'
 import CommonPagination from '@/components/common/CommonPagination.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
 import { 
-  getStatusType, 
-  getStatusName, 
-  getSalesTypeName,
   formatDateTime, 
   formatAmount, 
   formatQuantity 

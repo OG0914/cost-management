@@ -47,18 +47,14 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="status" label="状态" width="120">
           <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)">
-              {{ getStatusText(row.status) }}
-            </el-tag>
+            <StatusBadge type="status" :value="row.status" />
           </template>
         </el-table-column>
-        <el-table-column prop="sales_type" label="类型" width="80">
+        <el-table-column prop="sales_type" label="类型" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.sales_type === 'domestic' ? 'success' : 'warning'" size="small">
-              {{ row.sales_type === 'domestic' ? '内销' : '外销' }}
-            </el-tag>
+            <StatusBadge type="sales_type" :value="row.sales_type" />
           </template>
         </el-table-column>
         <el-table-column prop="customer_name" label="客户名称" width="150" />
@@ -117,14 +113,12 @@
                 <text x="12" y="15" text-anchor="middle" fill="#E6A23C" font-size="7" font-weight="bold">标</text>
               </svg>
             </div>
-            <el-tag :type="getStatusType(row.status)" size="small">{{ getStatusText(row.status) }}</el-tag>
+            <StatusBadge type="status" :value="row.status" />
           </div>
           <div class="mobile-card-body">
             <div class="flex justify-between">
               <span class="text-slate-500">{{ row.customer_name }}</span>
-              <el-tag :type="row.sales_type === 'domestic' ? 'success' : 'warning'" size="small">
-                {{ row.sales_type === 'domestic' ? '内销' : '外销' }}
-              </el-tag>
+              <StatusBadge type="sales_type" :value="row.sales_type" />
             </div>
             <div class="flex justify-between mt-1">
               <span class="text-slate-600">{{ row.model_name }}</span>
@@ -164,6 +158,7 @@ import ActionButton from '@/components/common/ActionButton.vue'
 import logger from '@/utils/logger'
 import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import { usePagination } from '@/composables/usePagination'
+import StatusBadge from '@/components/common/StatusBadge.vue'
 
 const router = useRouter()
 
@@ -252,27 +247,7 @@ watch([currentPage, pageSize], () => {
   fetchQuotations()
 })
 
-// 获取状态类型
-const getStatusType = (status) => {
-  const typeMap = {
-    draft: 'info',
-    submitted: 'warning',
-    approved: 'success',
-    rejected: 'danger'
-  }
-  return typeMap[status] || 'info'
-}
 
-// 获取状态文本
-const getStatusText = (status) => {
-  const textMap = {
-    draft: '草稿',
-    submitted: '已提交',
-    approved: '已审核',
-    rejected: '已退回'
-  }
-  return textMap[status] || status
-}
 
 
 

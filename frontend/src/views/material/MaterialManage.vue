@@ -75,7 +75,7 @@
            <el-table-column prop="category" label="品名类别" width="100">
              <template #default="{ row }">
                <div class="category-cell">
-                 <span class="status-badge" :class="getCategoryClass(row.category)">{{ row.category }}</span>
+                 <StatusBadge type="material_category" :value="row.category" />
                </div>
              </template>
            </el-table-column>
@@ -100,7 +100,7 @@
            <el-table-column prop="category" label="品名类别" width="100">
              <template #default="{ row }">
                <div class="category-cell">
-                 <span class="status-badge" :class="getCategoryClass(row.category)">{{ row.category }}</span>
+                 <StatusBadge type="material_category" :value="row.category" />
                </div>
              </template>
            </el-table-column>
@@ -312,6 +312,7 @@ import { formatNumber, formatDateTime, downloadBlob } from '../../utils/format'
 import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
 import { usePagination } from '@/composables/usePagination'
 import { useAuthStore } from '@/store/auth'
 import dayjs from 'dayjs'
@@ -346,11 +347,6 @@ const currentImportId = ref(null)
 const { currentPage, pageSize, total } = usePagination('material')
 
 // 格式化工具
-const getCategoryClass = (val) => {
-  if (val === '原料') return 'type-material'
-  if (val === '包材') return 'type-packaging'
-  return 'type-default'
-}
 const formatMoney = (val, currency = 'CNY') => {
   const symbol = currency === 'USD' ? '$' : '¥'
   return val || val === 0 ? `${symbol}${formatNumber(val)}` : '-'
@@ -719,21 +715,9 @@ onUnmounted(() => { if (searchTimer.value) clearTimeout(searchTimer.value) })
 
 /* Status Badge Style (Soft Pill) */
 .category-cell { display: flex; align-items: center; }
-.status-badge {
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.6;
-  transition: all 0.3s;
-}
-/* Material: Fresh Emerald */
-.type-material { background-color: #ecfdf5; color: #059669; }
-/* Packaging: Warm Amber */
-.type-packaging { background-color: #fffbeb; color: #d97706; }
-/* Default: Cool Gray */
-.type-default { background-color: #f3f4f6; color: #4b5563; }
+
+
+/* 拖拽样式 */
 
 /* 拖拽样式 */
 .draggable-tab {

@@ -1117,7 +1117,7 @@ onBeforeRouteLeave(async (to, from, next) => {
 
 <style scoped>
 /* ========== 页面容器 - 左右分栏布局 ========== */
-.cost-page-wrapper { max-width: 1400px; margin: 0 auto; }
+.cost-page-wrapper { max-width: 1400px; margin: 0; }
 
 .cost-page-body {
   display: grid;
