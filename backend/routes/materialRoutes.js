@@ -67,6 +67,6 @@ router.post('/import', isPurchaser, upload.single('file'), materialController.im
 router.post('/import/precheck', isPurchaser, upload.single('file'), materialController.preCheckImport);
 router.post('/import/confirm', isPurchaser, materialController.confirmImport);
 router.post('/export/excel', isPurchaser, materialController.exportMaterials);
-router.get('/template/download', isPurchaser, materialController.downloadTemplate);
+router.get('/template/download', materialController.downloadTemplate);
 
 module.exports = router;

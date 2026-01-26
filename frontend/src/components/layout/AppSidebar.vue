@@ -1,20 +1,12 @@
 <template>
   <aside :class="[
     'bg-white border-r border-slate-200 flex flex-col shadow-sm z-10 transition-all duration-300 h-full',
-    mobile ? 'w-full' : (collapsed ? 'w-16' : 'w-64')
+    mobile ? 'w-full' : (props.collapsed ? 'w-16' : 'w-64')
   ]">
-    <!-- Logo + 折叠按钮 -->
-    <div class="h-16 flex items-center justify-between border-b border-slate-100" :class="collapsed ? 'px-2' : 'px-4'">
-      <div class="flex items-center overflow-hidden">
-        <img src="../../images/logo.png" alt="Logo" class="h-7 w-auto object-contain scale-[0.7] flex-shrink-0" :class="collapsed ? '' : 'mr-0.1'" />
-        <span v-if="!collapsed" class="font-semibold text-base tracking-tight text-slate-800 whitespace-nowrap">成本分析系统</span>
-      </div>
-      <div 
-        @click="toggleCollapse"
-        class="flex-shrink-0 p-1.5 rounded-lg cursor-pointer text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors"
-      >
-        <i :class="collapsed ? 'ri-layout-right-line' : 'ri-layout-left-line'" class="text-lg"></i>
-      </div>
+    <!-- Logo区域 (已移至顶部栏，此处保留空白或移动端兼容) -->
+    <div v-if="mobile" class="h-16 flex items-center justify-between px-4 border-b border-slate-100">
+      <span class="font-semibold text-slate-800">导航菜单</span>
+      <i @click="$emit('close')" class="ri-close-line text-xl text-slate-400 cursor-pointer"></i>
     </div>
 
     <!-- 菜单列表 -->
@@ -23,7 +15,7 @@
         
         <!-- 分割线 (Divider) -->
         <div v-if="item.type === 'divider'" class="flex items-center px-3 py-2 mt-3 mb-1">
-          <template v-if="collapsed">
+          <template v-if="props.collapsed">
             <!-- 折叠时只显示横线 -->
             <div class="h-px bg-slate-200 w-full"></div>
           </template>
@@ -41,10 +33,10 @@
         <div 
           v-else-if="!item.children"
           @click="handleMenuClick(item)"
-          :title="collapsed ? item.label : ''"
+          :title="props.collapsed ? item.label : ''"
           :class="[
             'flex items-center rounded-lg cursor-pointer transition-colors group mb-1',
-            collapsed ? 'px-2 py-2.5 justify-center' : 'px-3 py-2.5',
+            props.collapsed ? 'px-2 py-2.5 justify-center' : 'px-3 py-2.5',
             isActive(item.id) 
               ? 'bg-primary-50 text-primary-700 font-medium' 
               : 'text-slate-800 hover:bg-slate-50 hover:text-slate-900'
@@ -53,35 +45,35 @@
           <i :class="[
             item.icon, 
             'text-xl transition-colors',
-            collapsed ? '' : 'mr-3',
+            props.collapsed ? '' : 'mr-3',
             isActive(item.id) ? 'text-primary-600' : 'text-slate-400 group-hover:text-slate-600'
           ]"></i>
-          <span v-if="!collapsed" class="text-sm">{{ item.label }}</span>
+          <span v-if="!props.collapsed" class="text-sm">{{ item.label }}</span>
         </div>
 
         <!-- 有子菜单 -->
         <div v-else>
           <div 
-            @click="collapsed ? handleMenuClick(item.children[0]) : toggleSubmenu(item.id)"
-            :title="collapsed ? item.label : ''"
+            @click="props.collapsed ? handleMenuClick(item.children[0]) : toggleSubmenu(item.id)"
+            :title="props.collapsed ? item.label : ''"
             :class="[
               'flex items-center rounded-lg cursor-pointer transition-colors group mb-1 relative',
-              collapsed ? 'px-2 py-2.5 justify-center' : 'px-3 py-2.5 justify-between',
+              props.collapsed ? 'px-2 py-2.5 justify-center' : 'px-3 py-2.5 justify-between',
               isSubmenuActive(item) ? 'bg-white text-slate-800' : 'text-slate-800 hover:bg-slate-50 hover:text-slate-900'
             ]"
           >
-            <div class="flex items-center" :class="collapsed ? 'justify-center' : ''">
-              <i :class="[item.icon, 'text-xl text-slate-400 group-hover:text-slate-600', collapsed ? '' : 'mr-3']"></i>
-              <span v-if="!collapsed" class="text-sm font-medium">{{ item.label }}</span>
+            <div class="flex items-center" :class="props.collapsed ? 'justify-center' : ''">
+              <i :class="[item.icon, 'text-xl text-slate-400 group-hover:text-slate-600', props.collapsed ? '' : 'mr-3']"></i>
+              <span v-if="!props.collapsed" class="text-sm font-medium">{{ item.label }}</span>
               <!-- 审核管理菜单的红色气泡（折叠时显示在图标旁） -->
               <span 
-                v-if="item.id === 'review' && pendingCount > 0 && collapsed"
+                v-if="item.id === 'review' && pendingCount > 0 && props.collapsed"
                 class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-medium w-4 h-4 rounded-full flex items-center justify-center"
               >
                 {{ pendingCount > 9 ? '!' : pendingCount }}
               </span>
             </div>
-            <div v-if="!collapsed" class="flex items-center">
+            <div v-if="!props.collapsed" class="flex items-center">
               <!-- 审核管理菜单的红色气泡（展开时显示在箭头旁） -->
               <span 
                 v-if="item.id === 'review' && pendingCount > 0 && !expandedMenus.includes(item.id)"
@@ -98,7 +90,7 @@
           
           <!-- 子菜单项 -->
           <Transition name="submenu">
-            <div v-if="!collapsed" v-show="expandedMenus.includes(item.id)" class="pl-6 pr-2 space-y-1 mb-2">
+            <div v-if="!props.collapsed" v-show="expandedMenus.includes(item.id)" class="pl-6 pr-2 space-y-1 mb-2">
               <div 
                 v-for="sub in item.children" 
                 :key="sub.id"
@@ -130,17 +122,17 @@
     <div class="p-3 border-t border-slate-100">
       <div :class="[
         'flex items-center p-2 rounded-lg hover:bg-slate-50 transition-colors',
-        collapsed ? 'justify-center' : 'justify-between'
+        props.collapsed ? 'justify-center' : 'justify-between'
       ]">
         <!-- 头像（仅展开时显示） -->
         <div 
-          v-if="!collapsed"
+          v-if="!props.collapsed"
           class="user-avatar flex-shrink-0 mr-3"
           :style="{ backgroundColor: getRoleColor(authStore.userRole) }"
         >
           {{ getInitial(authStore.realName) }}
         </div>
-        <div v-if="!collapsed" class="overflow-hidden flex-1">
+        <div v-if="!props.collapsed" class="overflow-hidden flex-1">
           <p class="text-sm font-medium text-slate-700 truncate">{{ userName }}</p>
           <p class="text-xs text-slate-400 truncate">{{ roleName }}</p>
         </div>
@@ -163,17 +155,15 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import { menuConfig, filterMenuByRole, findMenuItem as findMenuItemUtil, getRoleName } from '../../config/menuConfig'
 
 const props = defineProps({
-  mobile: { type: Boolean, default: false }
+  mobile: { type: Boolean, default: false },
+  collapsed: { type: Boolean, default: false }
 })
-const emit = defineEmits(['close'])
+const emit = defineEmits(['close', 'toggle-collapse'])
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const reviewStore = useReviewStore()
-
-// 侧边栏折叠状态
-const collapsed = ref(false)
 
 // 展开的菜单
 const expandedMenus = ref(['cost'])
@@ -211,7 +201,7 @@ const visibleMenuItems = computed(() => filterMenuByRole(menuConfig, authStore.u
 
 // 切换折叠状态
 const toggleCollapse = () => {
-  collapsed.value = !collapsed.value
+  emit('toggle-collapse')
 }
 
 // 判断菜单是否激活

@@ -487,7 +487,8 @@ const exportMaterials = async (req, res, next) => {
 // 下载导入模板
 const downloadTemplate = async (req, res, next) => {
   try {
-    const workbook = await ExcelGenerator.generateMaterialTemplate();
+    const { type } = req.query;
+    const workbook = await ExcelGenerator.generateMaterialTemplate(type);
     const fileName = '原料导入模板.xlsx';
     const filePath = ensureTempFile(fileName);
 

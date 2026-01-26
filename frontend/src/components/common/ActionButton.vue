@@ -96,8 +96,7 @@ const iconSvg = computed(() => ICONS[props.type] || ICONS.default)
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 20px;
+  padding: 8px 10px; /* 图标状态下的紧凑内边距 */
   font-size: 14px;
   font-weight: 600;
   border-radius: 34px;
@@ -136,9 +135,10 @@ const iconSvg = computed(() => ICONS[props.type] || ICONS.default)
 
 .action-btn:hover {
   color: #fff; /* 悬浮时字体变白 */
-  scale: 1.1;
+  scale: 1.05;
   box-shadow: 0 0 20px var(--btn-glow);
   border-color: var(--btn-color); /* 保持边框颜色，避免透明导致的视觉问题 */
+  padding: 8px 20px; /* 悬浮时恢复完整内边距 */
 }
 
 /* 导入按钮特殊处理：悬浮时字体设为深色(如css.txt中示例由于金色背景文字需深色对比)，
@@ -163,7 +163,21 @@ const iconSvg = computed(() => ICONS[props.type] || ICONS.default)
   z-index: 1; 
 }
 .action-btn__icon svg { width: 100%; height: 100%; }
-.action-btn__text { position: relative; z-index: 1; }
+.action-btn__text { 
+  position: relative; 
+  z-index: 1;
+  max-width: 0;
+  opacity: 0;
+  margin-left: 0;
+  transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* 悬浮时展示文字 */
+.action-btn:hover .action-btn__text {
+  max-width: 150px; /* 给予足够宽度 */
+  opacity: 1;
+  margin-left: 6px;
+}
 
 /* ========== 类型特定样式 ========== */
 

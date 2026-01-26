@@ -60,6 +60,11 @@ request.interceptors.response.use(
 
       switch (status) {
         case 401:
+          // 如果是登录接口本身的 401 错误，不视为 token 过期，直接抛出由页面处理
+          if (error.config.url && error.config.url.includes('/auth/login')) {
+            return Promise.reject(error)
+          }
+
           ElMessage.error('登录已过期，请重新登录')
           // 清除所有认证信息
           clearAuth()

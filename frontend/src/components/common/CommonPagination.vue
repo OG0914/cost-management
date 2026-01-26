@@ -7,7 +7,7 @@
       <el-pagination
         v-model:current-page="currentPageModel"
         v-model:page-size="pageSizeModel"
-        :page-sizes="[8, 16, 50, 100]"
+        :page-sizes="[8, 12, 50, 100]"
         :pager-count="5"
         :total="total"
         background

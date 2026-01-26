@@ -59,7 +59,7 @@ class ExcelParser {
 
       const materials = [], errors = [];
       const getValue = (value) => (value && typeof value === 'object' && value.richText) ? value.richText.map(t => t.text).join('') : value; // 处理富文本
-      const isHalfMaskFormat = headers.includes('产品描述') || headers.includes('供应商') || headers.includes('MOQ'); // 检测表头格式
+      const isHalfMaskFormat = headers.includes('产品描述') || headers.includes('绑定型号') || headers.includes('供应商') || headers.includes('MOQ'); // 检测表头格式
       const isGeneralFormat = headers.includes('厂商') && headers.includes('原料品名') && !isHalfMaskFormat;
 
       data.forEach((row, index) => {
@@ -79,13 +79,13 @@ class ExcelParser {
 
         const material = {
           item_no: String(itemNo).trim(), name: String(name).trim(), unit: String(unit).trim(), price: priceNum,
-          category: String(getValue(row['类别']) || getValue(row['category']) || '').trim() || null,
+          category: String(getValue(row['类别']) || getValue(row['品名类别']) || getValue(row['category']) || '').trim() || null,
           currency: String(getValue(row['币别']) || getValue(row['currency']) || 'CNY'),
           material_type: isHalfMaskFormat ? 'half_mask' : (String(getValue(row['原料类型']) || getValue(row['material_type']) || 'general').trim()),
-          subcategory: String(getValue(row['子分类']) || getValue(row['subcategory']) || '').trim() || null,
+          subcategory: String(getValue(row['子分类']) || getValue(row['细分类']) || getValue(row['subcategory']) || '').trim() || null,
           manufacturer: String(getValue(row['厂商']) || getValue(row['manufacturer']) || '').trim() || null, // 非半面罩类使用
           supplier: String(getValue(row['供应商']) || getValue(row['supplier']) || '').trim() || null, // 半面罩类使用
-          product_desc: String(getValue(row['产品描述']) || getValue(row['product_desc']) || '').trim() || null,
+          product_desc: String(getValue(row['产品描述']) || getValue(row['绑定型号']) || getValue(row['product_desc']) || '').trim() || null,
           packaging_mode: String(getValue(row['包装方式']) || getValue(row['packaging_mode']) || '').trim() || null,
           usage_amount: parseFloat(getValue(row['用量']) || getValue(row['usage_amount'])) || null,
           production_date: getValue(row['生产日期']) || getValue(row['production_date']) || null,

@@ -41,12 +41,18 @@
             v-model="currentSubcategory" 
             @change="handleSubcategoryChange" 
             size="default"
+            class="sortable-radio-group"
           >
-            <el-radio-button label="">全部</el-radio-button>
+            <el-radio-button label="" class="static-tab">全部</el-radio-button>
             <el-radio-button 
-              v-for="sub in (currentType === 'half_mask' ? categoryStructure.half_mask : categoryStructure.general)" 
+              v-for="(sub, index) in (currentType === 'half_mask' ? categoryStructure.half_mask : categoryStructure.general)" 
               :key="sub" 
               :label="sub"
+              draggable="true"
+              @dragstart="handleDragStart($event, index)"
+              @dragover.prevent
+              @drop="handleDrop($event, index)"
+              class="draggable-tab"
              >
               {{ sub }}
             </el-radio-button>
@@ -66,17 +72,25 @@
         
         <!-- 半面罩类视图 -->
         <template v-if="isHalfMaskView">
+           <el-table-column prop="category" label="品名类别" width="100">
+             <template #default="{ row }">
+               <div class="category-cell">
+                 <span class="status-badge" :class="getCategoryClass(row.category)">{{ row.category }}</span>
+               </div>
+             </template>
+           </el-table-column>
+           <el-table-column prop="subcategory" label="细分类" width="120" />
            <el-table-column prop="item_no" label="品号" width="120" />
            <el-table-column prop="name" label="原料名称" width="200" show-overflow-tooltip />
-           <el-table-column prop="product_desc" label="绑定型号" width="160" show-overflow-tooltip />
-           <el-table-column prop="packaging_mode" label="包装方式" width="100" />
            <el-table-column prop="supplier" label="供应商" width="150" show-overflow-tooltip />
-           <el-table-column prop="usage_amount" label="用量" width="80" />
            <el-table-column prop="price" label="单价" width="100" sortable>
              <template #default="{ row }">{{ formatMoney(row.price, row.currency) }}</template>
            </el-table-column>
            <el-table-column prop="currency" label="币别" width="70" align="center" />
            <el-table-column prop="unit" label="单位" width="70" align="center" />
+           <el-table-column prop="product_desc" label="绑定型号" width="160" show-overflow-tooltip />
+           <el-table-column prop="packaging_mode" label="包装方式" width="100" />
+           <el-table-column prop="usage_amount" label="用量" width="80" />
            <el-table-column prop="production_cycle" label="生产周期" width="100" />
            <el-table-column prop="moq" label="MOQ" width="80" />
         </template>
@@ -258,6 +272,33 @@
         <el-button type="primary" @click="handleSubmit" :loading="formLoading">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 导入重复确认弹窗 -->
+    <el-dialog
+      v-model="importConfirmVisible"
+      title="发现重复品号"
+      width="500px"
+      append-to-body
+      :close-on-click-modal="false"
+    >
+      <div class="import-confirm-content">
+        <p class="warning-text">检测到 {{ importDuplicates.length }} 条数据在系统中已存在（品号重复）。</p>
+        <div class="duplicate-list">
+          <p v-for="(item, index) in importDuplicates.slice(0, 5)" :key="index" class="duplicate-item">
+            {{ item.item_no }} - {{ item.name }} <span class="exist-tag">(系统已有: {{ item.existing_name }})</span>
+          </p>
+          <p v-if="importDuplicates.length > 5" class="more-text">...等 {{ importDuplicates.length }} 条</p>
+        </div>
+        <p class="prompt-text">请选择处理方式：</p>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="importConfirmVisible = false">取消导入</el-button>
+          <el-button type="warning" @click="handleImportConfirm('skip')">跳过重复项</el-button>
+          <el-button type="primary" @click="handleImportConfirm('update')">覆盖更新</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -295,6 +336,11 @@ const formLoading = ref(false)
 const formRef = ref(null)
 const searchTimer = ref(null)
 const modelList = ref([]) // 型号列表（用于绑定型号下拉）
+
+// 导入确认状态
+const importConfirmVisible = ref(false)
+const importDuplicates = ref([])
+const currentImportId = ref(null)
 
 // 分页
 const { currentPage, pageSize, total } = usePagination('material')
@@ -358,10 +404,71 @@ const fetchCategoryStructure = async () => {
   try {
     const res = await request.get('/materials/structure')
     if (res.success) {
-      categoryStructure.half_mask = res.data.half_mask || []
-      categoryStructure.general = res.data.general || []
+      // 默认排序：将"其他"放到最后
+      const sortDefault = (list) => {
+        const others = list.filter(i => i === '其他' || i === 'Other')
+        const normal = list.filter(i => i !== '其他' && i !== 'Other')
+        return [...normal, ...others]
+      }
+
+      let halfMask = sortDefault(res.data.half_mask || [])
+      let general = sortDefault(res.data.general || [])
+
+      // 应用本地存储的自定义排序
+      categoryStructure.half_mask = applyCustomSort(halfMask, 'half_mask')
+      categoryStructure.general = applyCustomSort(general, 'general')
     }
   } catch (e) { console.error(e) }
+}
+
+// 应用自定义排序
+const applyCustomSort = (list, type) => {
+  const savedOrder = localStorage.getItem(`material_sort_${type}`)
+  if (!savedOrder) return list
+
+  try {
+    const order = JSON.parse(savedOrder)
+    const orderedList = []
+    const remaining = [...list]
+
+    // 按保存的顺序添加存在的项
+    order.forEach(item => {
+      const idx = remaining.indexOf(item)
+      if (idx > -1) {
+        orderedList.push(item)
+        remaining.splice(idx, 1)
+      }
+    })
+
+    // 添加剩余的新项
+    return [...orderedList, ...remaining]
+  } catch (e) {
+    return list
+  }
+}
+
+// 拖拽相关状态
+const draggedIndex = ref(null)
+
+const handleDragStart = (event, index) => {
+  draggedIndex.value = index
+  event.dataTransfer.effectAllowed = 'move'
+}
+
+const handleDrop = (event, targetIndex) => {
+  if (draggedIndex.value === null || draggedIndex.value === targetIndex) return
+
+  const type = currentType.value
+  const list = categoryStructure[type]
+  const item = list[draggedIndex.value]
+
+  // 移动数组元素
+  list.splice(draggedIndex.value, 1)
+  list.splice(targetIndex, 0, item)
+
+  // 保存新顺序
+  localStorage.setItem(`material_sort_${type}`, JSON.stringify(list))
+  draggedIndex.value = null
 }
 
 // 获取型号列表（用于绑定型号下拉）
@@ -423,17 +530,46 @@ const handleFileChange = async (file) => {
   const formData = new FormData()
   formData.append('file', file.raw)
   try {
-    const res = await request.post('/materials/import', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+    // 改为调用 precheck 接口进行预检查
+    const res = await request.post('/materials/import/precheck', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
     if (res.success) {
-      if (res.data.needConfirm) {
-         ElMessage.warning('存在重复品号，部分数据未导入')
+      if (res.data.duplicates && res.data.duplicates.length > 0) {
+         importDuplicates.value = res.data.duplicates
+         currentImportId.value = res.data.importId
+         importConfirmVisible.value = true
       } else {
-         ElMessage.success(`导入成功，新增 ${res.data.created} 条`)
-         fetchCategoryStructure()
-         fetchMaterials()
+         // 无重复，直接确认导入 (mode=skip 也没关系，因为没重复)
+         await performImportConfirm(res.data.importId, 'skip')
       }
     }
-  } catch (e) { /* Error handled by interceptor */ }
+  } catch (e) {
+    // 错误处理由拦截器负责，但在上传组件中可能捕获不到
+    console.error(e)
+  }
+}
+
+const handleImportConfirm = async (mode) => {
+  if (!currentImportId.value) return
+  await performImportConfirm(currentImportId.value, mode)
+  importConfirmVisible.value = false
+}
+
+const performImportConfirm = async (importId, mode) => {
+  try {
+    const res = await request.post('/materials/import/confirm', { importId, mode })
+    if (res.success) {
+      const { created, updated, skipped } = res.data
+      let msg = `导入完成`
+      if (created) msg += `，新增 ${created} 条`
+      if (updated) msg += `，更新 ${updated} 条`
+      if (skipped) msg += `，跳过 ${skipped} 条`
+      ElMessage.success(msg)
+      fetchCategoryStructure()
+      fetchMaterials()
+    }
+  } catch(e) {
+    ElMessage.error('导入处理失败')
+  }
 }
 
 const handleTypeChange = () => { }
@@ -500,8 +636,17 @@ const handleBatchDelete = async () => {
 const handleSelectionChange = (val) => selectedMaterials.value = val
 const handleDownloadTemplate = async () => {
   try {
-    const res = await request.get('/materials/template/download', { responseType: 'blob' })
-    downloadBlob(res, '导入模板.xlsx')
+    const typeParam = currentType.value || ''
+    const res = await request.get('/materials/template/download', { 
+      params: { type: typeParam },
+      responseType: 'blob' 
+    })
+    
+    let filename = '原料导入模板.xlsx'
+    if (currentType.value === 'half_mask') filename = '原料（半面罩）导入模板.xlsx'
+    if (currentType.value === 'general') filename = '原料（口罩类）导入模板.xlsx'
+    
+    downloadBlob(res, filename)
   } catch (e) { ElMessage.error('下载失败') }
 }
 
@@ -563,6 +708,15 @@ onUnmounted(() => { if (searchTimer.value) clearTimeout(searchTimer.value) })
 .el-table .el-button.is-circle:hover:not(:disabled) { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
 :deep(.el-table th.el-table__cell) { background-color: #f5f7fa; }
 
+/* 导入确认样式 */
+.warning-text { color: #e6a23c; font-weight: bold; margin-bottom: 10px; }
+.duplicate-list { background: #fdf6ec; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto; margin-bottom: 15px; }
+.duplicate-item { font-size: 13px; margin: 4px 0; color: #606266; }
+.exist-tag { color: #909399; font-size: 12px; margin-left: 5px; }
+.more-text { color: #909399; font-size: 12px; margin-top: 5px; text-align: center; }
+.prompt-text { font-weight: 500; margin-bottom: 10px; }
+.dialog-footer { display: flex; justify-content: flex-end; gap: 10px; }
+
 /* Status Badge Style (Soft Pill) */
 .category-cell { display: flex; align-items: center; }
 .status-badge {
@@ -580,4 +734,16 @@ onUnmounted(() => { if (searchTimer.value) clearTimeout(searchTimer.value) })
 .type-packaging { background-color: #fffbeb; color: #d97706; }
 /* Default: Cool Gray */
 .type-default { background-color: #f3f4f6; color: #4b5563; }
+
+/* 拖拽样式 */
+.draggable-tab {
+  cursor: grab; /* 提示可拖动 */
+}
+.draggable-tab:active {
+  cursor: grabbing;
+}
+/* 禁用 "全部" 标签的拖拽样式影响 */
+.static-tab {
+  cursor: pointer;
+}
 </style>
