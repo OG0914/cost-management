@@ -23,12 +23,12 @@ export function useFreightCalculation() {
     fobShenzhenExchangeRate: 7.1,
     fcl20FreightUsd: 840,
     fcl40FreightUsd: 940,
-    lclBaseFreight1_3: 800,
-    lclBaseFreight3_10: 1000,
-    lclBaseFreight10_18: 1500,
-    lclBaseFreight18_28: 2000,
-    lclBaseFreight28_40: 2500,
-    lclBaseFreight40_58: 3000,
+    lclBaseFreight1_3: 900,
+    lclBaseFreight3_5: 1000,
+    lclBaseFreight5_8: 1100,
+    lclBaseFreight8_10: 1200,
+    lclBaseFreight10_12: 1300,
+    lclBaseFreight12_15: 1400,
     lclHandlingCharge: 500,
     lclCfsPerCbm: 170,
     lclDocumentFee: 500,
@@ -55,12 +55,12 @@ export function useFreightCalculation() {
         systemConfig.value.fobShenzhenExchangeRate = response.data.fob_shenzhen_exchange_rate || 7.1
         systemConfig.value.fcl20FreightUsd = response.data.fcl_20_freight_usd || 840
         systemConfig.value.fcl40FreightUsd = response.data.fcl_40_freight_usd || 940
-        systemConfig.value.lclBaseFreight1_3 = response.data.lcl_base_freight_1_3 || 800
-        systemConfig.value.lclBaseFreight3_10 = response.data.lcl_base_freight_3_10 || 1000
-        systemConfig.value.lclBaseFreight10_18 = response.data.lcl_base_freight_10_18 || 1500
-        systemConfig.value.lclBaseFreight18_28 = response.data.lcl_base_freight_18_28 || 2000
-        systemConfig.value.lclBaseFreight28_40 = response.data.lcl_base_freight_28_40 || 2500
-        systemConfig.value.lclBaseFreight40_58 = response.data.lcl_base_freight_40_58 || 3000
+        systemConfig.value.lclBaseFreight1_3 = response.data.lcl_base_freight_1_3 || 900
+        systemConfig.value.lclBaseFreight3_5 = response.data.lcl_base_freight_3_5 || 1000
+        systemConfig.value.lclBaseFreight5_8 = response.data.lcl_base_freight_5_8 || 1100
+        systemConfig.value.lclBaseFreight8_10 = response.data.lcl_base_freight_8_10 || 1200
+        systemConfig.value.lclBaseFreight10_12 = response.data.lcl_base_freight_10_12 || 1300
+        systemConfig.value.lclBaseFreight12_15 = response.data.lcl_base_freight_12_15 || 1400
         systemConfig.value.lclHandlingCharge = response.data.lcl_handling_charge || 500
         systemConfig.value.lclCfsPerCbm = response.data.lcl_cfs_per_cbm || 170
         systemConfig.value.lclDocumentFee = response.data.lcl_document_fee || 500
@@ -173,18 +173,18 @@ export function useFreightCalculation() {
       let baseFreight = 0
       if (ceiledCBM >= 1 && ceiledCBM <= 3) {
         baseFreight = systemConfig.value.lclBaseFreight1_3
-      } else if (ceiledCBM > 3 && ceiledCBM <= 10) {
-        baseFreight = systemConfig.value.lclBaseFreight3_10
-      } else if (ceiledCBM > 10 && ceiledCBM <= 18) {
-        baseFreight = systemConfig.value.lclBaseFreight10_18
-      } else if (ceiledCBM > 18 && ceiledCBM <= 28) {
-        baseFreight = systemConfig.value.lclBaseFreight18_28
-      } else if (ceiledCBM > 28 && ceiledCBM <= 40) {
-        baseFreight = systemConfig.value.lclBaseFreight28_40
-      } else if (ceiledCBM > 40 && ceiledCBM <= 58) {
-        baseFreight = systemConfig.value.lclBaseFreight40_58
-      } else if (ceiledCBM > 58) {
-        // CBM超过58，清空运费并返回
+      } else if (ceiledCBM > 3 && ceiledCBM <= 5) {
+        baseFreight = systemConfig.value.lclBaseFreight3_5
+      } else if (ceiledCBM > 5 && ceiledCBM <= 8) {
+        baseFreight = systemConfig.value.lclBaseFreight5_8
+      } else if (ceiledCBM > 8 && ceiledCBM <= 10) {
+        baseFreight = systemConfig.value.lclBaseFreight8_10
+      } else if (ceiledCBM > 10 && ceiledCBM <= 12) {
+        baseFreight = systemConfig.value.lclBaseFreight10_12
+      } else if (ceiledCBM > 12 && ceiledCBM <= 15) {
+        baseFreight = systemConfig.value.lclBaseFreight12_15
+      } else if (ceiledCBM > 15) {
+        // CBM超过15，清空运费并返回
         form.freight_total = null
         freightCalculation.value = null
         return
@@ -212,8 +212,8 @@ export function useFreightCalculation() {
 
     const cbm = parseFloat(shippingInfo.cbm)
     const ceiledCBM = Math.ceil(cbm)
-    if (ceiledCBM > 58) {
-      // CBM超过58，清空运费并返回 (保持与LCL一致限制)
+    if (ceiledCBM > 15) {
+      // CBM超过15，清空运费并返回
       form.freight_total = null
       freightCalculation.value = null
       return
@@ -240,11 +240,11 @@ export function useFreightCalculation() {
     } else {
       // 东莞迅安，使用 LCL 分档基础运费
       if (ceiledCBM >= 1 && ceiledCBM <= 3) domesticTransportFee = systemConfig.value.lclBaseFreight1_3
-      else if (ceiledCBM > 3 && ceiledCBM <= 10) domesticTransportFee = systemConfig.value.lclBaseFreight3_10
-      else if (ceiledCBM > 10 && ceiledCBM <= 18) domesticTransportFee = systemConfig.value.lclBaseFreight10_18
-      else if (ceiledCBM > 18 && ceiledCBM <= 28) domesticTransportFee = systemConfig.value.lclBaseFreight18_28
-      else if (ceiledCBM > 28 && ceiledCBM <= 40) domesticTransportFee = systemConfig.value.lclBaseFreight28_40
-      else if (ceiledCBM > 40 && ceiledCBM <= 58) domesticTransportFee = systemConfig.value.lclBaseFreight40_58
+      else if (ceiledCBM > 3 && ceiledCBM <= 5) domesticTransportFee = systemConfig.value.lclBaseFreight3_5
+      else if (ceiledCBM > 5 && ceiledCBM <= 8) domesticTransportFee = systemConfig.value.lclBaseFreight5_8
+      else if (ceiledCBM > 8 && ceiledCBM <= 10) domesticTransportFee = systemConfig.value.lclBaseFreight8_10
+      else if (ceiledCBM > 10 && ceiledCBM <= 12) domesticTransportFee = systemConfig.value.lclBaseFreight10_12
+      else if (ceiledCBM > 12 && ceiledCBM <= 15) domesticTransportFee = systemConfig.value.lclBaseFreight12_15
     }
 
     // 总运费

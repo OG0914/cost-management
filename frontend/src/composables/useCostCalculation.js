@@ -30,6 +30,8 @@ export function useCostCalculation() {
     }
   }
 
+  const modelCategory = ref('')
+
   const calculateItemSubtotal = (row) => {
     if (row.category === 'packaging') {
       row.subtotal = (row.usage_amount && row.usage_amount !== 0)
@@ -37,8 +39,19 @@ export function useCostCalculation() {
         : 0
     } else if (row.category === 'material') {
       const coefficient = materialCoefficient.value || 1
-      const rawSubtotal = (row.usage_amount || 0) * (row.unit_price || 0)
-      row.subtotal = coefficient !== 0 ? rawSubtotal / coefficient : rawSubtotal
+      if (modelCategory.value === '半面罩') {
+        const rawSubtotal = (row.usage_amount || 0) * (row.unit_price || 0)
+        row.subtotal = coefficient !== 0 ? rawSubtotal / coefficient : rawSubtotal
+      } else {
+        if (row.usage_amount && row.usage_amount !== 0) {
+          // 修改为：单价 / 用量 / 系数
+          // 确保系数也不为0（虽然默认为1）
+          const safeCoefficient = coefficient !== 0 ? coefficient : 1
+          row.subtotal = (row.unit_price || 0) / row.usage_amount / safeCoefficient
+        } else {
+          row.subtotal = 0
+        }
+      }
       row.subtotal = Math.round(row.subtotal * 10000) / 10000
       row.coefficient_applied = true
     } else {
@@ -152,6 +165,7 @@ export function useCostCalculation() {
   return {
     calculation,
     customProfitTiers,
+    modelCategory,
     materialCoefficient,
     materialCoefficientsCache,
     loadMaterialCoefficients,

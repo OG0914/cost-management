@@ -33,15 +33,27 @@ export function useQuotationData() {
     }
   }
 
-  const loadBomMaterials = async (modelId, materialCoefficient) => {
+  const loadBomMaterials = async (modelId, materialCoefficient, modelCategory = '') => {
     if (!modelId) return []
     try {
       const res = await request.get(`/bom/${modelId}`)
       if (res.success && res.data && res.data.length > 0) {
         return res.data.map(b => {
           const coefficient = materialCoefficient || 1
-          const rawSubtotal = (parseFloat(b.usage_amount) || 0) * (parseFloat(b.unit_price) || 0)
-          const subtotal = coefficient !== 0 ? rawSubtotal / coefficient : rawSubtotal
+          const usage = parseFloat(b.usage_amount) || 0
+          const price = parseFloat(b.unit_price) || 0
+
+          let subtotal = 0
+          if (modelCategory === '半面罩') {
+            const rawSubtotal = usage * price
+            subtotal = coefficient !== 0 ? rawSubtotal / coefficient : rawSubtotal
+          } else {
+            if (usage && usage !== 0) {
+              // 修改为：单价 / 用量 / 系数
+              const safeCoefficient = coefficient !== 0 ? coefficient : 1
+              subtotal = price / usage / safeCoefficient
+            }
+          }
           return {
             category: 'material',
             material_id: b.material_id,

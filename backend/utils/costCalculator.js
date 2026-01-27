@@ -110,7 +110,7 @@ class CostCalculator {
     if (!customFees || customFees.length === 0) {
       return basePrice;
     }
-    
+
     let result = basePrice;
     for (const fee of customFees) {
       result = result * (1 + fee.rate);
@@ -272,11 +272,23 @@ class CostCalculator {
    * @param {number} materialCoefficient - 原料系数（口罩=0.97，半面罩=0.99）
    * @returns {number} 原料小计
    */
-  static calculateMaterialSubtotal(usageAmount, unitPrice, materialCoefficient = 1) {
+  static calculateMaterialSubtotal(usageAmount, unitPrice, materialCoefficient = 1, modelCategory = '') {
     if (!materialCoefficient || materialCoefficient === 0) {
       materialCoefficient = 1;
     }
-    const subtotal = (usageAmount * unitPrice) / materialCoefficient;
+
+    // 半面罩特殊逻辑：单价 * 用量 / 系数
+    if (modelCategory === '半面罩') {
+      const subtotal = (usageAmount * unitPrice) / materialCoefficient;
+      return Math.round(subtotal * Math.pow(10, 4)) / Math.pow(10, 4);
+    }
+
+    // 其他默认逻辑：单价 / 用量 / 系数
+    // 防止除以0错误
+    if (!usageAmount || usageAmount === 0) {
+      return 0;
+    }
+    const subtotal = unitPrice / usageAmount / materialCoefficient;
     return Math.round(subtotal * Math.pow(10, 4)) / Math.pow(10, 4);
   }
 

@@ -226,12 +226,12 @@
                   </div>
                 </div>
 
-                <!-- CBM过大提示 (仅在散货且CBM>58时显示) -->
-                <div v-if="shippingInfo.cbm && parseFloat(shippingInfo.cbm) > 58" class="smart-packing-tip warning">
+                <!-- CBM过大提示 (仅在散货且CBM>15时显示) -->
+                <div v-if="shippingInfo.cbm && parseFloat(shippingInfo.cbm) > 15" class="smart-packing-tip warning">
                   <el-icon><WarningFilled /></el-icon>
                   <div class="tip-content">
                     <div class="tip-title">运输建议:</div>
-                    <div>当前CBM为 <strong>{{ shippingInfo.cbm }}</strong> (超过58)，建议选择整柜运输或联系物流单独确认运费。</div>
+                    <div>当前CBM为 <strong>{{ shippingInfo.cbm }}</strong> (超过15)，建议选择整柜运输或联系物流单独确认运费。</div>
                   </div>
                 </div>
               </div>
@@ -481,7 +481,7 @@ const selectedNewProductCategory = computed(() => {
 
 // Composables
 const { freightCalculation, systemConfig, shippingInfo, quantityUnit, quantityInput, domesticCbmPrice, currentFactory, loadSystemConfig, setShippingInfoFromConfig, calculateShippingInfo, calculateFOBFreight, calculateCIFShenzhen, onQuantityUnitChange, onQuantityInputChange, onDomesticCbmPriceChange, onShippingMethodChange, onPortTypeChange, resetShippingInfo } = useFreightCalculation()
-const { calculation, customProfitTiers, materialCoefficient, materialCoefficientsCache, loadMaterialCoefficients, calculateItemSubtotal, calculateCost, addCustomProfitTier, updateCustomTierPrice, updateTierSort, removeCustomProfitTier, prepareCustomProfitTiersForSave, getAllProfitTiers } = useCostCalculation()
+const { calculation, customProfitTiers, modelCategory: costModelCategory, materialCoefficient, materialCoefficientsCache, loadMaterialCoefficients, calculateItemSubtotal, calculateCost, addCustomProfitTier, updateCustomTierPrice, updateTierSort, removeCustomProfitTier, prepareCustomProfitTiersForSave, getAllProfitTiers } = useCostCalculation()
 const { saving, submitting, isSaved, loadRegulations, loadPackagingConfigs, loadBomMaterials, loadPackagingConfigDetails, loadQuotationData, loadStandardCostData, saveQuotation, submitQuotation } = useQuotationData()
 const { isNewCustomer, selectedCustomerId, customerOptions, customerSearchLoading, customerSelectFocused, onCustomerTypeChange, searchCustomers, onCustomerSelect } = useCustomerSearch()
 const { allMaterials, materialSearchOptions, materialSearchLoading, loadAllMaterials, searchMaterials, onMaterialSelect, onPackagingMaterialSelect } = useMaterialSearch()
@@ -806,7 +806,7 @@ const onPackagingConfigChange = async () => {
       ElMessage.warning({ message: '当前配置缺少外箱材积数据，无法自动计算CBM和运费。请前往「包材管理」补充外箱的材积信息', duration: 8000, showClose: true })
     }
     if (form.quantity) quantityInput.value = quantityUnit.value === 'carton' ? Math.ceil(form.quantity / pcsPerCarton) : form.quantity
-    form.materials = await loadBomMaterials(config.model_id, materialCoefficient.value)
+    form.materials = await loadBomMaterials(config.model_id, materialCoefficient.value, currentModelCategory.value)
     editMode.materials = false
     form.processes = (processes || []).map(p => ({ category: 'process', item_name: p.process_name, usage_amount: 1, unit_price: parseFloat(p.unit_price) || 0, subtotal: parseFloat(p.unit_price) || 0, is_changed: 0, from_standard: true }))
     form.packaging = (materials || []).map(m => ({ category: 'packaging', item_name: m.material_name, usage_amount: parseFloat(m.basic_usage) || 0, unit_price: parseFloat(m.unit_price) || 0, carton_volume: m.carton_volume ? parseFloat(m.carton_volume) : null, subtotal: (parseFloat(m.basic_usage) || 0) !== 0 ? (parseFloat(m.unit_price) || 0) / (parseFloat(m.basic_usage) || 1) : 0, is_changed: 0, from_standard: true }))
@@ -1083,6 +1083,11 @@ onMounted(async () => {
     await checkAndRestoreDraft()
   }
   if (!route.params.id) startAutoSave(getFormDataForDraft, AUTO_SAVE_INTERVAL)
+})
+
+// 同步产品分类到 CostCalculation composable
+watch(currentModelCategory, (val) => {
+  costModelCategory.value = val
 })
 
 // 监听路由模式变化，切换时重置表单

@@ -34,9 +34,10 @@ const validateQuotationData = (data) => {
  * 计算原料明细总计（提取公共逻辑）
  * @param {Array} items - 明细数组
  * @param {number} materialCoefficient - 原料系数
+ * @param {string} modelCategory - 产品分类
  * @returns {Object} { materialTotal, afterOverheadMaterialTotal, processTotal, packagingTotal }
  */
-const calculateItemTotals = (items, materialCoefficient) => {
+const calculateItemTotals = (items, materialCoefficient, modelCategory) => {
     // 计算单项原料小计的辅助函数
     const calcMaterialSubtotal = (item) => {
         if (item.coefficient_applied) {
@@ -45,7 +46,8 @@ const calculateItemTotals = (items, materialCoefficient) => {
         return CostCalculator.calculateMaterialSubtotal(
             parseFloat(item.usage_amount || 0),
             parseFloat(item.unit_price || 0),
-            materialCoefficient
+            materialCoefficient,
+            modelCategory
         );
     };
 
@@ -72,18 +74,21 @@ const calculateItemTotals = (items, materialCoefficient) => {
 };
 
 /**
- * 获取原料系数
+ * 获取原料系数和分类
  * @param {number} modelId - 型号ID
- * @returns {Promise<number>} 原料系数
+ * @returns {Promise<{coefficient: number, category: string}>} 原料系数和分类
  */
-const getMaterialCoefficient = async (modelId) => {
-    if (!modelId) return 1;
+const getModelCostParams = async (modelId) => {
+    if (!modelId) return { coefficient: 1, category: '' };
     const model = await Model.findById(modelId);
     if (model && model.model_category) {
         const coefficients = await SystemConfig.getValue('material_coefficients') || {};
-        return CostCalculator.getMaterialCoefficient(model.model_category, coefficients);
+        return {
+            coefficient: CostCalculator.getMaterialCoefficient(model.model_category, coefficients),
+            category: model.model_category
+        };
     }
-    return 1;
+    return { coefficient: 1, category: '' };
 };
 
 /**
@@ -146,14 +151,14 @@ const createQuotation = async (req, res) => {
             return res.status(400).json(error(validationError, 400));
         }
 
-        // 获取原料系数
-        const materialCoefficient = await getMaterialCoefficient(model_id);
+        // 获取原料系数和分类
+        const { coefficient: materialCoefficient, category: modelCategory } = await getModelCostParams(model_id);
 
         // 计算运费成本
         const freight_per_unit = freight_total / quantity;
 
         // 计算明细总计
-        const { materialTotal, afterOverheadMaterialTotal, processTotal, packagingTotal } = calculateItemTotals(items, materialCoefficient);
+        const { materialTotal, afterOverheadMaterialTotal, processTotal, packagingTotal } = calculateItemTotals(items, materialCoefficient, modelCategory);
 
         // 获取系统配置并计算报价
         const calculatorConfig = await SystemConfig.getCalculatorConfig();
@@ -316,11 +321,11 @@ const calculateQuotation = async (req, res) => {
             return res.status(400).json(error('缺少必填字段', 400));
         }
 
-        // 获取原料系数
-        const materialCoefficient = await getMaterialCoefficient(model_id);
+        // 获取原料系数和分类
+        const { coefficient: materialCoefficient, category: modelCategory } = await getModelCostParams(model_id);
 
         // 计算明细总计
-        const { materialTotal, afterOverheadMaterialTotal, processTotal, packagingTotal } = calculateItemTotals(items, materialCoefficient);
+        const { materialTotal, afterOverheadMaterialTotal, processTotal, packagingTotal } = calculateItemTotals(items, materialCoefficient, modelCategory);
 
         // 获取系统配置并计算报价
         const calculatorConfig = await SystemConfig.getCalculatorConfig();
@@ -401,14 +406,14 @@ const updateQuotation = async (req, res) => {
             return res.status(400).json(error(validationError, 400));
         }
 
-        // 获取原料系数（使用报价单关联的型号）
-        const materialCoefficient = await getMaterialCoefficient(quotation.model_id);
+        // 获取原料系数和分类（使用报价单关联的型号）
+        const { coefficient: materialCoefficient, category: modelCategory } = await getModelCostParams(quotation.model_id);
 
         // 计算运费成本
         const freight_per_unit = freight_total / quantity;
 
         // 计算明细总计
-        const { materialTotal, afterOverheadMaterialTotal, processTotal, packagingTotal } = calculateItemTotals(items, materialCoefficient);
+        const { materialTotal, afterOverheadMaterialTotal, processTotal, packagingTotal } = calculateItemTotals(items, materialCoefficient, modelCategory);
 
         // 获取系统配置并计算报价
         const calculatorConfig = await SystemConfig.getCalculatorConfig();
@@ -625,13 +630,8 @@ const getQuotationDetail = async (req, res) => {
         // 查询报价单明细
         const items = await QuotationItem.getGroupedByCategory(id);
 
-        // 获取原料系数
-        let materialCoefficient = 1;
-        const model = await Model.findById(quotation.model_id);
-        if (model && model.model_category) {
-            const coefficients = await SystemConfig.getValue('material_coefficients') || {};
-            materialCoefficient = CostCalculator.getMaterialCoefficient(model.model_category, coefficients);
-        }
+        // 获取原料系数和分类
+        const { coefficient: materialCoefficient, category: modelCategory } = await getModelCostParams(quotation.model_id);
 
         // 重新计算以获取利润区间
         // 注意：工序总计传入原始值，计算器内部会自动乘以工价系数

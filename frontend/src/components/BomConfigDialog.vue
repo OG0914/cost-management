@@ -11,7 +11,7 @@
   >
     <div class="bom-config">
       <!-- 操作区域 -->
-      <div class="action-section">
+      <div class="action-section" v-if="canEdit">
         <!-- 添加原料 -->
         <div class="add-section">
           <el-select 
@@ -60,10 +60,11 @@
         </el-table-column>
         <el-table-column label="用量" width="140">
           <template #default="{ row }">
-            <el-input-number v-model="row.usage_amount" :min="0.0001" :precision="4" :controls="false" size="small" @change="handleUpdateUsage(row)" style="width: 100%" />
+            <el-input-number v-if="canEdit" v-model="row.usage_amount" :min="0.0001" :precision="4" :controls="false" size="small" @change="handleUpdateUsage(row)" style="width: 100%" />
+            <span v-else>{{ row.usage_amount }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="80" fixed="right">
+        <el-table-column label="操作" width="80" fixed="right" v-if="canEdit">
           <template #default="{ row }">
             <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
           </template>
@@ -162,6 +163,7 @@
 import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, CopyDocument, Upload } from '@element-plus/icons-vue'
+import { useAuthStore } from '../store/auth'
 import request from '../utils/request'
 import { formatNumber } from '../utils/format'
 
@@ -174,6 +176,7 @@ const emit = defineEmits(['update:modelValue', 'updated'])
 
 const visible = defineModel({ type: Boolean, default: false })
 const loading = ref(false)
+const authStore = useAuthStore() // 引入 store
 const bomList = ref([])
 const materialOptions = ref([])
 const materialSearchLoading = ref(false)
@@ -187,6 +190,9 @@ const copyLoading = ref(false)
 const allModels = ref([])
 const modelsLoading = ref(false)
 const sourceBomPreview = ref([])
+
+// 权限检查：只有管理员和生产人员可以编辑
+const canEdit = computed(() => authStore.isAdmin || authStore.isProducer)
 
 // 新建原料
 const showNewMaterialDialog = ref(false)
