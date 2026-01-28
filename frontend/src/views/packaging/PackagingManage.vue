@@ -91,48 +91,17 @@
         <div v-if="paginatedConfigs.length === 0" class="empty-tip">
           暂无匹配数据
         </div>
-        <div
+        <ManagementCard
           v-for="config in paginatedConfigs"
           :key="config.id"
-          class="config-card"
-        >
-          <!-- 卡片头部 -->
-          <div class="card-header-section">
-            <div class="header-info">
-              <div class="flex items-center gap-2">
-                <div class="model-name">{{ config.model_name }}</div>
-                <el-tag size="small" type="info" effect="plain">{{ getFactoryName(config.factory) }}</el-tag>
-              </div>
-              <div class="config-name">{{ config.config_name }}</div>
-              <div class="packaging-method">
-                {{ formatPackagingMethodFromConfig(config) }}
-              </div>
-              <div class="total-qty">
-                每箱: {{ calculateTotalFromConfig(config) }} pcs
-              </div>
-            </div>
-            <div class="category-badge" :style="{ backgroundColor: getRegulationColor(config.regulation_name) }">
-              {{ config.regulation_name || '未知法规' }}
-            </div>
-          </div>
-          
-          <div class="card-body">
-            <StatusBadge type="packaging_type" :value="config.packaging_type" />
-            <div class="price">
-              包材总价: ¥{{ formatNumber(config.material_total_price || 0) }}
-            </div>
-            <div class="status">
-              <StatusBadge type="active_status" :value="config.is_active" mode="text" />
-            </div>
-          </div>
-          
-          <!-- 操作栏 -->
-          <div class="card-actions">
-            <el-button :icon="View" circle @click="viewMaterials(config)" title="查看" />
-            <el-button :icon="EditPen" circle @click="editConfig(config)" v-if="canEditConfig || canEditMaterial" title="编辑" />
-            <el-button :icon="Delete" circle class="delete-btn" @click="deleteConfig(config)" v-if="canEditConfig" title="删除" />
-          </div>
-        </div>
+          :config="config"
+          type="packaging"
+          :can-edit="canEditConfig || canEditMaterial"
+          :can-delete="canEditConfig"
+          @view="viewMaterials"
+          @edit="editConfig"
+          @delete="deleteConfig"
+        />
       </div>
 
       <!-- 包装配置列表 -->
@@ -199,7 +168,7 @@
       <CommonPagination 
         v-model:current-page="currentPage" 
         v-model:page-size="pageSize" 
-        :total="packagingConfigs.length" 
+        :total="filteredByViewMode.length" 
       />
     </el-card>
 
@@ -253,8 +222,8 @@
             <el-radio-group v-model="form.packaging_type" size="small">
               <el-radio-button value="standard_box">标准彩盒</el-radio-button>
               <el-radio-button value="no_box">无彩盒</el-radio-button>
-              <el-radio-button value="blister_direct">吸塑直出</el-radio-button>
-              <el-radio-button value="blister_bag">袋装吸塑</el-radio-button>
+              <el-radio-button value="blister_direct">泡壳直出</el-radio-button>
+              <el-radio-button value="blister_bag">泡壳袋装</el-radio-button>
             </el-radio-group>
           </div>
 
@@ -400,7 +369,6 @@
               <template #default="{ $index }">
                 <el-button 
                   link 
-                  type="danger" 
                   size="small" 
                   @click="removeMaterial($index)"
                   class="text-slate-400 hover:text-red-500 transition-colors"
@@ -433,56 +401,13 @@
       </template>
     </el-dialog>
 
-    <!-- 查看包材对话框 -->
-    <el-dialog v-model="materialDialogVisible" title="包材列表" width="700px" class="view-dialog" append-to-body>
-      <div class="mb-4">
-        <p class="text-lg font-bold">{{ currentConfig?.model_name }} - {{ currentConfig?.config_name }}</p>
-        <p class="text-gray-600 flex items-center gap-2">
-          <StatusBadge type="packaging_type" :value="currentConfig?.packaging_type" />
-          <span>{{ formatPackagingMethodFromConfig(currentConfig) }}
-          （每箱 {{ calculateTotalFromConfig(currentConfig) }} pcs）</span>
-        </p>
-      </div>
-      
-      <el-table :data="currentMaterials" border show-summary :summary-method="getViewSummaries">
-        <el-table-column label="序号" width="60" type="index" />
-        <el-table-column prop="material_name" label="包材名称" min-width="150" />
-        <el-table-column prop="basic_usage" label="基本用量" width="100">
-          <template #default="{ row }">
-            {{ formatNumber(row.basic_usage) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="unit_price" label="单价" width="100">
-          <template #default="{ row }">
-            ¥{{ formatNumber(row.unit_price) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="小计" width="120" align="right">
-          <template #default="{ row }">
-            <span class="subtotal-text">¥{{ formatNumber(row.basic_usage !== 0 ? (row.unit_price / row.basic_usage) : 0) }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="carton_volume" width="140">
-          <template #header>
-            <div class="flex items-center gap-1">
-              <span>外箱材积(m³)</span>
-              <el-tooltip content="用于计算CBM和运费" placement="top">
-                <el-icon class="text-blue-400 cursor-help"><InfoFilled /></el-icon>
-              </el-tooltip>
-            </div>
-          </template>
-          <template #default="{ row }">
-            <span :class="{ 'text-red-400': !row.carton_volume }">{{ row.carton_volume ? formatNumber(row.carton_volume) : '未设置' }}</span>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <div class="mt-4 text-right">
-        <p class="text-lg font-bold">
-          包材总价: <span class="text-blue-600">¥{{ formatNumber(totalMaterialPrice) }}</span>
-        </p>
-      </div>
-    </el-dialog>
+    <!-- 查看包材对话框 (已组件化) -->
+    <ManagementDetailDialog
+      v-model="materialDialogVisible"
+      :config="currentConfig"
+      :items="currentMaterials"
+      type="packaging"
+    />
 
     <!-- 一键复制包材弹窗 -->
     <el-dialog v-model="showMaterialCopyDialog" title="从其他配置复制包材" width="550px" append-to-body :close-on-click-modal="false">
@@ -533,7 +458,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, Delete, Grid, List, View, EditPen, CaretLeft, CaretRight, InfoFilled, CopyDocument } from '@element-plus/icons-vue';
+import { Plus, Delete, Grid, List, View, EditPen, CaretLeft, CaretRight, InfoFilled, CopyDocument, Box } from '@element-plus/icons-vue'; // 引入图标
 import request from '../../utils/request';
 import { useAuthStore } from '../../store/auth';
 import { formatNumber, formatDateTime } from '../../utils/format';
@@ -551,6 +476,8 @@ import CommonPagination from '../../components/common/CommonPagination.vue';
 import ActionButton from '../../components/common/ActionButton.vue';
 import StatusSwitch from '../../components/common/StatusSwitch.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
+import ManagementCard from '@/components/management/ManagementCard.vue';
+import ManagementDetailDialog from '@/components/management/ManagementDetailDialog.vue';
 
 const getFactoryName = (factory) => {
   const map = {
@@ -610,11 +537,19 @@ watch(viewMode, (newMode) => {
 const currentPage = ref(1);
 const pageSize = ref(10);
 
+// 根据视图模式获取数据源（卡片视图只显示启用的，列表视图显示全部）
+const filteredByViewMode = computed(() => {
+  if (viewMode.value === 'card') {
+    return packagingConfigs.value.filter(c => c.is_active); // 卡片视图过滤禁用项
+  }
+  return packagingConfigs.value; // 列表视图显示全部
+});
+
 // 分页后的数据
 const paginatedConfigs = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value;
   const end = start + pageSize.value;
-  return packagingConfigs.value.slice(start, end);
+  return filteredByViewMode.value.slice(start, end);
 });
 
 // 包装类型标签颜色
@@ -755,15 +690,15 @@ const loadCategories = async () => {
   }
 };
 
-// 加载所有原料
+// 加载包材类别的原料（只加载 category=包材 的数据）
 const loadMaterials = async () => {
   try {
-    const response = await request.get('/materials');
+    const response = await request.get('/materials', { params: { category: '包材' } });
     if (response.success) {
       allMaterials.value = response.data;
     }
   } catch (error) {
-    logger.error('加载原料失败:', error);
+    logger.error('加载包材原料失败:', error);
   }
 };
 
@@ -791,12 +726,13 @@ const handleSelectMaterial = (row, material) => {
   row.unit_price = material.price;
 };
 
-// 加载包装配置
+// 加载包装配置（包含禁用记录，前端根据视图模式过滤）
 const loadPackagingConfigs = async () => {
   loading.value = true;
   try {
     let url = '/processes/packaging-configs';
     const params = new URLSearchParams();
+    params.append('include_inactive', 'true'); // 请求包含禁用记录
     
     if (selectedModelId.value) {
       url = `/processes/packaging-configs/model/${selectedModelId.value}`;
@@ -807,9 +743,7 @@ const loadPackagingConfigs = async () => {
     }
     
     const queryString = params.toString();
-    if (queryString && !selectedModelId.value) {
-      url += '?' + queryString;
-    }
+    url += '?' + queryString;
     
     const response = await request.get(url);
     
@@ -1248,143 +1182,9 @@ onMounted(() => {
   padding: 40px 0;
 }
 
-.config-card {
-  border: 1px solid #ebeef5;
-  border-radius: 8px;
-  background: #fff;
-  transition: box-shadow 0.3s, border-color 0.3s;
-}
-
-.config-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.card-header-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  border-bottom: 1px solid #ebeef5;
-}
-
-.header-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  flex: 1;
-}
-
-.model-name {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.config-name {
-  font-size: 14px;
-  color: #606266;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.category-badge {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 500;
-  text-align: center;
-  line-height: 1.2;
-  flex-shrink: 0;
-  margin-left: 12px;
-}
-
-.config-card .card-body {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.packaging-method {
-  color: #606266;
-  font-weight: 500;
-  font-size: 14px;
-}
-
-.total-qty {
-  font-size: 13px;
-  color: #606266;
-}
-
-.price {
-  font-size: 14px;
-  color: #409EFF;
-  font-weight: 500;
-}
-
-.status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: #606266;
-}
-
-.status-active {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #67c23a;
-}
-
-.status-inactive {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #909399;
-}
-
-.card-actions {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px;
-  border-top: 1px solid #ebeef5;
-  background: #fafafa;
-  border-radius: 0 0 8px 8px;
-}
-
-.card-actions .el-button {
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.card-actions .el-button:hover:not(:disabled) {
-  transform: scale(1.05);
-}
-
-/* 删除按钮样式 */
-.delete-btn {
-  color: #F56C6C;
-}
-
-.delete-btn:hover:not(:disabled) {
-  color: #f78989;
-  border-color: #f78989;
-}
-
 /* 查看对话框样式 */
 :deep(.view-dialog .el-dialog__body) {
-  max-height: 60vh;
+  max-height: 70vh;
   overflow-y: auto;
 }
 

@@ -74,8 +74,8 @@ const configMap = {
   packaging_type: {
     standard_box: { label: '标准彩盒', color: 'blue' },
     no_box: { label: '无彩盒', color: 'emerald' },
-    blister_direct: { label: '吸塑直出', color: 'amber' },
-    blister_bag: { label: '袋装吸塑', color: 'slate' }
+    blister_direct: { label: '泡壳直出', color: 'amber' },
+    blister_bag: { label: '袋装泡壳', color: 'slate' }
   },
   // 启用状态
   active_status: {

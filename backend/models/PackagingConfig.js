@@ -15,10 +15,26 @@ class PackagingConfig {
    * 获取所有包装配置
    * @param {Object} [options] - 查询选项
    * @param {string} [options.packaging_type] - 按包装类型筛选
+   * @param {boolean} [options.include_inactive=false] - 是否包含禁用记录
    * @returns {Promise<Array>} 包装配置列表
    */
   static async findAll(options = {}) {
-    let sql = `
+    const conditions = []; // 动态条件数组
+    const params = [];
+
+    // 是否过滤禁用记录（默认过滤）
+    if (!options.include_inactive) {
+      conditions.push('pc.is_active = true');
+    }
+
+    if (options.packaging_type) {
+      params.push(options.packaging_type);
+      conditions.push(`pc.packaging_type = $${params.length}`);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const sql = `
       SELECT pc.id, pc.model_id, pc.config_name, pc.packaging_type,
              pc.layer1_qty, pc.layer2_qty, pc.layer3_qty,
              pc.pc_per_bag, pc.bags_per_box, pc.boxes_per_carton,
@@ -28,16 +44,9 @@ class PackagingConfig {
       FROM packaging_configs pc
       LEFT JOIN models m ON pc.model_id = m.id
       LEFT JOIN regulations r ON m.regulation_id = r.id
-      WHERE pc.is_active = true
+      ${whereClause}
+      ORDER BY pc.created_at DESC
     `;
-    const params = [];
-
-    if (options.packaging_type) {
-      params.push(options.packaging_type);
-      sql += ` AND pc.packaging_type = $${params.length}`;
-    }
-
-    sql += ` ORDER BY pc.created_at DESC`;
 
     const result = await dbManager.query(sql, params);
     return result.rows;
@@ -48,10 +57,24 @@ class PackagingConfig {
    * @param {number} modelId - 型号 ID
    * @param {Object} [options] - 查询选项
    * @param {string} [options.packaging_type] - 按包装类型筛选
+   * @param {boolean} [options.include_inactive=false] - 是否包含禁用记录
    * @returns {Promise<Array>} 包装配置列表
    */
   static async findByModelId(modelId, options = {}) {
-    let sql = `
+    const conditions = ['pc.model_id = $1']; // 型号ID是必须条件
+    const params = [modelId];
+
+    // 是否过滤禁用记录（默认过滤）
+    if (!options.include_inactive) {
+      conditions.push('pc.is_active = true');
+    }
+
+    if (options.packaging_type) {
+      params.push(options.packaging_type);
+      conditions.push(`pc.packaging_type = $${params.length}`);
+    }
+
+    const sql = `
       SELECT pc.id, pc.model_id, pc.config_name, pc.packaging_type,
              pc.layer1_qty, pc.layer2_qty, pc.layer3_qty,
              pc.pc_per_bag, pc.bags_per_box, pc.boxes_per_carton,
@@ -61,16 +84,9 @@ class PackagingConfig {
       FROM packaging_configs pc
       LEFT JOIN models m ON pc.model_id = m.id
       LEFT JOIN regulations r ON m.regulation_id = r.id
-      WHERE pc.model_id = $1 AND pc.is_active = true
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY pc.created_at DESC
     `;
-    const params = [modelId];
-
-    if (options.packaging_type) {
-      params.push(options.packaging_type);
-      sql += ` AND pc.packaging_type = $${params.length}`;
-    }
-
-    sql += ` ORDER BY pc.created_at DESC`;
 
     const result = await dbManager.query(sql, params);
     return result.rows;

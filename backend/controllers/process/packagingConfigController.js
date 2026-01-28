@@ -36,10 +36,10 @@ const enrichConfigsWithPrices = async (configs, includeTypeName = false) => {
   return Promise.all(configs.map(config => enrichConfigWithPrices(config, processCoefficient, includeTypeName)));
 };
 
-// 获取所有包装配置（支持 packaging_type 筛选）
+// 获取所有包装配置（支持 packaging_type 和 include_inactive 筛选）
 exports.getAllPackagingConfigs = async (req, res) => {
   try {
-    const { packaging_type } = req.query;
+    const { packaging_type, include_inactive } = req.query;
 
     if (packaging_type && !isValidPackagingType(packaging_type)) {
       return res.status(400).json({
@@ -48,7 +48,10 @@ exports.getAllPackagingConfigs = async (req, res) => {
       });
     }
 
-    const configs = await PackagingConfig.findAll({ packaging_type });
+    const configs = await PackagingConfig.findAll({
+      packaging_type,
+      include_inactive: include_inactive === 'true' // 字符串转布尔
+    });
     const configsWithPrice = await enrichConfigsWithPrices(configs, true);
 
     res.json({ success: true, data: configsWithPrice });
@@ -62,7 +65,10 @@ exports.getAllPackagingConfigs = async (req, res) => {
 exports.getPackagingConfigsByModel = async (req, res) => {
   try {
     const { modelId } = req.params;
-    const configs = await PackagingConfig.findByModelId(modelId);
+    const { include_inactive } = req.query;
+    const configs = await PackagingConfig.findByModelId(modelId, {
+      include_inactive: include_inactive === 'true'
+    });
     const configsWithPrice = await enrichConfigsWithPrices(configs);
 
     res.json({ success: true, data: configsWithPrice });
