@@ -51,7 +51,7 @@
             {{ formatQuantity(row.quantity) }}
           </template>
         </el-table-column>
-        <el-table-column prop="final_price" label="最终价格" width="150">
+        <el-table-column prop="final_price" label="最终成本价" width="150">
           <template #default="{ row }">
             {{ formatAmount(row.final_price, row.currency) }}
           </template>

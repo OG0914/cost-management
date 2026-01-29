@@ -1,5 +1,13 @@
-<template>
+  <template>
   <div class="animate-fade-in">
+    <CostPageHeader title="工作台">
+       <template #actions>
+        <el-button link type="primary" @click="handleRefresh" :loading="refreshing">
+          <i class="ri-refresh-line mr-1"></i>刷新页面数据
+        </el-button>
+      </template>
+    </CostPageHeader>
+
     <!-- 问候语区域 -->
     <div class="greeting-card group">
       <!-- 装饰背景 -->
@@ -192,6 +200,7 @@ import logger from '../utils/logger'
 import QuickNavButton from '../components/dashboard/QuickNavButton.vue'
 import StatCards from '../components/dashboard/StatCards.vue'
 import ChartSection from '../components/dashboard/ChartSection.vue'
+import CostPageHeader from '../components/cost/CostPageHeader.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -205,6 +214,8 @@ const isAdmin = computed(() => authStore.user?.role === 'admin')
 
 // 最近操作记录（非管理员显示）
 const recentActivities = ref([])
+// 刷新状态
+const refreshing = ref(false)
 
 // 问候语
 const greeting = computed(() => {
@@ -430,6 +441,19 @@ const loadRecentActivities = async () => {
     }
   } catch (err) {
     logger.error('加载最近操作失败:', err)
+  }
+}
+
+// 刷新数据
+const handleRefresh = async () => {
+  refreshing.value = true
+  try {
+    await loadDashboardData()
+  } finally {
+    // 延迟一点结束loading，让用户感知到刷新
+    setTimeout(() => {
+      refreshing.value = false
+    }, 500)
   }
 }
 
