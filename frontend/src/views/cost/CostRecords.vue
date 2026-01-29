@@ -24,12 +24,42 @@
           clearable
           @input="handleSearch"
           @clear="handleClearSearch"
-          class="search-input"
+          class="search-input mr-4"
         >
           <template #prefix>
             <el-icon><Search /></el-icon>
           </template>
         </el-input>
+
+        <el-select
+          v-model="filterStatus"
+          placeholder="状态"
+          clearable
+          class="w-32 mr-4"
+          @change="handleSearch"
+        >
+          <el-option
+            v-for="item in statusOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
+
+        <el-select
+          v-model="filterSalesType"
+          placeholder="销售类型"
+          clearable
+          class="w-32"
+          @change="handleSearch"
+        >
+          <el-option
+            v-for="item in salesTypeOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
       </div>
 
       <!-- 桌面端数据表格 -->
@@ -37,13 +67,10 @@
         <el-table-column type="selection" width="55" :selectable="checkSelectable" />
         <el-table-column prop="quotation_no" label="报价单编号" width="180">
           <template #default="{ row }">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div class="quotation-no-cell">
               <span>{{ row.quotation_no }}</span>
-              <svg v-if="row.is_standard_cost" class="standard-stamp-icon" viewBox="0 0 24 24" width="20" height="20" title="标准成本">
-                <circle cx="12" cy="12" r="10" fill="none" stroke="#E6A23C" stroke-width="2"/>
-                <circle cx="12" cy="12" r="7" fill="none" stroke="#E6A23C" stroke-width="1.5"/>
-                <text x="12" y="15" text-anchor="middle" fill="#E6A23C" font-size="7" font-weight="bold">标准</text>
-              </svg>
+              <el-tag v-if="row.is_estimation" size="small" effect="plain" class="cost-type-tag">预估</el-tag>
+              <el-tag v-if="row.is_standard_cost" type="warning" size="small" effect="plain" class="cost-type-tag">标准</el-tag>
             </div>
           </template>
         </el-table-column>
@@ -52,7 +79,7 @@
             <StatusBadge type="status" :value="row.status" />
           </template>
         </el-table-column>
-        <el-table-column prop="sales_type" label="类型" width="100">
+        <el-table-column prop="sales_type" label="销售类型" width="100">
           <template #default="{ row }">
             <StatusBadge type="sales_type" :value="row.sales_type" />
           </template>
@@ -60,8 +87,8 @@
         <el-table-column prop="customer_name" label="客户名称" width="150" />
         <el-table-column prop="customer_region" label="客户地区" width="100" />
         <el-table-column prop="model_category" label="产品类别" width="100" />
-        <el-table-column prop="model_name" label="型号" width="120" />
-        <el-table-column prop="packaging_config_name" label="包装方式" width="220">
+        <el-table-column prop="model_name" label="产品型号" width="140" />
+        <el-table-column prop="packaging_config_name" label="包装方式" width="200">
           <template #default="{ row }">
             <div v-if="row.packaging_config_name">
               <div>{{ row.packaging_config_name }}</div>
@@ -72,12 +99,12 @@
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column prop="quantity" label="数量" width="130">
+        <el-table-column prop="quantity" label="订单数量" width="140">
           <template #default="{ row }">
             {{ formatQuantity(row.quantity) }}
           </template>
         </el-table-column>
-        <el-table-column prop="final_price" label="最终价格" width="120">
+        <el-table-column prop="final_price" label="最终成本价" width="140">
           <template #default="{ row }">
             {{ formatNumber(row.final_price) }} {{ row.currency }}
           </template>
@@ -106,12 +133,10 @@
         </div>
         <div v-for="row in tableData" :key="row.id" class="mobile-card" @click="viewDetail(row.id)">
           <div class="mobile-card-header">
-            <div class="mobile-card-title flex items-center">
+            <div class="mobile-card-title flex items-center gap-1">
               <span>{{ row.quotation_no }}</span>
-              <svg v-if="row.is_standard_cost" class="standard-stamp-icon ml-1" viewBox="0 0 24 24" width="16" height="16">
-                <circle cx="12" cy="12" r="10" fill="none" stroke="#E6A23C" stroke-width="2"/>
-                <text x="12" y="15" text-anchor="middle" fill="#E6A23C" font-size="7" font-weight="bold">标</text>
-              </svg>
+              <el-tag v-if="row.is_estimation" size="small" effect="plain">预估</el-tag>
+              <el-tag v-if="row.is_standard_cost" type="warning" size="small" effect="plain">标准</el-tag>
             </div>
             <StatusBadge type="status" :value="row.status" />
           </div>
@@ -171,6 +196,22 @@ const isRestrictedRole = computed(() => ['admin', 'reviewer', 'readonly'].includ
 
 // 搜索关键词
 const searchKeyword = ref('')
+const filterStatus = ref('')
+const filterSalesType = ref('')
+
+// 状态选项
+const statusOptions = [
+  { label: '草稿', value: 'draft' },
+  { label: '已提交', value: 'submitted' },
+  { label: '已审核', value: 'approved' },
+  { label: '已退回', value: 'rejected' }
+]
+
+// 销售类型选项
+const salesTypeOptions = [
+  { label: '内销', value: 'domestic' },
+  { label: '外销', value: 'export' }
+]
 
 // 表格数据（从后端获取的当前页数据）
 const tableData = ref([])
@@ -207,7 +248,9 @@ const fetchQuotations = async () => {
       params: {
         page: currentPage.value,
         pageSize: pageSize.value,
-        keyword: searchKeyword.value || undefined
+        keyword: searchKeyword.value || undefined,
+        status: filterStatus.value || undefined,
+        sales_type: filterSalesType.value || undefined
       }
     })
     if (res.success) {
@@ -241,6 +284,13 @@ const handleClearSearch = () => {
   currentPage.value = 1
   fetchQuotations()
 }
+
+// 监听筛选条件变化
+watch([filterStatus, filterSalesType], () => {
+  currentPage.value = 1
+  fetchQuotations()
+})
+
 
 // 监听分页参数变化
 watch([currentPage, pageSize], () => {
@@ -432,15 +482,19 @@ onUnmounted(() => {
   border-color: #f78989;
 }
 
-/* 标准成本盖章图标 */
-.standard-stamp-icon {
-  flex-shrink: 0;
-  opacity: 0.9;
+/* 报价单编号单元格 */
+.quotation-no-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.standard-stamp-icon:hover {
-  opacity: 1;
-  transform: scale(1.1);
-  transition: all 0.2s;
+/* 成本类型标签 */
+.cost-type-tag {
+  flex-shrink: 0;
+  font-size: 11px;
+  padding: 0 6px;
+  height: 18px;
+  line-height: 16px;
 }
 </style>

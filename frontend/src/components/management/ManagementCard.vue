@@ -161,7 +161,7 @@ const getFactoryName = (factory: string) => {
 
 .regulation-label {
   position: absolute;
-  top: 0;
+  top: 28px;
   right: 0;
   font-size: 10px;
   font-weight: 700;

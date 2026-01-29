@@ -227,6 +227,8 @@ const createQuotation = async (req, res) => {
             include_freight_in_base: req.body.include_freight_in_base !== false,
             custom_profit_tiers: customProfitTiersJson,
             vat_rate: vatRateToSave,
+            is_estimation: req.body.is_estimation || false,
+            reference_standard_cost_id: req.body.reference_standard_cost_id || null,
             status: 'draft',
             created_by: req.user.id
         });
@@ -570,13 +572,14 @@ const submitQuotation = async (req, res) => {
  */
 const getQuotationList = async (req, res) => {
     try {
-        const { status, keyword, start_date, end_date, page = 1, pageSize = 20 } = req.query;
+        const { status, sales_type, keyword, start_date, end_date, page = 1, pageSize = 20 } = req.query;
 
         const pageNum = Math.max(1, parseInt(page) || 1); // 参数校验
         const pageSizeNum = Math.min(100, Math.max(1, parseInt(pageSize) || 20));
 
         const options = {
             status,
+            sales_type,
             keyword,
             date_from: start_date,
             date_to: end_date,

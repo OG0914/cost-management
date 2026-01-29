@@ -28,13 +28,13 @@
             <StatusBadge type="status" :value="row.status" />
           </template>
         </el-table-column>
-        <el-table-column prop="sales_type" label="类型" width="90">
+        <el-table-column prop="sales_type" label="销售类型" width="90">
           <template #default="{ row }">
             <StatusBadge type="sales_type" :value="row.sales_type" />
           </template>
         </el-table-column>
         <el-table-column prop="customer_name" label="客户名称" width="150" />
-        <el-table-column prop="model_name" label="型号" width="150" />
+        <el-table-column prop="model_name" label="产品型号" width="150" />
         <el-table-column prop="config_name" label="包装方式" min-width="220">
           <template #default="{ row }">
             <div v-if="row.config_name">
@@ -46,7 +46,7 @@
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column prop="quantity" label="数量" width="120">
+        <el-table-column prop="quantity" label="订单数量" width="120">
           <template #default="{ row }">
             {{ formatQuantity(row.quantity) }}
           </template>

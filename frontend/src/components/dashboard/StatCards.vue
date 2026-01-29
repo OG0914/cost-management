@@ -24,7 +24,7 @@
           </div>
         </div>
         <div class="stat-footer">
-          <span class="truncate hidden sm:inline">含所有业务已提交记录</span>
+          <span class="truncate hidden sm:inline">含所有已提交记录</span>
         </div>
       </div>
 

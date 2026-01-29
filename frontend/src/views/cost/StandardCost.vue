@@ -72,6 +72,9 @@
         <el-select v-model="searchForm.model_category" placeholder="产品类别" clearable style="width: 150px; margin-left: 10px" @change="handleFilterChange">
           <el-option v-for="cat in modelCategories" :key="cat" :label="cat" :value="cat" />
         </el-select>
+        <el-select v-model="filterSalesType" placeholder="销售类型" clearable style="width: 150px; margin-left: 10px" @change="handleFilterChange">
+          <el-option v-for="item in salesTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
+        </el-select>
       </div>
 
       <!-- 标准成本表格 -->
@@ -84,7 +87,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="model_category" label="产品类别" width="100" />
-        <el-table-column prop="model_name" label="型号" width="150" />
+        <el-table-column prop="model_name" label="产品型号" width="150" />
         <el-table-column prop="packaging_config_name" label="包装方式" width="220">
           <template #default="{ row }">
             <div v-if="row.packaging_config_name">
@@ -96,7 +99,7 @@
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column prop="quantity" label="数量" width="100">
+        <el-table-column prop="quantity" label="订单数量" width="100">
           <template #default="{ row }">
             {{ formatQuantity(row.quantity) }}
           </template>
@@ -106,7 +109,7 @@
             <StatusBadge type="sales_type" :value="row.sales_type" />
           </template>
         </el-table-column>
-        <el-table-column label="最终价格" width="120">
+        <el-table-column label="最终成本价" width="140">
           <template #default="{ row }">
             {{ formatNumber(row.sales_type === 'domestic' ? row.domestic_price : row.export_price) }} {{ row.currency }}
           </template>
@@ -187,6 +190,13 @@ const standardCosts = ref([])
 const loading = ref(false)
 const searchForm = reactive({ model_category: '' })
 const searchKeyword = ref('')
+const filterSalesType = ref('')
+
+// 销售类型选项
+const salesTypeOptions = [
+  { label: '内销', value: 'domestic' },
+  { label: '外销', value: 'export' }
+]
 
 // 分页状态
 const { currentPage, pageSize, total } = usePagination('standard_cost')
@@ -224,7 +234,8 @@ const loadStandardCosts = async () => {
         page: currentPage.value,
         pageSize: pageSize.value,
         keyword: searchKeyword.value || undefined,
-        model_category: searchForm.model_category || undefined
+        model_category: searchForm.model_category || undefined,
+        sales_type: filterSalesType.value || undefined
       }
     })
     if (res.success) {

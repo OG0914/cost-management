@@ -33,6 +33,17 @@
           >
             <template #prefix><el-icon><Search /></el-icon></template>
           </el-input>
+          
+          <el-select 
+            v-model="filterCategory" 
+            placeholder="品名类别" 
+            clearable 
+            style="width: 120px"
+            @change="handleSearch"
+          >
+            <el-option label="原料" value="原料" />
+            <el-option label="包材" value="包材" />
+          </el-select>
         </div>
 
         <!-- 子分类筛选（仅在特定类型下显示） -->
@@ -326,7 +337,9 @@ const showToolbar = ref(true)
 const currentType = ref(null) // 'half_mask' | 'general' | null (all)
 const currentSubcategory = ref('') // 子分类筛选（如活性炭）
 const categoryStructure = reactive({ half_mask: [], general: [] })
+
 const searchKeyword = ref('')
+const filterCategory = ref('')
 const tableData = ref([])
 const loading = ref(false)
 const selectedMaterials = ref([])
@@ -483,6 +496,7 @@ const fetchMaterials = async () => {
       page: currentPage.value,
       pageSize: pageSize.value,
       keyword: searchKeyword.value || undefined,
+      category: filterCategory.value || undefined,
       material_type: currentType.value || undefined,
       subcategory: currentSubcategory.value || undefined // 只有当 currentSubcategory 不为空时才传
     }
@@ -654,6 +668,7 @@ watch(
     if (currentType.value !== newType) {
       currentType.value = newType || null
       currentSubcategory.value = '' // 切换大类时重置子分类筛选
+      filterCategory.value = '' // 切换大类时重置品名类别筛选
       fetchMaterials()
     }
   },
@@ -685,6 +700,9 @@ onUnmounted(() => { if (searchTimer.value) clearTimeout(searchTimer.value) })
 
 .search-row {
   margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .category-row {

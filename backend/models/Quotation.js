@@ -118,7 +118,8 @@ class Quotation {
       page = 1,
       pageSize = 20,
       excludeOthersDraft = false, // 审核员过滤：排除其他用户的草稿
-      currentUserId = null        // 当前用户ID（用于excludeOthersDraft判断）
+      currentUserId = null,       // 当前用户ID（用于excludeOthersDraft判断）
+      sales_type
     } = options;
 
     // 使用查询构建器构建查询
@@ -133,6 +134,10 @@ class Quotation {
     // 动态添加查询条件
     if (status) {
       builder.where('q.status', '=', status);
+    }
+
+    if (sales_type) {
+      builder.where('q.sales_type', '=', sales_type);
     }
 
     // 关键词搜索（报价单编号、客户名称、型号）
@@ -195,7 +200,8 @@ class Quotation {
         pc.boxes_per_carton,
         u1.real_name as creator_name,
         u2.real_name as reviewer_name,
-        CASE WHEN sc.id IS NOT NULL THEN true ELSE false END as is_standard_cost
+        CASE WHEN sc.id IS NOT NULL THEN true ELSE false END as is_standard_cost,
+        q.is_estimation
       `);
 
     const dataResult = await dbManager.query(dataQuery.sql, dataQuery.params);

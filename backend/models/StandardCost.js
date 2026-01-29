@@ -7,7 +7,7 @@ const dbManager = require('../db/database');
 class StandardCost {
   /** 获取所有当前版本的标准成本（支持分页和筛选） */
   static async findAllCurrent(options = {}) {
-    const { model_category, model_name, keyword, regulation_id, page = 1, pageSize = 20 } = options;
+    const { model_category, model_name, keyword, regulation_id, sales_type, page = 1, pageSize = 20 } = options;
     const params = [];
     let paramIndex = 0;
     let whereClause = 'WHERE sc.is_current = true';
@@ -31,6 +31,12 @@ class StandardCost {
       paramIndex++;
       whereClause += ` AND (m.model_name ILIKE $${paramIndex} OR pc.config_name ILIKE $${paramIndex} OR q.quotation_no ILIKE $${paramIndex})`;
       params.push(`%${keyword.trim()}%`);
+    }
+
+    if (sales_type) {
+      paramIndex++;
+      whereClause += ` AND sc.sales_type = $${paramIndex}`;
+      params.push(sales_type);
     }
 
     const baseQuery = `
@@ -127,7 +133,7 @@ class StandardCost {
         `INSERT INTO standard_costs (packaging_config_id, quotation_id, version, is_current, base_cost, overhead_price, domestic_price, export_price, quantity, currency, sales_type, set_by)
          VALUES ($1, $2, $3, true, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
         [data.packaging_config_id, data.quotation_id, newVersion, data.base_cost, data.overhead_price,
-         data.domestic_price || null, data.export_price || null, data.quantity, data.currency || 'CNY', data.sales_type, data.set_by]
+        data.domestic_price || null, data.export_price || null, data.quantity, data.currency || 'CNY', data.sales_type, data.set_by]
       );
       return insertResult.rows[0].id;
     });

@@ -860,6 +860,7 @@ const prepareData = () => ({
   shipping_method: form.shipping_method || null, port: form.port || null,
   include_freight_in_base: form.include_freight_in_base, vat_rate: form.vat_rate,
   custom_profit_tiers: prepareCustomProfitTiersForSave(), custom_fees: form.customFees,
+  is_estimation: form.is_estimation, reference_standard_cost_id: form.reference_standard_cost_id,
   items: [...form.materials, ...form.processes, ...form.packaging]
 })
 
