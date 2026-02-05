@@ -216,68 +216,22 @@
         </div>
 
         <!-- 第二部分：包装规格与参数 -->
-        <div class="bg-slate-50 rounded-xl p-5 mb-8 border border-slate-100">
-          <div class="mb-4">
-            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">包装类型</span>
-            <el-radio-group v-model="form.packaging_type" size="small">
-              <el-radio-button value="standard_box">标准彩盒</el-radio-button>
-              <el-radio-button value="no_box">无彩盒</el-radio-button>
-              <el-radio-button value="blister_direct">泡壳直出</el-radio-button>
-              <el-radio-button value="blister_bag">泡壳袋装</el-radio-button>
-            </el-radio-group>
-          </div>
-
-          <div class="flex items-center space-x-4">
-            <!-- 包装层级可视化 -->
-            <div class="flex-1 grid grid-cols-3 gap-4">
-              <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-100 text-center">
-                <div class="text-xs text-slate-500 mb-1">第一层数量</div>
-                <div class="text-lg font-semibold text-slate-800">
-                   <span v-if="form.packaging_type === 'standard_box' || !form.packaging_type">{{ form.layer1_qty || '-' }} pcs/盒</span>
-                   <span v-else>{{ form.layer1_qty || '-' }}</span>
-                </div>
-              </div>
-              <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-100 text-center">
-                <div class="text-xs text-slate-500 mb-1">第二层数量</div>
-                <div class="text-lg font-semibold text-slate-800">
-                   <span v-if="form.packaging_type === 'standard_box' || !form.packaging_type">{{ form.layer2_qty || '-' }} 盒/箱</span>
-                   <span v-else>{{ form.layer2_qty || '-' }}</span>
-                </div>
-              </div>
-              <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-100 text-center relative overflow-hidden">
-                <div class="absolute top-0 right-0 p-1">
-                  <div class="w-2 h-2 rounded-full bg-blue-500"></div>
-                </div>
-                <div class="text-xs text-slate-500 mb-1">每箱总数</div>
-                <div class="text-xl font-bold text-blue-600">
-                   {{ calculateTotalFromConfig(form) }} <span class="text-sm font-normal text-slate-400">pcs</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="mt-3 text-xs text-slate-400 flex items-center">
-            <el-icon class="mr-1"><InfoFilled /></el-icon>
-            包装层级数量通常由“工序管理”模块定义，此处仅作展示。
+        <div class="mb-6">
+          <div class="text-sm font-bold text-slate-700 mb-3 pl-1 border-l-4 border-blue-500">包装规格定义</div>
+          <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+             <PackagingSpecConfigurator v-model="form" />
           </div>
         </div>
 
-        <!-- 第三部分：包材明细 -->
+        <!-- 第三部分：包材清单列表 -->
         <div class="mb-3 flex justify-between items-end">
-          <div>
-            <div class="text-sm font-bold text-slate-900">包材明细</div>
-            <div class="text-xs text-slate-500 mt-1">添加并管理该配置所需的所有包装材料</div>
-          </div>
-          <div class="flex gap-2">
-            <el-button type="success" plain size="small" @click="openMaterialCopyDialog">
-              <el-icon class="mr-1"><CopyDocument /></el-icon>一键复制
-            </el-button>
-            <el-button type="primary" plain size="small" @click="addMaterial">
-              <el-icon class="mr-1"><Plus /></el-icon>添加原料
-            </el-button>
-          </div>
+          <div class="text-sm font-bold text-slate-700 pl-1 border-l-4 border-blue-500">包材清单</div>
+          <el-button type="primary" plain size="small" @click="addMaterial">
+            <el-icon class="mr-1"><Plus /></el-icon> 添加包材
+          </el-button>
         </div>
 
-        <div class="border border-slate-200 rounded-lg overflow-hidden mb-6">
+        <div class="scrollable-table-container border border-slate-200 rounded-lg overflow-hidden mb-6">
           <el-table 
             :data="form.materials" 
             style="width: 100%" 
@@ -306,27 +260,27 @@
               </template>
             </el-table-column>
             
-            <el-table-column label="基本用量" width="120">
+            <el-table-column label="基本用量" width="90">
               <template #default="{ row }">
                 <el-input-number 
                   v-model="row.basic_usage" 
                   :min="0" 
-                  :precision="4" 
-                  :step="0.01" 
+                  :precision="0" 
+                  :step="1" 
                   :controls="false"
                   size="small"
                   class="w-full"
-                  placeholder="0.00"
+                  placeholder="0"
                 />
               </template>
             </el-table-column>
             
-            <el-table-column label="单价 (¥)" width="120">
+            <el-table-column label="单价" width="100">
               <template #default="{ row }">
                 <el-input-number 
                   v-model="row.unit_price" 
                   :min="0" 
-                  :precision="4" 
+                  :precision="2" 
                   :step="0.01" 
                   :controls="false"
                   size="small"
@@ -336,16 +290,16 @@
               </template>
             </el-table-column>
             
-            <el-table-column label="小计" width="120" align="right">
+            <el-table-column label="小计" width="90" align="left">
               <template #default="{ row }">
-                <span class="font-medium text-slate-700">¥{{ formatNumber(row.basic_usage && row.basic_usage !== 0 ? ((row.unit_price || 0) / row.basic_usage) : 0) }}</span>
+                <span class="font-medium text-blue-600">¥{{ (row.basic_usage && row.basic_usage !== 0 ? ((row.unit_price || 0) / row.basic_usage) : 0).toFixed(2) }}</span>
               </template>
             </el-table-column>
             
-            <el-table-column width="130">
+            <el-table-column width="100">
               <template #header>
                 <div class="flex items-center gap-1">
-                  <span>材积 (m³)</span>
+                  <span>材积</span>
                   <el-tooltip content="外箱材积用于计算CBM和运费，请务必填写" placement="top">
                     <el-icon class="text-blue-400 cursor-help"><InfoFilled /></el-icon>
                   </el-tooltip>
@@ -355,8 +309,8 @@
                 <el-input-number 
                   v-model="row.carton_volume" 
                   :min="0" 
-                  :precision="4" 
-                  :step="0.001" 
+                  :precision="2" 
+                  :step="0.01" 
                   :controls="false"
                   size="small"
                   class="w-full"
@@ -368,10 +322,9 @@
             <el-table-column width="60" align="center">
               <template #default="{ $index }">
                 <el-button 
-                  link 
-                  size="small" 
+                  text
+                  class="delete-icon-btn"
                   @click="removeMaterial($index)"
-                  class="text-slate-400 hover:text-red-500 transition-colors"
                 >
                   <el-icon><Delete /></el-icon>
                 </el-button>
@@ -478,6 +431,7 @@ import StatusSwitch from '../../components/common/StatusSwitch.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import ManagementCard from '@/components/management/ManagementCard.vue';
 import ManagementDetailDialog from '@/components/management/ManagementDetailDialog.vue';
+import PackagingSpecConfigurator from '@/components/packaging/PackagingSpecConfigurator.vue' // Import Shared Component;
 
 const getFactoryName = (factory) => {
   const map = {
@@ -1150,6 +1104,30 @@ onMounted(() => {
 .readonly-packaging-info { color: #409EFF; font-weight: 500; font-size: 14px; }
 .total-per-carton { font-size: 18px; font-weight: bold; color: #409EFF; }
 
+/* Allow text wrapping in material name autocomplete */
+.scrollable-table-container :deep(.el-autocomplete) {
+  width: 100%;
+}
+.scrollable-table-container :deep(.el-autocomplete .el-input__wrapper) {
+  height: auto;
+  min-height: 32px;
+  padding: 4px 11px;
+}
+.scrollable-table-container :deep(.el-autocomplete .el-input__inner) {
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.4;
+  height: auto;
+}
+/* Auto row height for table */
+.scrollable-table-container :deep(.el-table__row) {
+  height: auto;
+}
+.scrollable-table-container :deep(.el-table__cell) {
+  padding: 8px 4px;
+  vertical-align: middle;
+}
+
 /* 卡片视图样式 */
 .config-cards {
   display: grid;
@@ -1191,9 +1169,31 @@ onMounted(() => {
 /* 工具栏折叠 */
 .toolbar-wrapper { display: flex; align-items: center; gap: 12px; }
 .toolbar-toggle { flex-shrink: 0; }
+/* Toolbar Fade Animation */
 .toolbar-fade-enter-active, .toolbar-fade-leave-active { transition: opacity 0.3s, transform 0.3s; }
 .toolbar-fade-enter-from, .toolbar-fade-leave-to { opacity: 0; transform: translateX(10px); }
 
+/* Scrollable Table Container */
+.scrollable-table-container {
+  max-height: 480px; 
+  overflow-y: auto;
+  border: 1px solid #ebeef5;
+  border-bottom: none;
+}
+.scrollable-table-container::-webkit-scrollbar { width: 6px; }
+.scrollable-table-container::-webkit-scrollbar-track { background: #f1f2f5; }
+.scrollable-table-container::-webkit-scrollbar-thumb { background: #cdd0d6; border-radius: 3px; }
+
+.delete-icon-btn {
+  padding: 4px;
+  height: auto;
+  color: #909399;
+  transition: color 0.2s;
+}
+.delete-icon-btn:hover {
+  color: #f56c6c;
+  background-color: transparent !important;
+}
 
 /* No Border Input for the Grid */
 :deep(.no-border-input .el-input__wrapper) {
@@ -1208,5 +1208,3 @@ onMounted(() => {
   color: #334155;
 }
 </style>
-
-

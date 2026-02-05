@@ -188,9 +188,15 @@ exports.updatePackagingConfig = async (req, res) => {
     const l2 = layer2_qty !== undefined ? layer2_qty : bags_per_box;
     const l3 = layer3_qty !== undefined ? layer3_qty : boxes_per_carton;
 
+    // 处理 is_active 转换为布尔值 (前端可能传 1/0)
+    let activeState = true;
+    if (is_active !== undefined) {
+      activeState = (is_active === 1 || is_active === '1' || is_active === true || is_active === 'true');
+    }
+
     await PackagingConfig.update(id, {
       config_name, packaging_type, layer1_qty: l1, layer2_qty: l2, layer3_qty: l3,
-      is_active: is_active !== undefined ? is_active : true, factory
+      is_active: activeState, factory
     });
 
     if (processes) {
@@ -210,7 +216,12 @@ exports.updatePackagingConfig = async (req, res) => {
       return res.status(400).json({ success: false, message: error.message });
     }
 
-    res.status(500).json({ success: false, message: '更新包装配置失败' });
+    // 处理名称重复错误
+    if (error.code === '23505' || (error.message && error.message.includes('duplicate key'))) {
+      return res.status(400).json({ success: false, message: '该型号下已存在同名的配置，请修改配置名称' });
+    }
+
+    res.status(500).json({ success: false, message: error.message || '更新包装配置失败' });
   }
 };
 

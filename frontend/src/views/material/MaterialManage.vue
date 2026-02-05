@@ -148,141 +148,15 @@
       <CommonPagination v-model:current-page="currentPage" v-model:page-size="pageSize" :total="total" />
     </el-card>
 
-    <!-- 新增/编辑对话框 -->
-    <el-dialog
+    <!-- 新增/编辑对话框 (全新升级) -->
+    <MaterialDetailDialog
       v-model="dialogVisible"
-      :title="dialogTitle"
-      width="650px"
-      append-to-body
-      :close-on-click-modal="false"
-      class="minimal-dialog-auto"
-    >
-      <el-form ref="formRef" :model="form" :rules="formRules" label-width="100px" class="material-form">
-        <el-row :gutter="20">
-          <!-- 1. 品号 -->
-          <el-col :span="24">
-            <el-form-item label="品号" prop="item_no">
-              <el-input v-model="form.item_no" />
-            </el-form-item>
-          </el-col>
+      ref="materialDialogRef"
+      :initial-data="currentMaterial"
+      :model-list="modelList"
+      @saved="handleSaved"
+    />
 
-          <!-- 2. 原料名称 -->
-          <el-col :span="24">
-             <el-form-item label="原料名称" prop="name">
-                <el-input v-model="form.name" />
-             </el-form-item>
-          </el-col>
-
-          <!-- 3. 原料类型 -->
-          <el-col :span="24">
-            <el-form-item label="原料类型" prop="material_type">
-              <el-select v-model="form.material_type" @change="handleTypeChange" style="width: 100%">
-                <el-option label="半面罩类" value="half_mask" />
-                <el-option label="口罩类(通用)" value="general" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          
-          <!-- 4. 品名类别 (通用) -->
-          <el-col :span="24" v-if="form.material_type !== 'half_mask'">
-            <el-form-item label="品名类别">
-               <el-select v-model="form.category" style="width: 100%" clearable>
-                 <el-option label="原料" value="原料" />
-                 <el-option label="包材" value="包材" />
-               </el-select>
-            </el-form-item>
-          </el-col>
-
-          <!-- 5. 细分类 -->
-          <el-col :span="24">
-            <el-form-item label="细分类" prop="subcategory">
-              <el-input v-model="form.subcategory" placeholder="如：活性炭、配件" />
-            </el-form-item>
-          </el-col>
-
-          <!-- 6. 厂商 (通用) -->
-          <el-col :span="24" v-if="form.material_type !== 'half_mask'">
-             <el-form-item label="厂商">
-               <el-input v-model="form.manufacturer" />
-             </el-form-item>
-          </el-col>
-
-          <!-- 7,8,9. 单价、单位、币别 (保持一行) -->
-           <el-col :span="8">
-             <el-form-item label="单价" prop="price">
-                <el-input-number v-model="form.price" :min="0" :controls="false" style="width: 100%" />
-             </el-form-item>
-          </el-col>
-           <el-col :span="8">
-             <el-form-item label="单位" prop="unit">
-                <el-input v-model="form.unit" />
-             </el-form-item>
-          </el-col>
-           <el-col :span="8">
-             <el-form-item label="币别" prop="currency">
-                <el-select v-model="form.currency" style="width: 100%">
-                  <el-option label="CNY" value="CNY" />
-                  <el-option label="USD" value="USD" />
-                </el-select>
-             </el-form-item>
-          </el-col>
-
-          <!-- 10. 备注 (通用) / 半面罩其他信息 -->
-          <template v-if="form.material_type === 'half_mask'">
-             <!-- 绑定型号 -->
-             <el-col :span="24">
-               <el-form-item label="绑定型号">
-                 <el-select v-model="form.product_desc" filterable clearable placeholder="选择要绑定的产品型号" style="width: 100%">
-                   <el-option v-for="model in modelList" :key="model.id" :label="model.model_name" :value="model.model_name" />
-                 </el-select>
-               </el-form-item>
-             </el-col>
-             <!-- 包装方式 -->
-             <el-col :span="24">
-               <el-form-item label="包装方式">
-                 <el-input v-model="form.packaging_mode" />
-               </el-form-item>
-             </el-col>
-             <!-- 供应商 -->
-             <el-col :span="12">
-               <el-form-item label="供应商">
-                 <el-input v-model="form.supplier" />
-               </el-form-item>
-             </el-col>
-             <!-- 用量 -->
-             <el-col :span="12">
-               <el-form-item label="用量">
-                 <el-input-number v-model="form.usage_amount" :controls="false" style="width: 100%" />
-               </el-form-item>
-             </el-col>
-             <!-- 生产周期 -->
-             <el-col :span="12">
-               <el-form-item label="生产周期">
-                 <el-input v-model="form.production_cycle" placeholder="如15天" />
-               </el-form-item>
-             </el-col>
-             <!-- MOQ -->
-             <el-col :span="12">
-               <el-form-item label="MOQ">
-                 <el-input-number v-model="form.moq" :controls="false" style="width: 100%" />
-               </el-form-item>
-             </el-col>
-          </template>
-
-          <template v-else>
-             <el-col :span="24">
-               <el-form-item label="备注">
-                 <el-input v-model="form.remark" type="textarea" :rows="2" />
-               </el-form-item>
-             </el-col>
-          </template>
-        </el-row>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="formLoading">保存</el-button>
-      </template>
-    </el-dialog>
 
     <!-- 导入重复确认弹窗 -->
     <el-dialog
@@ -314,7 +188,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, watch, onUnmounted } from 'vue'
+import { ref, reactive, onMounted, computed, watch, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Delete, Search, EditPen, CaretLeft, CaretRight } from '@element-plus/icons-vue'
@@ -324,7 +198,9 @@ import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import MaterialDetailDialog from '@/components/material/MaterialDetailDialog.vue'
 import { usePagination } from '@/composables/usePagination'
+
 import { useAuthStore } from '@/store/auth'
 import dayjs from 'dayjs'
 
@@ -344,12 +220,11 @@ const tableData = ref([])
 const loading = ref(false)
 const selectedMaterials = ref([])
 const dialogVisible = ref(false)
-const dialogTitle = ref('新增原料')
-const isEdit = ref(false)
-const formLoading = ref(false)
-const formRef = ref(null)
-const searchTimer = ref(null)
+// 弹窗状态
+const currentMaterial = ref(null) // 编辑时的当前数据
+const materialDialogRef = ref(null)
 const modelList = ref([]) // 型号列表（用于绑定型号下拉）
+const searchTimer = ref(null)
 
 // 导入确认状态
 const importConfirmVisible = ref(false)
@@ -375,38 +250,6 @@ const currentTitle = computed(() => {
   return '原料管理 - 全部'
 })
 
-// 表单对象
-const form = reactive({
-  id: null,
-  material_type: 'general',
-  subcategory: '',
-  item_no: '',
-  name: '',
-  unit: '',
-  price: 0,
-  currency: 'CNY',
-  // half_mask 字段
-  supplier: '',
-  packaging_mode: '',
-  product_desc: '', // 绑定型号（存储型号名称）
-  usage_amount: null,
-  moq: null,
-  production_cycle: '', // 生产周期（如15天）
-  // general 字段
-  manufacturer: '',
-  category: '',
-  remark: ''
-})
-
-const formRules = {
-  material_type: [{ required: true, message: '请选择类型', trigger: 'change' }],
-  item_no: [{ required: true, message: '请输入品号', trigger: 'blur' }],
-  name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
-  unit: [{ required: true, message: '请输入单位', trigger: 'blur' }],
-  price: [{ required: true, message: '请输入单价', trigger: 'blur' }],
-  category: [{ required: true, message: '请选择品名类别', trigger: 'change' }],
-  subcategory: [{ required: true, message: '请输入细分类', trigger: 'blur' }]
-}
 
 // 获取分类结构
 const fetchCategoryStructure = async () => {
@@ -586,38 +429,23 @@ const handleTypeChange = () => { }
 
 // 新增/编辑
 const handleAdd = () => {
-  isEdit.value = false
-  dialogTitle.value = '新增原料'
-  // 重置表单，保留当前选中的分类
-  Object.keys(form).forEach(k => form[k] = (k === 'price' || k === 'usage_amount' || k === 'moq') ? null : '')
-  form.price = 0
-  form.currency = 'CNY'
-  form.material_type = currentType.value || 'general'
-  form.subcategory = currentSubcategory.value || ''
+  currentMaterial.value = null
   dialogVisible.value = true
+  nextTick(() => {
+    materialDialogRef.value?.setMaterialType(currentType.value || 'general')
+  })
 }
 
 const handleEdit = (row) => {
-  isEdit.value = true
-  dialogTitle.value = '编辑原料'
-  Object.assign(form, row)
-  form.price = parseFloat(row.price)
+  currentMaterial.value = { ...row }
   dialogVisible.value = true
 }
 
-const handleSubmit = async () => {
-  try { await formRef.value.validate() } catch (e) { return }
-  formLoading.value = true
-  try {
-    const api = isEdit.value ? request.put(`/materials/${form.id}`, form) : request.post('/materials', form)
-    await api
-    ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
-    dialogVisible.value = false
-    fetchMaterials()
-    fetchCategoryStructure()
-  } catch (e) { } 
-  finally { formLoading.value = false }
+const handleSaved = () => {
+  fetchMaterials()
+  fetchCategoryStructure()
 }
+
 
 const handleDelete = async (row) => {
   try {

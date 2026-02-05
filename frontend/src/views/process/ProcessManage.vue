@@ -167,210 +167,13 @@
       <CommonPagination v-model:current-page="currentPage" v-model:page-size="pageSize" :total="filteredByViewMode.length" />
     </el-card>
 
-    <!-- 创建/编辑包装配置对话框 -->
-    <el-dialog
+    <!-- 创建/编辑包装配置对话框 (重构为组件) -->
+    <ProcessConfigDialog
       v-model="dialogVisible"
-      :title="isEdit ? '编辑工序配置' : '新增工序配置'"
-      width="850px"
-      top="5vh"
-      class="minimal-dialog"
-      append-to-body
-      :close-on-click-modal="false"
-    >
-      <el-form :model="form" ref="formRef" label-position="top" class="px-2">
-        
-        <!-- 第一部分：基础信息 -->
-        <div class="grid grid-cols-3 gap-6 mb-6">
-          <el-form-item label="产品型号" required class="mb-0">
-            <el-select 
-              v-model="form.model_id" 
-              placeholder="选择型号" 
-              :disabled="isEdit"
-              filterable
-              class="w-full"
-            >
-              <el-option
-                v-for="model in models"
-                :key="model.id"
-                :label="`${model.model_name} (${model.regulation_name})`"
-                :value="model.id"
-              />
-            </el-select>
-          </el-form-item>
-          
-          <el-form-item label="配置名称" required class="mb-0">
-            <el-input v-model="form.config_name" placeholder="例如：C5标准包装" />
-          </el-form-item>
-
-          <el-form-item label="生产工厂" required class="mb-0">
-            <el-select v-model="form.factory" placeholder="选择工厂" class="w-full">
-              <el-option label="东莞迅安" value="dongguan_xunan" />
-              <el-option label="湖北知腾" value="hubei_zhiteng" />
-            </el-select>
-          </el-form-item>
-        </div>
-
-        <!-- 第二部分：包装规格定义 -->
-        <div class="bg-slate-50 rounded-xl p-5 mb-8 border border-slate-100">
-          <div class="mb-4">
-            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">包装类型</span>
-            <el-radio-group v-model="form.packaging_type" size="small" @change="onPackagingTypeChange">
-              <el-radio-button value="standard_box">标准彩盒</el-radio-button>
-              <el-radio-button value="no_box">无彩盒</el-radio-button>
-              <el-radio-button value="blister_direct">泡壳直出</el-radio-button>
-              <el-radio-button value="blister_bag">泡壳袋装</el-radio-button>
-            </el-radio-group>
-          </div>
-
-          <div class="flex items-center space-x-4">
-            <!-- 动态层级输入 -->
-            <div class="flex-1 grid grid-cols-3 gap-4" v-if="currentPackagingTypeConfig">
-              <!-- Layer 1 -->
-              <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-100 text-center transition-shadow hover:shadow-md focus-within:ring-2 focus-within:ring-blue-100">
-                <div class="text-xs text-slate-500 mb-2">{{ currentPackagingTypeConfig.fieldLabels[0] }}</div>
-                <el-input-number 
-                  v-model="form.layer1_qty" 
-                  :min="1" 
-                  :controls="false" 
-                  size="large"
-                  class="w-full text-center no-border-input"
-                  placeholder="0"
-                />
-              </div>
-
-              <!-- Layer 2 -->
-              <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-100 text-center transition-shadow hover:shadow-md focus-within:ring-2 focus-within:ring-blue-100" v-if="currentPackagingTypeConfig.layers >= 2">
-                <div class="text-xs text-slate-500 mb-2">{{ currentPackagingTypeConfig.fieldLabels[1] }}</div>
-                <el-input-number 
-                  v-model="form.layer2_qty" 
-                  :min="1" 
-                  :controls="false" 
-                  size="large"
-                  class="w-full text-center no-border-input"
-                  placeholder="0"
-                />
-              </div>
-              
-              <!-- Layer 3 (if needed) -->
-              <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-100 text-center transition-shadow hover:shadow-md focus-within:ring-2 focus-within:ring-blue-100" v-if="currentPackagingTypeConfig.layers >= 3">
-                <div class="text-xs text-slate-500 mb-2">{{ currentPackagingTypeConfig.fieldLabels[2] }}</div>
-                 <el-input-number 
-                  v-model="form.layer3_qty" 
-                  :min="1" 
-                  :controls="false" 
-                  size="large"
-                  class="w-full text-center no-border-input"
-                  placeholder="0"
-                />
-              </div>
-
-              <!-- Total Result -->
-              <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-100 text-center relative overflow-hidden flex flex-col justify-center">
-                <div class="absolute top-0 right-0 p-1">
-                  <div class="w-2 h-2 rounded-full bg-green-500"></div>
-                </div>
-                <div class="text-xs text-slate-500 mb-1">每箱总数 (自动计算)</div>
-                <div class="text-2xl font-bold text-green-600">
-                   {{ computedTotalPerCarton }} <span class="text-sm font-normal text-slate-400">pcs</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 第三部分：工序明细 -->
-        <div class="mb-3 flex justify-between items-end">
-          <div>
-            <div class="text-lg font-bold text-slate-900">工序列表</div>
-            <div class="text-xs text-slate-500 mt-1">配置生产所需的标准工序及单价</div>
-          </div>
-          <div class="flex gap-2">
-            <el-button type="success" plain size="small" @click="openProcessCopyDialog">
-              <el-icon class="mr-1"><CopyDocument /></el-icon>一键复制
-            </el-button>
-            <el-button type="primary" plain size="small" @click="addProcess">
-              <el-icon class="mr-1"><Plus /></el-icon> 添加工序
-            </el-button>
-          </div>
-        </div>
-
-        <div class="border border-slate-200 rounded-lg overflow-hidden mb-6">
-          <el-table 
-            :data="form.processes" 
-            style="width: 100%" 
-            :header-cell-style="{ background: '#f8fafc', color: '#64748b', fontWeight: '500', fontSize: '12px' }"
-          >
-            <el-table-column label="序号" width="60" type="index" align="center" />
-            
-            <el-table-column label="工序名称" min-width="200">
-              <template #default="{ row }">
-                <el-input 
-                  v-model="row.process_name" 
-                  placeholder="请输入工序名称" 
-                  size="small"
-                  class="w-full" 
-                />
-              </template>
-            </el-table-column>
-            
-            <el-table-column label="工序单价 (¥)" width="150">
-              <template #default="{ row }">
-                <el-input-number 
-                  v-model="row.unit_price" 
-                  :min="0" 
-                  :precision="4" 
-                  :step="0.01" 
-                  :controls="false"
-                  size="small"
-                  class="w-full"
-                  placeholder="0.00"
-                />
-              </template>
-            </el-table-column>
-            
-            <el-table-column width="60" align="center">
-              <template #default="{ $index }">
-                <el-button 
-                  link 
-                  size="small" 
-                  @click="removeProcess($index)"
-                  class="text-slate-400 hover:text-red-500 transition-colors"
-                >
-                  <el-icon><Delete /></el-icon>
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </div>
-
-        <div class="flex justify-end items-center mb-6 text-sm bg-slate-50 p-3 rounded-lg border border-slate-100">
-           <div class="text-slate-500 mr-6">工序小计: ¥{{ formatNumber(formProcessSubtotal) }}</div>
-           <div class="font-bold text-slate-700">
-             工序总价 (含系数{{ configStore.getProcessCoefficient() }}): 
-             <span class="text-blue-600 text-lg ml-1">¥{{ formatNumber(formTotalProcessPrice) }}</span>
-           </div>
-        </div>
-
-        <div v-if="isEdit" class="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-100">
-           <span class="text-sm text-slate-600 font-medium">配置状态</span>
-           <StatusSwitch
-            v-model="form.is_active"
-            :active-value="1"
-            :inactive-value="0"
-            active-text="启用中"
-            inactive-text="已停用"
-          />
-        </div>
-
-      </el-form>
-      
-      <template #footer>
-        <div class="flex justify-end pt-4 border-t border-slate-100">
-          <el-button @click="dialogVisible = false" size="large" class="w-32">取消</el-button>
-          <el-button type="primary" @click="submitForm" :loading="loading" size="large" class="w-32">保存配置</el-button>
-        </div>
-      </template>
-    </el-dialog>
+      :initial-data="editingConfig"
+      :models="models"
+      @saved="loadPackagingConfigs"
+    />
 
     <!-- 查看工序对话框 (已组件化) -->
     <ManagementDetailDialog
@@ -379,49 +182,6 @@
       :items="currentProcesses"
       type="process"
     />
-
-    <!-- 一键复制工序弹窗 -->
-    <el-dialog v-model="showProcessCopyDialog" title="从其他配置复制工序" width="550px" class="minimal-dialog-auto" append-to-body :close-on-click-modal="false">
-      <el-form label-width="100px">
-        <el-form-item label="源配置" required>
-          <el-select v-model="copySourceConfigId" filterable placeholder="选择要复制的源配置" style="width: 100%" @change="handleCopySourceChange" :loading="copyConfigsLoading">
-            <template #empty>
-              <div style="padding: 10px; text-align: center; color: #909399;">{{ copyConfigsLoading ? '加载中...' : '暂无已配置工序的配置' }}</div>
-            </template>
-            <el-option v-for="c in configsWithProcesses" :key="c.id" :label="`${c.model_name} - ${c.config_name}`" :value="c.id">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span>{{ c.model_name }} - {{ c.config_name }}</span>
-                <el-tag size="small" type="success">{{ c.process_count }}项</el-tag>
-              </div>
-            </el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="工序预览" v-if="copySourcePreview.length > 0">
-          <div class="source-preview">
-            <el-tag v-for="item in copySourcePreview.slice(0, 5)" :key="item.id" size="small" style="margin: 2px">
-              {{ item.process_name }}
-            </el-tag>
-            <el-tag v-if="copySourcePreview.length > 5" size="small" type="info">+{{ copySourcePreview.length - 5 }}项</el-tag>
-          </div>
-        </el-form-item>
-        <el-form-item label="复制模式">
-          <el-radio-group v-model="copyMode">
-            <el-radio value="replace">
-              <span>替换模式</span>
-              <el-text type="info" size="small" style="margin-left: 4px">清空现有工序后复制</el-text>
-            </el-radio>
-            <el-radio value="merge">
-              <span>合并模式</span>
-              <el-text type="info" size="small" style="margin-left: 4px">保留现有，追加新工序</el-text>
-            </el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showProcessCopyDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleCopyProcesses" :loading="copyLoading" :disabled="!copySourceConfigId">确认复制</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -444,13 +204,12 @@ import StatusSwitch from '@/components/common/StatusSwitch.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import ManagementCard from '@/components/management/ManagementCard.vue'
 import ManagementDetailDialog from '@/components/management/ManagementDetailDialog.vue'
+import ProcessConfigDialog from '@/components/process/ProcessConfigDialog.vue'
 import { 
   getPackagingTypeOptions, 
   getPackagingTypeName, 
-  getPackagingTypeByKey,
   formatPackagingMethodFromConfig,
-  calculateTotalFromConfig,
-  calculateTotalPerCarton
+  calculateTotalFromConfig
 } from '../../config/packagingTypes'
 import { usePagination } from '@/composables/usePagination'
 
@@ -528,77 +287,11 @@ const paginatedConfigs = computed(() => {
 // 对话框
 const dialogVisible = ref(false)
 const processDialogVisible = ref(false)
-const isEdit = ref(false)
-const formRef = ref(null)
-
-// 表单
-const form = reactive({
-  id: null,
-  model_id: null,
-  config_name: '',
-  packaging_type: 'standard_box',
-  layer1_qty: null,
-  layer2_qty: null,
-  layer3_qty: null,
-  factory: 'dongguan_xunan',
-  is_active: 1,
-  processes: []
-})
-
-// 一键复制工序相关
-const showProcessCopyDialog = ref(false)
-const copySourceConfigId = ref(null)
-const copyMode = ref('replace')
-const copyLoading = ref(false)
-const copyConfigsLoading = ref(false)
-const copySourcePreview = ref([])
-const allConfigsForCopy = ref([])
-
-// 过滤有工序的配置（排除当前配置）
-const configsWithProcesses = computed(() => {
-  return allConfigsForCopy.value.filter(c => c.id !== form.id && c.process_count > 0)
-})
-
-// 当前包装类型配置
-const currentPackagingTypeConfig = computed(() => {
-  return getPackagingTypeByKey(form.packaging_type)
-})
-
-// 计算每箱总数
-const computedTotalPerCarton = computed(() => {
-  return calculateTotalPerCarton(
-    form.packaging_type,
-    form.layer1_qty,
-    form.layer2_qty,
-    form.layer3_qty
-  )
-})
+const editingConfig = ref(null) // Pass to child component
 
 // 当前查看的配置
 const currentConfig = ref(null)
 const currentProcesses = ref([])
-
-// 工序小计（不含系数）
-const processSubtotal = computed(() => {
-  return currentProcesses.value.reduce((total, p) => total + (parseFloat(p.unit_price) || 0), 0)
-})
-
-// 工序总价（含系数）
-const totalProcessPrice = computed(() => {
-  const coefficient = configStore.getProcessCoefficient()
-  return processSubtotal.value * coefficient
-})
-
-// 表单工序小计（用于编辑/新增对话框）
-const formProcessSubtotal = computed(() => {
-  return form.processes.reduce((total, p) => total + (parseFloat(p.unit_price) || 0), 0)
-})
-
-// 表单工序总价（用于编辑/新增对话框）
-const formTotalProcessPrice = computed(() => {
-  const coefficient = configStore.getProcessCoefficient()
-  return formProcessSubtotal.value * coefficient
-})
 
 // 包装类型标签颜色
 const getPackagingTypeTagType = (type) => {
@@ -609,13 +302,6 @@ const getPackagingTypeTagType = (type) => {
     blister_bag: 'info'
   }
   return typeMap[type] || 'info'
-}
-
-// 包装类型变更时重置层级数量
-const onPackagingTypeChange = () => {
-  form.layer1_qty = null
-  form.layer2_qty = null
-  form.layer3_qty = null
 }
 
 // 加载型号列表
@@ -639,90 +325,6 @@ const loadCategories = async () => {
     }
   } catch (error) {
     // 错误已在拦截器处理
-  }
-}
-
-// 加载所有配置及其工序数量（用于一键复制，使用优化后的接口）
-const loadConfigsForCopy = async () => {
-  copyConfigsLoading.value = true
-  try {
-    const response = await request.get('/processes/packaging-configs/with-process-count')
-    if (response.success) {
-      allConfigsForCopy.value = response.data
-    }
-  } catch (error) {
-    logger.error('加载配置列表失败:', error)
-  } finally {
-    copyConfigsLoading.value = false
-  }
-}
-
-// 打开一键复制弹窗
-const openProcessCopyDialog = async () => {
-  copySourceConfigId.value = null
-  copySourcePreview.value = []
-  copyMode.value = 'replace'
-  showProcessCopyDialog.value = true
-  await loadConfigsForCopy()
-}
-
-// 选择源配置时加载预览
-const handleCopySourceChange = async (configId) => {
-  if (!configId) {
-    copySourcePreview.value = []
-    return
-  }
-  try {
-    const response = await request.get(`/processes/packaging-configs/${configId}`)
-    if (response.success) {
-      copySourcePreview.value = response.data.processes || []
-    }
-  } catch (error) {
-    copySourcePreview.value = []
-  }
-}
-
-// 辅助函数：映射工序数据
-const mapProcessData = (p, index) => ({
-  process_name: p.process_name,
-  unit_price: p.unit_price,
-  sort_order: index
-})
-
-// 执行工序复制
-const handleCopyProcesses = () => {
-  if (!copySourceConfigId.value || copySourcePreview.value.length === 0) {
-    ElMessage.warning('请选择有工序的源配置')
-    return
-  }
-  
-  copyLoading.value = true
-  try {
-    let copiedCount = 0
-    
-    if (copyMode.value === 'replace') {
-      form.processes = copySourcePreview.value.map(mapProcessData)
-      copiedCount = form.processes.length
-    } else {
-      // 合并模式：追加新工序（跳过重复）
-      const existingNames = new Set(form.processes.map(p => p.process_name))
-      const newProcesses = copySourcePreview.value
-        .filter(p => !existingNames.has(p.process_name))
-        .map((p, index) => mapProcessData(p, form.processes.length + index))
-      
-      form.processes.push(...newProcesses)
-      copiedCount = newProcesses.length
-      
-      const skipped = copySourcePreview.value.length - copiedCount
-      if (skipped > 0) {
-        ElMessage.info(`已跳过 ${skipped} 个重复工序`)
-      }
-    }
-    
-    showProcessCopyDialog.value = false
-    ElMessage.success(`成功复制 ${copiedCount} 项工序`)
-  } finally {
-    copyLoading.value = false
   }
 }
 
@@ -764,39 +366,23 @@ const loadPackagingConfigs = async () => {
 
 // 显示创建对话框
 const showCreateDialog = () => {
-  isEdit.value = false
-  resetForm()
+  editingConfig.value = null
   dialogVisible.value = true
 }
 
 // 编辑配置
 const editConfig = async (row) => {
-  isEdit.value = true
-  
   try {
     const response = await request.get(`/processes/packaging-configs/${row.id}`)
     
     if (response.success) {
-      const data = response.data
-      form.id = data.id
-      form.model_id = data.model_id
-      form.config_name = data.config_name
-      form.packaging_type = data.packaging_type || 'standard_box'
-      form.layer1_qty = data.layer1_qty ?? data.pc_per_bag
-      form.layer2_qty = data.layer2_qty ?? data.bags_per_box
-      form.layer3_qty = data.layer3_qty ?? data.boxes_per_carton
-      form.factory = data.factory || 'dongguan_xunan'
-      form.is_active = data.is_active ? 1 : 0
-      // 将工序单价转为数字类型
-      form.processes = (data.processes || []).map(p => ({ ...p, unit_price: Number(p.unit_price) || 0 }))
-      
+      editingConfig.value = response.data
       dialogVisible.value = true
     }
   } catch (error) {
     // 错误已在拦截器处理
   }
 }
-
 
 
 // 查看工序
@@ -851,97 +437,6 @@ const handleBatchDelete = async () => {
       loadPackagingConfigs()
     }
   } catch (error) { if (error !== 'cancel') { /* 错误已在拦截器处理 */ } }
-}
-
-// 添加工序
-const addProcess = () => {
-  form.processes.push({
-    process_name: '',
-    unit_price: null,
-    sort_order: form.processes.length
-  })
-}
-
-// 删除工序
-const removeProcess = (index) => {
-  form.processes.splice(index, 1)
-  form.processes.forEach((p, i) => {
-    p.sort_order = i
-  })
-}
-
-// 提交表单
-const submitForm = async () => {
-  if (!form.model_id) {
-    ElMessage.warning('请选择型号')
-    return
-  }
-  if (!form.config_name) {
-    ElMessage.warning('请输入配置名称')
-    return
-  }
-  if (!form.packaging_type) {
-    ElMessage.warning('请选择包装类型')
-    return
-  }
-  if (!form.factory) {
-    ElMessage.warning('请选择工厂')
-    return
-  }
-  
-  const typeConfig = getPackagingTypeByKey(form.packaging_type)
-  if (!form.layer1_qty || !form.layer2_qty) {
-    ElMessage.warning('请填写完整的包装方式')
-    return
-  }
-  if (typeConfig && typeConfig.layers === 3 && !form.layer3_qty) {
-    ElMessage.warning('请填写完整的包装方式')
-    return
-  }
-  
-  loading.value = true
-  try {
-    const data = {
-      model_id: form.model_id,
-      config_name: form.config_name,
-      packaging_type: form.packaging_type,
-      layer1_qty: form.layer1_qty,
-      layer2_qty: form.layer2_qty,
-      layer3_qty: typeConfig && typeConfig.layers === 3 ? form.layer3_qty : null,
-      factory: form.factory,
-      is_active: form.is_active,
-      processes: form.processes
-    }
-    
-    if (isEdit.value) {
-      await request.put(`/processes/packaging-configs/${form.id}`, data)
-      ElMessage.success('更新成功')
-    } else {
-      await request.post('/processes/packaging-configs', data)
-      ElMessage.success('创建成功')
-    }
-    
-    dialogVisible.value = false
-    loadPackagingConfigs()
-  } catch (error) {
-    // 错误已在拦截器处理
-  } finally {
-    loading.value = false
-  }
-}
-
-// 重置表单
-const resetForm = () => {
-  form.id = null
-  form.model_id = selectedModelId.value || null
-  form.config_name = ''
-  form.packaging_type = 'standard_box'
-  form.layer1_qty = null
-  form.layer2_qty = null
-  form.layer3_qty = null
-  form.factory = 'dongguan_xunan'
-  form.is_active = 1
-  form.processes = []
 }
 
 // 选择变化
@@ -1116,19 +611,6 @@ onMounted(async () => {
 .toolbar-fade-enter-active, .toolbar-fade-leave-active { transition: opacity 0.3s, transform 0.3s; }
 .toolbar-fade-enter-from, .toolbar-fade-leave-to { opacity: 0; transform: translateX(10px); }
 
-
-/* No Border Input for the Grid */
-:deep(.no-border-input .el-input__wrapper) {
-  box-shadow: none !important;
-  background: transparent !important;
-  padding: 0;
-}
-:deep(.no-border-input .el-input__inner) {
-  text-align: center;
-  font-size: 18px;
-  font-weight: 600;
-  color: #334155;
-}
 </style>
 
 
