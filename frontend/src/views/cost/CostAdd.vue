@@ -440,94 +440,145 @@ import CostDetailTabs from './components/CostDetailTabs.vue'
 import { formatNumber } from '@/utils/format'
 import { useConfigStore } from '@/store/config'
 import logger from '@/utils/logger'
-import { getPackagingTypeName, formatPackagingMethodFromConfig, calculateTotalFromConfig, PACKAGING_TYPES } from '@/config/packagingTypes'
 import { useFreightCalculation, useCostCalculation, useQuotationData, useCustomerSearch, useMaterialSearch, useCustomFees, useQuotationDraft } from '@/composables'
-import { AUTO_SAVE_INTERVAL, DEFAULT_FORM_DATA, COMMON_REGIONS } from './config/costAddConfig'
+import { AUTO_SAVE_INTERVAL, COMMON_REGIONS } from './config/costAddConfig'
 import { useDetailRows, useRegionSuggestion } from './composables/useDetailRows'
+
+// New Composables
+import { useCostForm } from './composables/useCostForm'
+import { useEstimationLogic } from './composables/useEstimationLogic'
+import { usePackagingLogic } from './composables/usePackagingLogic'
+import { useCustomerLogic } from './composables/useCustomerLogic'
 
 defineOptions({ name: 'CostAdd' })
 
 const router = useRouter()
 const route = useRoute()
-const formRef = ref(null)
 const configStore = useConfigStore()
 const activeDetailTab = ref('materials')
 
-// 表单数据
-const form = reactive({
-  regulation_id: null, model_id: null, packaging_config_id: null,
-  customer_name: '', customer_region: '', sales_type: 'domestic',
-  shipping_method: '', port_type: 'fob_shenzhen', port: '',
-  quantity: null, freight_total: null, include_freight_in_base: true,
-  vat_rate: null, materials: [], processes: [], packaging: [], customFees: [],
-  is_estimation: false, reference_standard_cost_id: null
+// 1. 基础表单逻辑
+const { 
+  form, formRef, rules, editMode, currentModelCategory, regulations, packagingConfigs, 
+  isEditMode, vatRateOptions, resetForm: resetFormBase, validateForm 
+} = useCostForm()
+
+// 2. 通用业务逻辑 Hooks
+const { 
+  freightCalculation, systemConfig, shippingInfo, quantityUnit, quantityInput, domesticCbmPrice, 
+  currentFactory, loadSystemConfig, setShippingInfoFromConfig, calculateShippingInfo, 
+  calculateFOBFreight, calculateCIFShenzhen, onQuantityUnitChange, onQuantityInputChange, 
+  onDomesticCbmPriceChange, onShippingMethodChange, onPortTypeChange, resetShippingInfo 
+} = useFreightCalculation()
+
+const { 
+  calculation, customProfitTiers, modelCategory: costModelCategory, materialCoefficient, 
+  materialCoefficientsCache, loadMaterialCoefficients, calculateItemSubtotal, calculateCost, 
+  addCustomProfitTier, updateCustomTierPrice, updateTierSort, removeCustomProfitTier, 
+  prepareCustomProfitTiersForSave, getAllProfitTiers 
+} = useCostCalculation()
+
+const { 
+  saving, submitting, isSaved, loadRegulations, loadPackagingConfigs, loadBomMaterials, 
+  loadPackagingConfigDetails, loadQuotationData, loadStandardCostData, saveQuotation, submitQuotation 
+} = useQuotationData()
+
+const { 
+  isNewCustomer, selectedCustomerId, customerOptions, customerSearchLoading, 
+  customerSelectFocused, onCustomerTypeChange, searchCustomers, onCustomerSelect 
+} = useCustomerSearch()
+
+const { 
+  allMaterials, materialSearchOptions, materialSearchLoading, loadAllMaterials, 
+  searchMaterials, onMaterialSelect, onPackagingMaterialSelect 
+} = useMaterialSearch()
+
+const { 
+  hasDraft, getDraftInfo, saveDraft, loadDraft, clearDraft, startAutoSave, stopAutoSave 
+} = useQuotationDraft()
+
+// 3. 处理函数定义 (需要传递给后续 Logic Hooks)
+const handleCalculateCost = () => calculateCost(form)
+
+// 4. 拆分出的业务逻辑 Hooks
+const { 
+  newProductModels, referenceStandardCosts, referenceStandardCostsLoading, referenceStandardCostId,
+  isEstimationMode, selectedNewProductCategory, loadNewProductModels, loadReferenceStandardCosts,
+  onNewProductModelChange, onReferenceStandardCostChange: onReferenceStandardCostChangeLogic, fillReferenceStandardCostData: fillReferenceStandardCostDataLogic
+} = useEstimationLogic({ 
+  form, currentModelCategory, materialCoefficient, materialCoefficientsCache, 
+  quantityInput, quantityUnit, loadMaterialCoefficients, setShippingInfoFromConfig, 
+  calculateShippingInfo, handleCalculateCost 
 })
 
-// 编辑状态控制
-const editMode = reactive({ materials: false, processes: false, packaging: false })
-const currentModelCategory = ref('')
+// Wrappers for Estimation Logic
+const onReferenceStandardCostChange = () => onReferenceStandardCostChangeLogic(loadStandardCostData, shippingInfo)
+const fillReferenceStandardCostData = (data) => fillReferenceStandardCostDataLogic(data, shippingInfo)
 
-// 预估模式相关
-const isEstimationMode = computed(() => route.query.mode === 'estimation' || form.is_estimation)
-const newProductModels = ref([])
-const referenceStandardCosts = ref([])
-const referenceStandardCostsLoading = ref(false)
-const referenceStandardCostId = ref(null)
-const selectedNewProductCategory = computed(() => {
-  if (!form.model_id || !newProductModels.value.length) return ''
-  const model = newProductModels.value.find(m => m.id === form.model_id)
-  return model?.model_category || ''
+const { 
+  selectedConfigInfo, filteredPackagingConfigs, groupedPackagingConfigs, 
+  formatPackagingMethodFromConfig, onPackagingConfigChange 
+} = usePackagingLogic({ 
+  form, packagingConfigs, currentModelCategory, materialCoefficientsCache, materialCoefficient, 
+  loadMaterialCoefficients, loadPackagingConfigDetails, currentFactory, loadBomMaterials, 
+  editMode, setShippingInfoFromConfig, quantityInput, quantityUnit, calculateShippingInfo, 
+  handleCalculateCost 
 })
 
-// Composables
-const { freightCalculation, systemConfig, shippingInfo, quantityUnit, quantityInput, domesticCbmPrice, currentFactory, loadSystemConfig, setShippingInfoFromConfig, calculateShippingInfo, calculateFOBFreight, calculateCIFShenzhen, onQuantityUnitChange, onQuantityInputChange, onDomesticCbmPriceChange, onShippingMethodChange, onPortTypeChange, resetShippingInfo } = useFreightCalculation()
-const { calculation, customProfitTiers, modelCategory: costModelCategory, materialCoefficient, materialCoefficientsCache, loadMaterialCoefficients, calculateItemSubtotal, calculateCost, addCustomProfitTier, updateCustomTierPrice, updateTierSort, removeCustomProfitTier, prepareCustomProfitTiersForSave, getAllProfitTiers } = useCostCalculation()
-const { saving, submitting, isSaved, loadRegulations, loadPackagingConfigs, loadBomMaterials, loadPackagingConfigDetails, loadQuotationData, loadStandardCostData, saveQuotation, submitQuotation } = useQuotationData()
-const { isNewCustomer, selectedCustomerId, customerOptions, customerSearchLoading, customerSelectFocused, onCustomerTypeChange, searchCustomers, onCustomerSelect } = useCustomerSearch()
-const { allMaterials, materialSearchOptions, materialSearchLoading, loadAllMaterials, searchMaterials, onMaterialSelect, onPackagingMaterialSelect } = useMaterialSearch()
-const { hasDraft, getDraftInfo, saveDraft, loadDraft, clearDraft, startAutoSave, stopAutoSave } = useQuotationDraft()
+const { 
+  isOtherSalespersonCustomer, selectedCustomerOwner, handleCustomerSearch, 
+  handleCustomerAutoSelect: handleCustomerAutoSelectLogic, handleCustomerClear: handleCustomerClearLogic 
+} = useCustomerLogic({ form, searchCustomers, customerOptions })
 
-// 按类别搜索物料的封装函数
-const searchMaterialsByCategory = (query) => searchMaterials(query, '原料') // 原料明细只搜索类别为"原料"的
-const searchPackagingByCategory = (query) => searchMaterials(query, '包材') // 包材明细只搜索类别为"包材"的
+// Wrappers for Customer Logic
+const handleCustomerAutoSelect = (item) => handleCustomerAutoSelectLogic(item, { selectedCustomerId, isNewCustomer })
+const handleCustomerClear = () => handleCustomerClearLogic({ selectedCustomerId, isNewCustomer })
 
-// 数据列表
-const regulations = ref([])
-const packagingConfigs = ref([])
+// 5. 剩余的胶水逻辑和页面特有逻辑
 
-// computed
-const vatRateOptions = computed(() => configStore.config.vat_rate_options || [0.13, 0.10])
-const isEditMode = computed(() => !!route.params.id)
+// 常用地区建议
+const { suggestRegions } = useRegionSuggestion(COMMON_REGIONS)
+
+// 明细行操作
+const { addMaterialRow, addProcessRow, addPackagingRow, removeMaterialRow, removeProcessRow, removePackagingRow } = useDetailRows(form, handleCalculateCost)
+
+// 自定义费用
+const { addFeeDialogVisible, feeFormRef, newFee, feeRules, customFeeSummary, customFeesWithValues, showAddFeeDialog, confirmAddFee, removeCustomFee } = useCustomFees(form, calculation)
+
+// Wrappers for Template Events
+const handleQuantityUnitChange = () => onQuantityUnitChange(form, handleCalculateCost)
+const handleQuantityInputChange = () => onQuantityInputChange(form, handleCalculateCost)
+const handleDomesticCbmPriceChange = () => onDomesticCbmPriceChange(form, handleCalculateCost)
+const handleShippingMethodChange = () => onShippingMethodChange(form, handleCalculateCost)
+const handlePortTypeChange = () => onPortTypeChange(form, handleCalculateCost)
+
+const handleMaterialSelectHelper = (row, index) => { onMaterialSelect(row, materialCoefficient.value, (r) => { calculateItemSubtotal(r); handleCalculateCost() }) }
+const handlePackagingMaterialSelectHelper = (row, index) => { onPackagingMaterialSelect(row, (r) => { calculateItemSubtotal(r); handleCalculateCost() }) }
+// Template uses handleMaterialSelect and handlePackagingMaterialSelect
+const handleMaterialSelect = handleMaterialSelectHelper
+const handlePackagingMaterialSelect = handlePackagingMaterialSelectHelper
+
+const handleItemSubtotalChange = (row) => { calculateItemSubtotal(row); handleCalculateCost() }
+const handleAddRow = (type) => { if (type === 'materials') addMaterialRow(); else if (type === 'processes') addProcessRow(); else if (type === 'packaging') addPackagingRow() }
+const handleRemoveRow = (type, index) => { if (type === 'materials') removeMaterialRow(index); else if (type === 'processes') removeProcessRow(index); else if (type === 'packaging') removePackagingRow(index) }
+const handleSearchMaterial = (query, category) => searchMaterials(query, category)
+const handleAddCustomProfitTier = () => { if (!addCustomProfitTier()) ElMessage.warning('请先完成基础信息填写') }
+const handleUpdateCustomTierPrice = (tier) => updateCustomTierPrice(tier)
+const handleUpdateTierSort = (tier) => updateTierSort(tier)
+const handleRemoveCustomProfitTier = (index) => removeCustomProfitTier(index)
+const handleConfirmAddFee = () => confirmAddFee(handleCalculateCost)
+const handleRemoveCustomFee = (index) => removeCustomFee(index, handleCalculateCost)
+
+// Computed: Page Title
 const pageTitle = computed(() => {
   if (route.params.id) return '编辑报价单'
   if (route.query.copyFrom) return '复制报价单'
   if (isEstimationMode.value) return '新产品成本预估'
-  if (currentModelCategory.value) return `新增报价单 - ${currentModelCategory.value}`
+  if (currentModelCategory.value) return '新增报价单 - ' + currentModelCategory.value
   return '新增报价单'
 })
-const selectedConfigInfo = computed(() => {
-  if (!form.packaging_config_id || !packagingConfigs.value.length) return ''
-  const config = packagingConfigs.value.find(c => c.id === form.packaging_config_id)
-  return config ? `${config.model_name} - ${config.config_name}` : ''
-})
-const filteredPackagingConfigs = computed(() => {
-  if (!form.regulation_id) return []
-  let filtered = packagingConfigs.value.filter(c => c.regulation_id === form.regulation_id)
-  if (currentModelCategory.value) filtered = filtered.filter(c => c.model_category === currentModelCategory.value)
-  return filtered
-})
-const groupedPackagingConfigs = computed(() => {
-  const configs = filteredPackagingConfigs.value
-  if (!configs.length) return []
-  const groups = {}
-  for (const config of configs) {
-    const type = config.packaging_type || 'standard_box'
-    if (!groups[type]) groups[type] = { type, typeName: getPackagingTypeName(type) || '标准彩盒', configs: [] }
-    groups[type].configs.push(config)
-  }
-  const orderedTypes = Object.keys(PACKAGING_TYPES)
-  return orderedTypes.filter(type => groups[type]?.configs.length > 0).map(type => groups[type])
-})
+
+// Computed Helpers
 const materialBeforeOverheadTotal = computed(() => form.materials.filter(item => !item.after_overhead).reduce((sum, item) => sum + item.subtotal, 0))
 const materialAfterOverheadTotal = computed(() => form.materials.filter(item => item.after_overhead).reduce((sum, item) => sum + item.subtotal, 0))
 const processSubtotal = computed(() => form.processes.reduce((sum, item) => sum + item.subtotal, 0))
@@ -535,22 +586,20 @@ const packagingTotal = computed(() => form.packaging.reduce((sum, item) => sum +
 const allProfitTiers = getAllProfitTiers
 const hasFormData = computed(() => form.customer_name || form.model_id || form.materials.length > 0 || form.processes.length > 0 || form.packaging.length > 0)
 
-// 利润滑块
+// Slider Logic
 const sliderProfitRate = ref(25)
 const sliderPrice = computed(() => {
   if (!calculation.value) return 0
   const basePrice = form.sales_type === 'domestic' ? calculation.value.domesticPrice : calculation.value.insurancePrice
   return basePrice / (1 - sliderProfitRate.value / 100)
 })
-const updateSliderPrice = () => {} // 触发computed更新
+const updateSliderPrice = () => {} 
 const setSliderFromTier = (tier) => {
   const rate = parseInt(tier.profitPercentage) || 0
   sliderProfitRate.value = rate
 }
 
-// 自定义费用
-const { addFeeDialogVisible, feeFormRef, newFee, feeRules, customFeeSummary, customFeesWithValues, showAddFeeDialog, confirmAddFee, removeCustomFee } = useCustomFees(form, calculation)
-
+// Custom Fee Wrapper
 const customFeeRatePercent = computed({
   get: () => {
     if (newFee.rate === null || newFee.rate === undefined) return undefined
@@ -565,75 +614,7 @@ const customFeeRatePercent = computed({
   }
 })
 
-// 表单验证规则
-const rules = {
-  regulation_id: [{ required: true, message: '请选择法规类别', trigger: 'change' }],
-  packaging_config_id: [{ required: true, message: '请选择型号配置', trigger: 'change' }],
-  customer_name: [{ required: true, message: '请输入客户名称', trigger: 'blur' }],
-  customer_region: [{ required: true, message: '请输入客户地区', trigger: 'blur' }],
-  sales_type: [{ required: true, message: '请选择销售类型', trigger: 'change' }],
-  quantity: [{ required: true, message: '请输入购买数量', trigger: 'blur' }],
-  freight_total: [{ required: true, message: '请输入运费总价', trigger: 'blur' }]
-}
-
-// 处理函数
-const handleCalculateCost = () => calculateCost(form)
-const handleQuantityUnitChange = () => onQuantityUnitChange(form, handleCalculateCost)
-const handleQuantityInputChange = () => onQuantityInputChange(form, handleCalculateCost)
-const handleDomesticCbmPriceChange = () => onDomesticCbmPriceChange(form, handleCalculateCost)
-const handleShippingMethodChange = () => onShippingMethodChange(form, handleCalculateCost)
-const handlePortTypeChange = () => onPortTypeChange(form, handleCalculateCost)
-// 智能客户搜索
-const isOtherSalespersonCustomer = ref(false)
-const selectedCustomerOwner = ref('')
-const handleCustomerSearch = async (queryString, cb) => {
-  if (!queryString || queryString.length < 2) { cb([]); return }
-  await searchCustomers(queryString)
-  cb(customerOptions.value)
-}
-const handleCustomerAutoSelect = async (item) => {
-  // 检查是否为其他业务员的客户
-  if (!item.is_mine && item.user_id) {
-    try {
-      await ElMessageBox.confirm(
-        `该客户「${item.name}」属于业务员「${item.salesperson_name}」，确定要为其创建报价吗？`,
-        '他人客户提示',
-        { confirmButtonText: '继续使用', cancelButtonText: '取消', type: 'warning' }
-      )
-    } catch { return }
-    isOtherSalespersonCustomer.value = true
-    selectedCustomerOwner.value = item.salesperson_name
-  } else {
-    isOtherSalespersonCustomer.value = false
-    selectedCustomerOwner.value = ''
-  }
-  selectedCustomerId.value = item.id
-  form.customer_name = item.name
-  form.customer_region = item.region || ''
-  isNewCustomer.value = false
-}
-const handleCustomerClear = () => {
-  selectedCustomerId.value = null
-  form.customer_region = ''
-  isNewCustomer.value = true
-  isOtherSalespersonCustomer.value = false
-  selectedCustomerOwner.value = ''
-}
-// 常用地区建议 - 使用导入的常量
-const { suggestRegions } = useRegionSuggestion(COMMON_REGIONS)
-const handleMaterialSelect = (row, index) => { onMaterialSelect(row, materialCoefficient.value, (r) => { calculateItemSubtotal(r); handleCalculateCost() }) }
-const handlePackagingMaterialSelect = (row, index) => { onPackagingMaterialSelect(row, (r) => { calculateItemSubtotal(r); handleCalculateCost() }) }
-const handleItemSubtotalChange = (row) => { calculateItemSubtotal(row); handleCalculateCost() }
-const handleAddRow = (type) => { if (type === 'materials') addMaterialRow(); else if (type === 'processes') addProcessRow(); else if (type === 'packaging') addPackagingRow() }
-const handleRemoveRow = (type, index) => { if (type === 'materials') removeMaterialRow(index); else if (type === 'processes') removeProcessRow(index); else if (type === 'packaging') removePackagingRow(index) }
-const handleSearchMaterial = (query, category) => searchMaterials(query, category)
-const handleAddCustomProfitTier = () => { if (!addCustomProfitTier()) ElMessage.warning('请先完成基础信息填写') }
-const handleUpdateCustomTierPrice = (tier) => updateCustomTierPrice(tier)
-const handleUpdateTierSort = (tier) => updateTierSort(tier)
-const handleRemoveCustomProfitTier = (index) => removeCustomProfitTier(index)
-const handleConfirmAddFee = () => confirmAddFee(handleCalculateCost)
-const handleRemoveCustomFee = (index) => removeCustomFee(index, handleCalculateCost)
-
+// Regulation Change Orchestration
 const onRegulationChange = () => {
   form.packaging_config_id = null
   form.model_id = null
@@ -648,126 +629,7 @@ const onRegulationChange = () => {
   }
 }
 
-// 预估模式：新产品型号变更
-const onNewProductModelChange = async () => {
-  if (!form.model_id) return
-  const model = newProductModels.value.find(m => m.id === form.model_id)
-  if (model) {
-    form.regulation_id = model.regulation_id
-    currentModelCategory.value = model.model_category
-    if (materialCoefficientsCache.value[model.model_category]) {
-      materialCoefficient.value = materialCoefficientsCache.value[model.model_category]
-    }
-    await loadReferenceStandardCosts(model.regulation_id, model.model_category)
-  }
-  referenceStandardCostId.value = null
-  form.materials = []
-  form.processes = []
-  form.packaging = []
-  calculation.value = null
-}
-
-// 加载参考标准成本列表
-const loadReferenceStandardCosts = async (regulationId, modelCategory) => {
-  referenceStandardCostsLoading.value = true
-  try {
-    const request = (await import('@/utils/request')).default
-    const res = await request.get('/standard-costs', { params: { regulation_id: regulationId, model_category: modelCategory, page: 1, pageSize: 100 } })
-    referenceStandardCosts.value = res.data || []
-  } catch (error) {
-    logger.error('加载参考标准成本失败:', error.message || error)
-    referenceStandardCosts.value = []
-  } finally {
-    referenceStandardCostsLoading.value = false
-  }
-}
-
-// 选择参考标准成本
-const onReferenceStandardCostChange = async () => {
-  if (!referenceStandardCostId.value) return
-  form.reference_standard_cost_id = referenceStandardCostId.value
-  try {
-    const data = await loadStandardCostData(referenceStandardCostId.value)
-    if (data) {
-      await fillReferenceStandardCostData(data)
-      ElMessage.success('已从参考标准成本复制数据，请根据新产品需求调整')
-    }
-  } catch (error) {
-    logger.error('加载参考标准成本数据失败:', error.message || error)
-    ElMessage.error('加载参考标准成本数据失败')
-  }
-}
-
-// 填充参考标准成本数据（预估模式专用）
-const fillReferenceStandardCostData = async (data) => {
-  const { standardCost, items } = data
-  const currentModelId = form.model_id
-  const currentRegulationId = form.regulation_id
-  
-  form.sales_type = standardCost.sales_type || 'domestic'
-  form.quantity = standardCost.quantity || null
-  form.vat_rate = configStore.config.vat_rate || 0.13
-  
-  if (items?.material) {
-    form.materials = items.material.items.map(item => ({
-      category: 'material', material_id: item.material_id || null, item_name: item.item_name,
-      usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0,
-      subtotal: parseFloat(item.subtotal) || 0, is_changed: 0, from_standard: true, from_reference: true,
-      after_overhead: item.after_overhead || false, coefficient_applied: true
-    }))
-  }
-  if (items?.process) {
-    form.processes = items.process.items.map(item => ({
-      category: 'process', item_name: item.item_name,
-      usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0,
-      subtotal: parseFloat(item.subtotal) || 0, is_changed: 0, from_standard: true, from_reference: true
-    }))
-  }
-  let cartonVolume = null
-  if (items?.packaging) {
-    form.packaging = items.packaging.items.map(item => ({
-      category: 'packaging', material_id: item.material_id || null, item_name: item.item_name,
-      usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0,
-      carton_volume: item.carton_volume ? parseFloat(item.carton_volume) : null,
-      subtotal: parseFloat(item.subtotal) || 0, is_changed: 0, from_standard: true, from_reference: true
-    }))
-    const cartonMaterial = items.packaging.items.find(item => item.carton_volume && item.carton_volume > 0)
-    if (cartonMaterial) cartonVolume = parseFloat(cartonMaterial.carton_volume)
-  }
-  
-  if (standardCost.pc_per_bag && standardCost.bags_per_box && standardCost.boxes_per_carton) {
-    const pcsPerCarton = standardCost.pc_per_bag * standardCost.bags_per_box * standardCost.boxes_per_carton
-    setShippingInfoFromConfig(pcsPerCarton, cartonVolume)
-  }
-  
-  form.model_id = currentModelId
-  form.regulation_id = currentRegulationId
-  form.is_estimation = true
-  
-  editMode.materials = false
-  editMode.processes = false
-  editMode.packaging = false
-  
-  if (form.quantity) {
-    quantityInput.value = form.quantity
-    quantityUnit.value = 'pcs'
-  }
-  if (form.quantity && shippingInfo.pcsPerCarton) calculateShippingInfo(form, handleCalculateCost)
-  handleCalculateCost()
-}
-
-// 加载新产品型号列表
-const loadNewProductModels = async () => {
-  try {
-    const request = (await import('@/utils/request')).default
-    const res = await request.get('/models')
-    newProductModels.value = res.data || []
-  } catch (error) {
-    logger.error('加载型号列表失败:', error.message || error)
-    newProductModels.value = []
-  }
-}
-
+// Sales Type Change Orchestration
 const onSalesTypeChange = () => {
   if (form.sales_type === 'domestic') {
     form.shipping_method = ''
@@ -782,50 +644,15 @@ const onSalesTypeChange = () => {
   handleCalculateCost()
 }
 
-const onPackagingConfigChange = async () => {
-  if (!form.packaging_config_id) return
-  try {
-    const data = await loadPackagingConfigDetails(form.packaging_config_id)
-    if (!data) return
-    const { config, processes, materials } = data
-    form.model_id = config.model_id
-    
-    // Set factory for CIF Shenzhen calculation
-    currentFactory.value = config.factory || 'dongguan_xunan'
-
-    const selectedConfig = packagingConfigs.value.find(c => c.id === form.packaging_config_id)
-    if (selectedConfig?.model_category) {
-      currentModelCategory.value = selectedConfig.model_category
-      if (Object.keys(materialCoefficientsCache.value).length === 0) await loadMaterialCoefficients(currentModelCategory.value)
-      else if (materialCoefficientsCache.value[selectedConfig.model_category]) materialCoefficient.value = materialCoefficientsCache.value[selectedConfig.model_category]
-    }
-    const pcsPerCarton = calculateTotalFromConfig(config)
-    const cartonMaterial = materials.find(m => m.carton_volume && parseFloat(m.carton_volume) > 0)
-    setShippingInfoFromConfig(pcsPerCarton, cartonMaterial ? parseFloat(cartonMaterial.carton_volume) : null)
-    if (!cartonMaterial) {
-      ElMessage.warning({ message: '当前配置缺少外箱材积数据，无法自动计算CBM和运费。请前往「包材管理」补充外箱的材积信息', duration: 8000, showClose: true })
-    }
-    if (form.quantity) quantityInput.value = quantityUnit.value === 'carton' ? Math.ceil(form.quantity / pcsPerCarton) : form.quantity
-    form.materials = await loadBomMaterials(config.model_id, materialCoefficient.value, currentModelCategory.value)
-    editMode.materials = false
-    form.processes = (processes || []).map(p => ({ category: 'process', item_name: p.process_name, usage_amount: 1, unit_price: parseFloat(p.unit_price) || 0, subtotal: parseFloat(p.unit_price) || 0, is_changed: 0, from_standard: true }))
-    form.packaging = (materials || []).map(m => ({ category: 'packaging', item_name: m.material_name, usage_amount: parseFloat(m.basic_usage) || 0, unit_price: parseFloat(m.unit_price) || 0, carton_volume: m.carton_volume ? parseFloat(m.carton_volume) : null, subtotal: (parseFloat(m.basic_usage) || 0) !== 0 ? (parseFloat(m.unit_price) || 0) / (parseFloat(m.basic_usage) || 1) : 0, is_changed: 0, from_standard: true }))
-    editMode.processes = false
-    editMode.packaging = false
-    calculateShippingInfo(form, handleCalculateCost)
-    handleCalculateCost()
-    if (form.processes.length > 0 || form.packaging.length > 0) ElMessage.success(`已加载 ${config.config_name}：${form.processes.length} 个工序和 ${form.packaging.length} 个包材`)
-    else ElMessage.warning('该配置暂无绑定的工序和包材数据')
-  } catch (error) {
-    logger.error('加载包装配置数据失败:', error)
-    ElMessage.error('加载包装配置数据失败')
-  }
+// Reset Form Full
+const resetForm = () => {
+  resetFormBase()
+  calculation.value = null
+  customProfitTiers.value = []
+  isNewCustomer.value = true
+  selectedCustomerId.value = null
+  resetShippingInfo()
 }
-
-const toggleEditMode = (section) => { editMode[section] = !editMode[section]; if (editMode[section]) ElMessage.success(`${section === 'materials' ? '原料' : section === 'processes' ? '工序' : '包材'}名称已解锁，编辑后请锁定保存`) }
-// 使用通用明细行操作函数
-const { addMaterialRow, addProcessRow, addPackagingRow, removeMaterialRow, removeProcessRow, removePackagingRow } = useDetailRows(form, handleCalculateCost)
-const goBack = () => router.back()
 
 const handleCancel = async () => {
   if (!hasFormData.value) return
@@ -837,22 +664,10 @@ const handleCancel = async () => {
   } catch { /* 用户选择继续填写 */ }
 }
 
-const resetForm = () => {
-  Object.assign(form, {
-    regulation_id: null, model_id: null, packaging_config_id: null,
-    customer_name: '', customer_region: '', sales_type: 'domestic',
-    shipping_method: '', port_type: 'fob_shenzhen', port: '',
-    quantity: null, freight_total: null, include_freight_in_base: true,
-    vat_rate: configStore.config.vat_rate || 0.13,
-    materials: [], processes: [], packaging: [], customFees: []
-  })
-  calculation.value = null
-  customProfitTiers.value = []
-  isNewCustomer.value = true
-  selectedCustomerId.value = null
-  resetShippingInfo()
-}
+const toggleEditMode = (section) => { editMode[section] = !editMode[section]; if (editMode[section]) ElMessage.success(`${section === 'materials' ? '原料' : section === 'processes' ? '工序' : '包材'}名称已解锁，编辑后请锁定保存`) }
+const goBack = () => router.back()
 
+// Prepare Data for Submit/Save
 const prepareData = () => ({
   customer_name: form.customer_name, customer_region: form.customer_region,
   model_id: form.model_id, regulation_id: form.regulation_id, packaging_config_id: form.packaging_config_id,
@@ -865,56 +680,47 @@ const prepareData = () => ({
 })
 
 const fieldLabels = {
-  regulation_id: '法规标准',
-  model_id: '新产品型号',
-  packaging_config_id: '型号配置',
-  customer_name: '客户名称',
-  customer_region: '客户地区',
-  sales_type: '销售类型',
-  port: '港口名称',
-  quantity: '数量',
-  freight_total: '运费总价',
-  vat_rate: '增值税率'
+  regulation_id: '法规标准', model_id: '新产品型号', packaging_config_id: '型号配置',
+  customer_name: '客户名称', customer_region: '客户地区', sales_type: '销售类型',
+  port: '港口名称', quantity: '数量', freight_total: '运费总价', vat_rate: '增值税率'
 }
 
 const handleSaveDraft = async () => {
   try {
-    await formRef.value.validate()
+    const valid = await validateForm()
+    if (valid !== true) {
+      const invalidFields = Object.keys(valid).map(key => fieldLabels[key] || key).join('、')
+      logger.warn('表单校验失败', valid)
+      ElMessage.error(`保存失败：请完善以下红色必填项：${invalidFields}`)
+      return
+    }
     if ([...form.materials, ...form.processes, ...form.packaging].length === 0) { ElMessage.warning('请至少添加一项明细'); return }
     const res = await saveQuotation(route.params.id, prepareData())
     if (res) { clearDraft(); stopAutoSave(); router.push('/cost/records') }
   } catch (error) {
-    // Element Plus validate throws an error when validation fails
-    if (error && typeof error === 'object' && !error.message) {
-      // Validation failed (error object contains invalid fields)
-      const invalidFields = Object.keys(error).map(key => fieldLabels[key] || key).join('、')
-      logger.warn('表单校验失败', error)
-      ElMessage.error(`保存失败：请完善以下红色必填项：${invalidFields}`)
-    } else {
-      logger.error('保存失败:', error)
-      ElMessage.error(error.message || '保存失败')
-    }
+     logger.error('保存失败:', error)
+     ElMessage.error(error.message || '保存失败')
   }
 }
 
 const handleSubmitQuotation = async () => {
-  try {
-    await formRef.value.validate()
+    try {
+    const valid = await validateForm()
+    if (valid !== true) {
+      const invalidFields = Object.keys(valid).map(key => fieldLabels[key] || key).join('、')
+      ElMessage.error(`提交失败：请完善以下红色必填项：${invalidFields}`)
+      return
+    }
     if ([...form.materials, ...form.processes, ...form.packaging].length === 0) { ElMessage.warning('请至少添加一项明细'); return }
     const res = await submitQuotation(route.params.id, prepareData())
     if (res) { clearDraft(); stopAutoSave(); router.push('/cost/records') }
   } catch (error) {
-    if (error && typeof error === 'object' && !error.message) {
-      const invalidFields = Object.keys(error).map(key => fieldLabels[key] || key).join('、')
-      logger.warn('表单校验失败', error)
-      ElMessage.error(`提交失败：请完善以下红色必填项：${invalidFields}`)
-    } else {
-      logger.error('提交失败:', error)
-      ElMessage.error(error.message || '提交失败')
-    }
+     logger.error('提交失败:', error)
+     ElMessage.error(error.message || '提交失败')
   }
 }
 
+// Fill Data (Quotation/Standard) Logic
 const fillQuotationData = async (data, isCopy = false) => {
   const { quotation, items, customFees: fees } = data
   form.regulation_id = quotation.regulation_id
@@ -936,8 +742,7 @@ const fillQuotationData = async (data, isCopy = false) => {
   form.vat_rate = quotation.vat_rate !== null ? parseFloat(quotation.vat_rate) : (configStore.config.vat_rate || 0.13)
   form.materials = items.material.items.map(item => ({ category: 'material', material_id: item.material_id || null, item_name: item.item_name, usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0, subtotal: parseFloat(item.subtotal) || 0, is_changed: item.is_changed || 0, from_standard: true, after_overhead: item.after_overhead || false, coefficient_applied: true }))
   form.processes = items.process.items.map(item => ({ category: 'process', item_name: item.item_name, usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0, subtotal: parseFloat(item.subtotal) || 0, is_changed: item.is_changed || 0, from_standard: true }))
-  form.packaging = items.packaging.items.map(item => ({ category: 'packaging', material_id: item.material_id || null, item_name: item.item_name, usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0, carton_volume: item.carton_volume ? parseFloat(item.carton_volume) : null, subtotal: parseFloat(item.subtotal) || 0, is_changed: item.is_changed || 0, from_standard: true }))
-  // 从原料库匹配原料ID（处理旧数据）
+  form.packaging = items.packaging.items.map(item => ({ category: 'packaging', material_id: item.material_id || null, item_name: item.item_name, usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0, carton_volume: item.carton_volume ? parseFloat(item.carton_volume) : null, subtotal: parseFloat(item.subtotal) || 0, is_changed: 0, from_standard: true }))
   form.materials.forEach(m => { if (!m.material_id) { const found = allMaterials.value.find(mat => mat.name === m.item_name); if (found) m.material_id = found.id } })
   form.packaging.forEach(p => { if (!p.material_id) { const found = allMaterials.value.find(mat => mat.name === p.item_name); if (found) p.material_id = found.id } })
   if (quotation.pc_per_bag && quotation.bags_per_box && quotation.boxes_per_carton) {
@@ -959,6 +764,7 @@ const fillQuotationData = async (data, isCopy = false) => {
   ElMessage.success(isCopy ? '报价单数据已复制，请修改后保存' : '报价单数据已加载')
 }
 
+// Standard Cost Data Fill
 const fillStandardCostData = async (data) => {
   const { standardCost, items } = data
   if (standardCost.model_category) { currentModelCategory.value = standardCost.model_category; if (materialCoefficientsCache.value[standardCost.model_category]) materialCoefficient.value = materialCoefficientsCache.value[standardCost.model_category] }
@@ -993,7 +799,6 @@ const fillStandardCostData = async (data) => {
     const cartonMaterial = items.packaging.items.find(item => item.carton_volume && item.carton_volume > 0)
     if (cartonMaterial) shippingInfo.cartonVolume = cartonMaterial.carton_volume
   }
-  // 从原料库匹配原料ID（处理旧数据）
   form.materials.forEach(m => { if (!m.material_id) { const found = allMaterials.value.find(mat => mat.name === m.item_name); if (found) m.material_id = found.id } })
   form.packaging.forEach(p => { if (!p.material_id) { const found = allMaterials.value.find(mat => mat.name === p.item_name); if (found) p.material_id = found.id } })
   if (form.quantity && shippingInfo.pcsPerCarton) calculateShippingInfo(form, handleCalculateCost)
@@ -1001,18 +806,16 @@ const fillStandardCostData = async (data) => {
   ElMessage.success('标准成本数据已复制，请填写客户信息后保存')
 }
 
-// 草稿功能
+// Draft Logic Wrappers
 const formatDraftTime = (isoString) => {
   const date = new Date(isoString)
   return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
-
 const getFormDataForDraft = () => ({
   form,
   extras: { modelCategory: currentModelCategory.value, quantityUnit: quantityUnit.value, quantityInput: quantityInput.value, domesticCbmPrice: domesticCbmPrice.value, customProfitTiers: customProfitTiers.value, editMode },
   hasData: hasFormData.value
 })
-
 const restoreDraft = async () => {
   const draft = loadDraft()
   if (!draft) return false
@@ -1034,7 +837,6 @@ const restoreDraft = async () => {
     return false
   }
 }
-
 const checkAndRestoreDraft = async () => {
   if (route.params.id || route.query.copyFrom || route.query.copyFromStandardCost) return false
   const draftInfo = getDraftInfo()
@@ -1052,6 +854,7 @@ const checkAndRestoreDraft = async () => {
   }
 }
 
+// Lifecycle
 onMounted(async () => {
   await configStore.loadConfig()
   await loadSystemConfig()
@@ -1061,7 +864,6 @@ onMounted(async () => {
   await loadMaterialCoefficients(currentModelCategory.value)
   form.vat_rate = configStore.config.vat_rate || 0.13
   
-  // 预估模式下加载型号列表
   if (route.query.mode === 'estimation') {
     form.is_estimation = true
     await loadNewProductModels()
@@ -1086,12 +888,10 @@ onMounted(async () => {
   if (!route.params.id) startAutoSave(getFormDataForDraft, AUTO_SAVE_INTERVAL)
 })
 
-// 同步产品分类到 CostCalculation composable
 watch(currentModelCategory, (val) => {
   costModelCategory.value = val
 })
 
-// 监听路由模式变化，切换时重置表单
 watch(() => route.query.mode, async (newMode, oldMode) => {
   if (route.path !== '/cost/add' || route.params.id) return
   resetForm()
@@ -1120,6 +920,7 @@ onBeforeRouteLeave(async (to, from, next) => {
   }
 })
 </script>
+
 
 <style scoped>
 /* ========== 页面容器 - 左右分栏布局 ========== */

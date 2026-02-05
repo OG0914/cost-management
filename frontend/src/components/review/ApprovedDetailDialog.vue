@@ -68,21 +68,21 @@
 
         <!-- 审核结果 -->
         <div class="section">
-          <div class="section-title" :class="quotationDetail.status === 'approved' ? 'status-approved' : 'status-rejected'">
-            {{ quotationDetail.status === 'approved' ? '✅ 审核结果' : '❌ 审核结果' }}
+          <div class="section-title" :class="statusTitleClass">
+            {{ statusTitleText }}
           </div>
-          <div class="result-box" :class="quotationDetail.status === 'approved' ? 'result-approved' : 'result-rejected'">
+          <div class="result-box" :class="resultBoxClass">
             <div class="result-icon">
-              {{ quotationDetail.status === 'approved' ? '✅' : '❌' }}
+              {{ resultIcon }}
             </div>
             <div class="result-text">
-              {{ quotationDetail.status === 'approved' ? '该报价单已审核通过' : '该报价单已被退回' }}
+              {{ resultText }}
             </div>
-            <div class="result-time">
+            <div class="result-time" v-if="quotationDetail.reviewed_at && quotationDetail.status !== 'submitted'">
               审核时间：{{ formatDateTime(quotationDetail.reviewed_at) }}
             </div>
           </div>
-          <div v-if="reviewComment" class="comment-section">
+          <div v-if="reviewComment && quotationDetail.status !== 'submitted'" class="comment-section">
             <div class="comment-label">{{ quotationDetail.status === 'approved' ? '审核批注：' : '退回原因：' }}</div>
             <div class="comment-content">{{ reviewComment }}</div>
           </div>
@@ -221,6 +221,42 @@ const profitPricing = computed(() => {
   allTiers.sort((a, b) => a.rate - b.rate)
   
   return allTiers
+})
+
+// 状态显示逻辑
+const statusTitleClass = computed(() => {
+  const s = quotationDetail.value?.status
+  if (s === 'approved') return 'status-approved'
+  if (s === 'rejected') return 'status-rejected'
+  return 'status-submitted'
+})
+
+const statusTitleText = computed(() => {
+  const s = quotationDetail.value?.status
+  if (s === 'approved') return '✅ 审核结果'
+  if (s === 'rejected') return '❌ 审核结果'
+  return '⏳ 审核状态'
+})
+
+const resultBoxClass = computed(() => {
+  const s = quotationDetail.value?.status
+  if (s === 'approved') return 'result-approved'
+  if (s === 'rejected') return 'result-rejected'
+  return 'result-submitted'
+})
+
+const resultIcon = computed(() => {
+  const s = quotationDetail.value?.status
+  if (s === 'approved') return '✅'
+  if (s === 'rejected') return '❌'
+  return '⏳'
+})
+
+const resultText = computed(() => {
+  const s = quotationDetail.value?.status
+  if (s === 'approved') return '该报价单已审核通过'
+  if (s === 'rejected') return '该报价单已被退回'
+  return '该报价单正在等待审核'
 })
 
 // 完整的审核历史时间线（包含创建、提交、审核操作）
@@ -377,10 +413,15 @@ const closeDialog = () => {
   color: #f56c6c;
 }
 
+.status-submitted {
+  color: #e6a23c;
+}
+
 .summary-grid {
   display: flex;
   gap: 20px;
 }
+
 
 .summary-card {
   flex: 1;
@@ -476,6 +517,11 @@ const closeDialog = () => {
 .result-rejected {
   background: #fef0f0;
   border: 1px solid #fde2e2;
+}
+
+.result-submitted {
+  background: #fdf6ec;
+  border: 1px solid #faecd8;
 }
 
 .result-icon {

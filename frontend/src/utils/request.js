@@ -77,7 +77,7 @@ request.interceptors.response.use(
           ElMessage.error('您没有权限执行此操作')
           break
         case 404:
-          ElMessage.error('请求的资源不存在')
+          ElMessage.error('请求的接口不存在(404)，请检查后端服务是否正常启动')
           break
         case 429:
           ElMessage.error('请求过于频繁，请稍后再试')
@@ -89,7 +89,7 @@ request.interceptors.response.use(
           ElMessage.error(data.message || '请求失败')
       }
     } else if (error.request) {
-      ElMessage.error('网络错误，请检查网络连接')
+      ElMessage.error('无法连接到服务器，请检查后端服务是否启动')
     } else {
       ElMessage.error('请求配置错误')
     }
