@@ -1,16 +1,16 @@
 /**
  * 认证控制器
+ * 包含核心认证逻辑，并汇总导出用户管理功能
  */
 
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../../models/User');
-const ExcelParser = require('../../utils/excelParser');
-const ExcelGenerator = require('../../utils/excel');
 const { success, error } = require('../../utils/response');
-const path = require('path');
-const fs = require('fs');
-const logger = require('../../utils/logger');
+
+// 导入子模块功能
+const userController = require('./userController');
+const userImportExport = require('./userImportExport');
 
 // 用户登录
 const login = async (req, res, next) => {
@@ -111,7 +111,7 @@ const register = async (req, res, next) => {
 const getCurrentUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);
-    
+
     if (!user) {
       return res.status(404).json(error('用户不存在', 404));
     }
@@ -164,252 +164,12 @@ const changePassword = async (req, res, next) => {
   }
 };
 
-// 获取所有用户（管理员）
-const getAllUsers = async (req, res, next) => {
-  try {
-    const users = await User.findAll();
-    
-    // 不返回密码字段
-    const usersWithoutPassword = users.map(user => {
-      const { password, ...userWithoutPassword } = user;
-      return userWithoutPassword;
-    });
-
-    res.json(success(usersWithoutPassword));
-  } catch (err) {
-    next(err);
-  }
-};
-
-// 更新用户信息（管理员）
-const updateUser = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { username, real_name, email, role, is_active } = req.body;
-
-    // 检查用户是否存在
-    const user = await User.findById(id);
-    if (!user) {
-      return res.status(404).json(error('用户不存在', 404));
-    }
-
-    // 不能禁用管理员账号
-    if (user.username === 'admin' && is_active === false) {
-      return res.status(400).json(error('不能禁用管理员账号', 400));
-    }
-
-    // 如果修改用户名，检查新用户名是否已存在
-    if (username && username !== user.username) {
-      const existingUser = await User.findByUsername(username);
-      if (existingUser) {
-        return res.status(400).json(error('用户代号已存在', 400));
-      }
-    }
-
-    // 验证角色是否合法
-    const validRoles = ['admin', 'purchaser', 'producer', 'reviewer', 'salesperson', 'readonly'];
-    if (role && !validRoles.includes(role)) {
-      return res.status(400).json(error('无效的角色类型', 400));
-    }
-
-    await User.update(id, { username, real_name, email, role, is_active });
-
-    res.json(success(null, '用户信息更新成功'));
-  } catch (err) {
-    next(err);
-  }
-};
-
-// 删除用户（管理员）
-const deleteUser = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-
-    // 不能删除管理员账号
-    const user = await User.findById(id);
-    if (!user) {
-      return res.status(404).json(error('用户不存在', 404));
-    }
-    
-    if (user.username === 'admin') {
-      return res.status(400).json(error('不能删除管理员账号', 400));
-    }
-
-    // 管理员删除用户时，自动处理关联的报价单
-    // 1. 删除用户创建的所有报价单
-    // 2. 将用户审核的报价单的 reviewed_by 设置为 NULL
-    const result = await User.deleteWithRelations(id);
-    
-    if (!result.success) {
-      return res.status(500).json(error('删除用户失败', 500));
-    }
-
-    res.json(success({
-      deletedQuotations: result.deletedQuotations,
-      updatedQuotations: result.updatedQuotations
-    }, `用户删除成功。已删除 ${result.deletedQuotations} 个报价单，更新 ${result.updatedQuotations} 个审核记录。`));
-  } catch (err) {
-    logger.error('删除用户失败:', err);
-    next(err);
-  }
-};
-
-// 重置用户密码（管理员）
-const resetUserPassword = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { newPassword } = req.body;
-
-    if (!newPassword) {
-      return res.status(400).json(error('新密码不能为空', 400));
-    }
-
-    // 加密新密码
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    // 更新密码
-    await User.updatePassword(id, hashedPassword);
-
-    res.json(success(null, '密码重置成功'));
-  } catch (err) {
-    next(err);
-  }
-};
-
-// 禁用/启用用户（管理员）
-const toggleUserStatus = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { is_active } = req.body;
-
-    // 检查用户是否存在
-    const user = await User.findById(id);
-    if (!user) {
-      return res.status(404).json(error('用户不存在', 404));
-    }
-
-    // 不能禁用管理员账号
-    if (user.username === 'admin' && is_active === false) {
-      return res.status(400).json(error('不能禁用管理员账号', 400));
-    }
-
-    // 更新用户状态
-    await User.update(id, { is_active });
-
-    const statusText = is_active ? '启用' : '禁用';
-    res.json(success(null, `用户${statusText}成功`));
-  } catch (err) {
-    next(err);
-  }
-};
-
-// 导入用户 Excel
-const importUsers = async (req, res, next) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json(error('请上传文件', 400));
-    }
-    
-    const filePath = req.file.path;
-    const result = await ExcelParser.parseUserExcel(filePath);
-    
-    fs.unlinkSync(filePath); // 删除临时文件
-    
-    if (!result.success) {
-      return res.status(400).json(error('文件解析失败', 400, result.errors));
-    }
-    
-    let created = 0, updated = 0;
-    const errors = [];
-    
-    for (const userData of result.data) {
-      try {
-        const existing = await User.findByUsername(userData.username);
-        if (existing) {
-          await User.update(existing.id, { real_name: userData.real_name, email: userData.email, role: userData.role });
-          updated++;
-        } else {
-          const hashedPassword = await bcrypt.hash(userData.password || '123456', 10);
-          await User.create({ ...userData, password: hashedPassword });
-          created++;
-        }
-      } catch (err) {
-        errors.push(`用户 ${userData.username}: ${err.message}`);
-      }
-    }
-    
-    res.json(success({ total: result.total, valid: result.valid, created, updated, errors }, '导入成功'));
-  } catch (err) {
-    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    next(err);
-  }
-};
-
-// 导出用户 Excel
-const exportUsers = async (req, res, next) => {
-  try {
-    const { ids } = req.body;
-    
-    let users;
-    if (ids && ids.length > 0) {
-      const userPromises = ids.map(id => User.findById(id));
-      users = (await Promise.all(userPromises)).filter(u => u !== null);
-    } else {
-      users = await User.findAll();
-    }
-    
-    if (users.length === 0) {
-      return res.status(400).json(error('没有可导出的数据', 400));
-    }
-    
-    const workbook = await ExcelGenerator.generateUserExcel(users);
-    const fileName = `用户清单_${Date.now()}.xlsx`;
-    const tempDir = path.join(__dirname, '../temp');
-    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-    const filePath = path.join(tempDir, fileName);
-    
-    await workbook.xlsx.writeFile(filePath);
-    
-    res.download(filePath, fileName, (err) => {
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-      if (err) next(err);
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// 下载用户导入模板
-const downloadUserTemplate = async (req, res, next) => {
-  try {
-    const workbook = await ExcelGenerator.generateUserTemplate();
-    const fileName = '用户导入模板.xlsx';
-    const tempDir = path.join(__dirname, '../temp');
-    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-    const filePath = path.join(tempDir, fileName);
-    
-    await workbook.xlsx.writeFile(filePath);
-    
-    res.download(filePath, fileName, (err) => {
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-      if (err) next(err);
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
 module.exports = {
   login,
   register,
   getCurrentUser,
   changePassword,
-  getAllUsers,
-  updateUser,
-  deleteUser,
-  resetUserPassword,
-  toggleUserStatus,
-  importUsers,
-  exportUsers,
-  downloadUserTemplate
+  // 导出子模块功能
+  ...userController,
+  ...userImportExport
 };

@@ -449,6 +449,9 @@ import { useCostForm } from './composables/useCostForm'
 import { useEstimationLogic } from './composables/useEstimationLogic'
 import { usePackagingLogic } from './composables/usePackagingLogic'
 import { useCustomerLogic } from './composables/useCustomerLogic'
+import { useDataFill } from './composables/useDataFill'
+import { useFormSubmit } from './composables/useFormSubmit'
+import { useDraftLogic } from './composables/useDraftLogic'
 
 defineOptions({ name: 'CostAdd' })
 
@@ -545,6 +548,29 @@ const { addMaterialRow, addProcessRow, addPackagingRow, removeMaterialRow, remov
 // 自定义费用
 const { addFeeDialogVisible, feeFormRef, newFee, feeRules, customFeeSummary, customFeesWithValues, showAddFeeDialog, confirmAddFee, removeCustomFee } = useCustomFees(form, calculation)
 
+// hasFormData 需要在 composables 初始化前定义
+const hasFormData = computed(() => form.customer_name || form.model_id || form.materials.length > 0 || form.processes.length > 0 || form.packaging.length > 0)
+
+// 6. 数据填充逻辑 (从 composable 获取)
+const { fillQuotationData, fillStandardCostData } = useDataFill({
+  form, packagingConfigs, currentModelCategory, materialCoefficient, materialCoefficientsCache,
+  currentFactory, customProfitTiers, shippingInfo, quantityUnit, quantityInput, allMaterials,
+  configStore, setShippingInfoFromConfig, calculateShippingInfo, handleCalculateCost: () => calculateCost(form)
+})
+
+// 7. 表单提交逻辑 (从 composable 获取)
+const { fieldLabels, prepareData, handleSaveDraft, handleSubmitQuotation } = useFormSubmit({
+  form, route, router, validateForm, prepareCustomProfitTiersForSave,
+  saveQuotation, submitQuotation, clearDraft, stopAutoSave
+})
+
+// 8. 草稿逻辑 (从 composable 获取)
+const { formatDraftTime, getFormDataForDraft, restoreDraft, checkAndRestoreDraft } = useDraftLogic({
+  form, route, currentModelCategory, quantityUnit, quantityInput, domesticCbmPrice,
+  customProfitTiers, editMode, hasFormData, getDraftInfo, loadDraft, saveDraft, clearDraft,
+  handleCalculateCost: () => calculateCost(form)
+})
+
 // Wrappers for Template Events
 const handleQuantityUnitChange = () => onQuantityUnitChange(form, handleCalculateCost)
 const handleQuantityInputChange = () => onQuantityInputChange(form, handleCalculateCost)
@@ -584,7 +610,6 @@ const materialAfterOverheadTotal = computed(() => form.materials.filter(item => 
 const processSubtotal = computed(() => form.processes.reduce((sum, item) => sum + item.subtotal, 0))
 const packagingTotal = computed(() => form.packaging.reduce((sum, item) => sum + item.subtotal, 0))
 const allProfitTiers = getAllProfitTiers
-const hasFormData = computed(() => form.customer_name || form.model_id || form.materials.length > 0 || form.processes.length > 0 || form.packaging.length > 0)
 
 // Slider Logic
 const sliderProfitRate = ref(25)
@@ -666,193 +691,6 @@ const handleCancel = async () => {
 
 const toggleEditMode = (section) => { editMode[section] = !editMode[section]; if (editMode[section]) ElMessage.success(`${section === 'materials' ? '原料' : section === 'processes' ? '工序' : '包材'}名称已解锁，编辑后请锁定保存`) }
 const goBack = () => router.back()
-
-// Prepare Data for Submit/Save
-const prepareData = () => ({
-  customer_name: form.customer_name, customer_region: form.customer_region,
-  model_id: form.model_id, regulation_id: form.regulation_id, packaging_config_id: form.packaging_config_id,
-  quantity: form.quantity, freight_total: form.freight_total || 0, sales_type: form.sales_type,
-  shipping_method: form.shipping_method || null, port: form.port || null,
-  include_freight_in_base: form.include_freight_in_base, vat_rate: form.vat_rate,
-  custom_profit_tiers: prepareCustomProfitTiersForSave(), custom_fees: form.customFees,
-  is_estimation: form.is_estimation, reference_standard_cost_id: form.reference_standard_cost_id,
-  items: [...form.materials, ...form.processes, ...form.packaging]
-})
-
-const fieldLabels = {
-  regulation_id: '法规标准', model_id: '新产品型号', packaging_config_id: '型号配置',
-  customer_name: '客户名称', customer_region: '客户地区', sales_type: '销售类型',
-  port: '港口名称', quantity: '数量', freight_total: '运费总价', vat_rate: '增值税率'
-}
-
-const handleSaveDraft = async () => {
-  try {
-    const valid = await validateForm()
-    if (valid !== true) {
-      const invalidFields = Object.keys(valid).map(key => fieldLabels[key] || key).join('、')
-      logger.warn('表单校验失败', valid)
-      ElMessage.error(`保存失败：请完善以下红色必填项：${invalidFields}`)
-      return
-    }
-    if ([...form.materials, ...form.processes, ...form.packaging].length === 0) { ElMessage.warning('请至少添加一项明细'); return }
-    const res = await saveQuotation(route.params.id, prepareData())
-    if (res) { clearDraft(); stopAutoSave(); router.push('/cost/records') }
-  } catch (error) {
-     logger.error('保存失败:', error)
-     ElMessage.error(error.message || '保存失败')
-  }
-}
-
-const handleSubmitQuotation = async () => {
-    try {
-    const valid = await validateForm()
-    if (valid !== true) {
-      const invalidFields = Object.keys(valid).map(key => fieldLabels[key] || key).join('、')
-      ElMessage.error(`提交失败：请完善以下红色必填项：${invalidFields}`)
-      return
-    }
-    if ([...form.materials, ...form.processes, ...form.packaging].length === 0) { ElMessage.warning('请至少添加一项明细'); return }
-    const res = await submitQuotation(route.params.id, prepareData())
-    if (res) { clearDraft(); stopAutoSave(); router.push('/cost/records') }
-  } catch (error) {
-     logger.error('提交失败:', error)
-     ElMessage.error(error.message || '提交失败')
-  }
-}
-
-// Fill Data (Quotation/Standard) Logic
-const fillQuotationData = async (data, isCopy = false) => {
-  const { quotation, items, customFees: fees } = data
-  form.regulation_id = quotation.regulation_id
-  form.packaging_config_id = quotation.packaging_config_id || null
-  if (form.packaging_config_id) {
-    const config = packagingConfigs.value.find(c => c.id === form.packaging_config_id)
-    if (config) currentFactory.value = config.factory || 'dongguan_xunan'
-  }
-  form.model_id = quotation.model_id
-  form.customer_name = isCopy ? `${quotation.customer_name}（复制）` : quotation.customer_name
-  form.customer_region = quotation.customer_region
-  form.sales_type = quotation.sales_type
-  form.shipping_method = quotation.shipping_method || ''
-  form.port_type = quotation.port === 'FOB深圳' ? 'fob_shenzhen' : 'other'
-  form.port = quotation.port || ''
-  form.quantity = quotation.quantity ? parseInt(quotation.quantity) : null
-  form.freight_total = quotation.freight_total ? parseFloat(quotation.freight_total) : null
-  form.include_freight_in_base = quotation.include_freight_in_base !== false
-  form.vat_rate = quotation.vat_rate !== null ? parseFloat(quotation.vat_rate) : (configStore.config.vat_rate || 0.13)
-  form.materials = items.material.items.map(item => ({ category: 'material', material_id: item.material_id || null, item_name: item.item_name, usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0, subtotal: parseFloat(item.subtotal) || 0, is_changed: item.is_changed || 0, from_standard: true, after_overhead: item.after_overhead || false, coefficient_applied: true }))
-  form.processes = items.process.items.map(item => ({ category: 'process', item_name: item.item_name, usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0, subtotal: parseFloat(item.subtotal) || 0, is_changed: item.is_changed || 0, from_standard: true }))
-  form.packaging = items.packaging.items.map(item => ({ category: 'packaging', material_id: item.material_id || null, item_name: item.item_name, usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0, carton_volume: item.carton_volume ? parseFloat(item.carton_volume) : null, subtotal: parseFloat(item.subtotal) || 0, is_changed: 0, from_standard: true }))
-  form.materials.forEach(m => { if (!m.material_id) { const found = allMaterials.value.find(mat => mat.name === m.item_name); if (found) m.material_id = found.id } })
-  form.packaging.forEach(p => { if (!p.material_id) { const found = allMaterials.value.find(mat => mat.name === p.item_name); if (found) p.material_id = found.id } })
-  if (quotation.pc_per_bag && quotation.bags_per_box && quotation.boxes_per_carton) {
-    const pcsPerCarton = quotation.pc_per_bag * quotation.bags_per_box * quotation.boxes_per_carton
-    const cartonMaterial = items.packaging.items.find(item => item.carton_volume && item.carton_volume > 0)
-    setShippingInfoFromConfig(pcsPerCarton, cartonMaterial?.carton_volume || null)
-    quantityInput.value = form.quantity
-    quantityUnit.value = 'pcs'
-    calculateShippingInfo(form, handleCalculateCost)
-  }
-  if (!quantityInput.value && form.quantity) { quantityInput.value = form.quantity; quantityUnit.value = 'pcs' }
-  if (quotation.custom_profit_tiers) {
-    try { const parsed = JSON.parse(quotation.custom_profit_tiers); customProfitTiers.value = parsed.map(t => ({ profitRate: t.profitRate, profitPercentage: t.profitPercentage, price: t.price, sortKey: t.profitRate ? parseFloat(t.profitRate) : 9999 })) }
-    catch (e) { customProfitTiers.value = [] }
-  }
-  if (fees?.length > 0) form.customFees = fees.map((fee, i) => ({ name: fee.name, rate: fee.rate, sortOrder: fee.sortOrder ?? i }))
-  else form.customFees = []
-  handleCalculateCost()
-  ElMessage.success(isCopy ? '报价单数据已复制，请修改后保存' : '报价单数据已加载')
-}
-
-// Standard Cost Data Fill
-const fillStandardCostData = async (data) => {
-  const { standardCost, items } = data
-  if (standardCost.model_category) { currentModelCategory.value = standardCost.model_category; if (materialCoefficientsCache.value[standardCost.model_category]) materialCoefficient.value = materialCoefficientsCache.value[standardCost.model_category] }
-  form.regulation_id = standardCost.regulation_id || null
-  await nextTick()
-  form.packaging_config_id = standardCost.packaging_config_id || null
-  if (form.packaging_config_id) {
-    const config = packagingConfigs.value.find(c => c.id === form.packaging_config_id)
-    if (config) currentFactory.value = config.factory || 'dongguan_xunan'
-  }
-  form.model_id = standardCost.model_id || null
-  form.customer_name = ''
-  form.customer_region = ''
-  form.sales_type = standardCost.sales_type
-  form.shipping_method = ''
-  form.port_type = 'fob_shenzhen'
-  form.port = ''
-  form.quantity = standardCost.quantity
-  form.freight_total = 0
-  form.include_freight_in_base = true
-  form.vat_rate = configStore.config.vat_rate || 0.13
-  if (standardCost.pc_per_bag && standardCost.bags_per_box && standardCost.boxes_per_carton) {
-    const pcsPerCarton = standardCost.pc_per_bag * standardCost.bags_per_box * standardCost.boxes_per_carton
-    setShippingInfoFromConfig(pcsPerCarton, null)
-    quantityInput.value = standardCost.quantity
-    quantityUnit.value = 'pcs'
-  }
-  if (items?.material) form.materials = items.material.items.map(item => ({ category: 'material', material_id: item.material_id || null, item_name: item.item_name, usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0, subtotal: parseFloat(item.subtotal) || 0, is_changed: 0, from_standard: true, after_overhead: item.after_overhead || false, coefficient_applied: true }))
-  if (items?.process) form.processes = items.process.items.map(item => ({ category: 'process', item_name: item.item_name, usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0, subtotal: parseFloat(item.subtotal) || 0, is_changed: 0, from_standard: true }))
-  if (items?.packaging) {
-    form.packaging = items.packaging.items.map(item => ({ category: 'packaging', material_id: item.material_id || null, item_name: item.item_name, usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0, carton_volume: item.carton_volume ? parseFloat(item.carton_volume) : null, subtotal: parseFloat(item.subtotal) || 0, is_changed: 0, from_standard: true }))
-    const cartonMaterial = items.packaging.items.find(item => item.carton_volume && item.carton_volume > 0)
-    if (cartonMaterial) shippingInfo.cartonVolume = cartonMaterial.carton_volume
-  }
-  form.materials.forEach(m => { if (!m.material_id) { const found = allMaterials.value.find(mat => mat.name === m.item_name); if (found) m.material_id = found.id } })
-  form.packaging.forEach(p => { if (!p.material_id) { const found = allMaterials.value.find(mat => mat.name === p.item_name); if (found) p.material_id = found.id } })
-  if (form.quantity && shippingInfo.pcsPerCarton) calculateShippingInfo(form, handleCalculateCost)
-  handleCalculateCost()
-  ElMessage.success('标准成本数据已复制，请填写客户信息后保存')
-}
-
-// Draft Logic Wrappers
-const formatDraftTime = (isoString) => {
-  const date = new Date(isoString)
-  return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-}
-const getFormDataForDraft = () => ({
-  form,
-  extras: { modelCategory: currentModelCategory.value, quantityUnit: quantityUnit.value, quantityInput: quantityInput.value, domesticCbmPrice: domesticCbmPrice.value, customProfitTiers: customProfitTiers.value, editMode },
-  hasData: hasFormData.value
-})
-const restoreDraft = async () => {
-  const draft = loadDraft()
-  if (!draft) return false
-  try {
-    if (draft.modelCategory) currentModelCategory.value = draft.modelCategory
-    Object.assign(form, draft.form)
-    if (draft.quantityUnit) quantityUnit.value = draft.quantityUnit
-    if (draft.quantityInput) quantityInput.value = draft.quantityInput
-    if (draft.domesticCbmPrice) domesticCbmPrice.value = draft.domesticCbmPrice
-    if (draft.customProfitTiers) customProfitTiers.value = draft.customProfitTiers
-    if (draft.editMode) Object.assign(editMode, draft.editMode)
-    await nextTick()
-    handleCalculateCost()
-    ElMessage.success('草稿已恢复')
-    return true
-  } catch (error) {
-    logger.error('恢复草稿失败:', error)
-    ElMessage.error('恢复草稿失败')
-    return false
-  }
-}
-const checkAndRestoreDraft = async () => {
-  if (route.params.id || route.query.copyFrom || route.query.copyFromStandardCost) return false
-  const draftInfo = getDraftInfo()
-  if (!draftInfo || !draftInfo.hasData) return false
-  try {
-    await ElMessageBox.confirm(
-      `保存时间：${formatDraftTime(draftInfo.savedAt)}${draftInfo.modelCategory ? `\n产品类别：${draftInfo.modelCategory}` : ''}${draftInfo.customerName ? `\n客户：${draftInfo.customerName}` : ''}`,
-      '检测到未完成的报价草稿',
-      { distinguishCancelAndClose: true, confirmButtonText: '继续编辑', cancelButtonText: '新建报价', type: 'info' }
-    )
-    return await restoreDraft()
-  } catch (action) {
-    if (action === 'cancel') clearDraft()
-    return false
-  }
-}
 
 // Lifecycle
 onMounted(async () => {
