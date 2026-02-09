@@ -1,6 +1,6 @@
   <template>
   <div class="animate-fade-in">
-    <CostPageHeader title="工作台">
+    <CostPageHeader title="仪表盘">
        <template #actions>
         <el-button link type="primary" @click="handleRefresh" :loading="refreshing">
           <i class="ri-refresh-line mr-1"></i>刷新页面数据
@@ -123,16 +123,30 @@
             <i class="ri-inbox-line text-3xl mb-2"></i>
             <p class="text-sm">暂无通知</p>
           </div>
-          <div 
-            v-for="(activity, index) in recentActivities" 
+          <div
+            v-for="(activity, index) in recentActivitiesWithType"
             :key="index"
-            class="flex items-start p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+            class="flex items-start p-3 rounded-lg transition-colors"
+            :class="getNotificationClass(activity.type).bg"
           >
-            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">
-              <i :class="[activity.icon, 'text-blue-600 text-sm']"></i>
+            <div
+              class="w-8 h-8 rounded-lg flex items-center justify-center mr-3 flex-shrink-0 mt-0.5"
+              :class="getNotificationClass(activity.type).iconBg"
+            >
+              <i :class="[activity.icon || getNotificationClass(activity.type).icon, 'text-sm', getNotificationClass(activity.type).iconColor]"></i>
             </div>
             <div class="flex-1 min-w-0">
-              <p class="text-xs text-slate-700 whitespace-normal break-words leading-relaxed">{{ activity.content }}</p>
+              <div class="flex items-center gap-1.5 mb-0.5">
+                <p class="text-xs font-medium" :class="getNotificationClass(activity.type).titleColor">
+                  {{ getNotificationTitle(activity.type) }}
+                </p>
+                <span
+                  v-if="isUnread(activity)"
+                  class="w-1.5 h-1.5 rounded-full"
+                  :class="getNotificationClass(activity.type).dotColor"
+                ></span>
+              </div>
+              <p class="text-xs text-slate-600 whitespace-normal break-words leading-relaxed">{{ activity.content }}</p>
               <p class="text-xs text-slate-400 mt-1">{{ activity.time }}</p>
             </div>
           </div>
@@ -431,6 +445,111 @@ const loadDashboardData = async () => {
     logger.error('加载仪表盘数据失败:', err)
   }
 }
+
+// 智能判断通知类型
+const detectNotificationType = (item) => {
+  const content = (item.content || '').toLowerCase()
+
+  // 审核退回
+  if (content.includes('退回') || content.includes('拒绝') || content.includes('驳回')) {
+    return 'rejected'
+  }
+  // 审核通过
+  if (content.includes('通过') || content.includes('批准') || content.includes('已完成')) {
+    return 'approved'
+  }
+  // 待审核
+  if (content.includes('待审核') || content.includes('待处理') || content.includes('提交')) {
+    return 'review'
+  }
+  // 警告提醒
+  if (content.includes('警告') || content.includes('异常') || content.includes('失败') || content.includes('错误')) {
+    return 'warning'
+  }
+  // 系统通知（默认）
+  return item.type || 'system'
+}
+
+// 获取通知样式配置
+const getNotificationClass = (type) => {
+  const config = {
+    system: {
+      bg: 'bg-blue-50/60',
+      iconBg: 'bg-blue-100',
+      iconColor: 'text-blue-600',
+      titleColor: 'text-blue-700',
+      dotColor: 'bg-blue-500',
+      icon: 'ri-information-line'
+    },
+    review: {
+      bg: 'bg-amber-50/60',
+      iconBg: 'bg-amber-100',
+      iconColor: 'text-amber-600',
+      titleColor: 'text-amber-700',
+      dotColor: 'bg-amber-500',
+      icon: 'ri-time-line'
+    },
+    approved: {
+      bg: 'bg-emerald-50/60',
+      iconBg: 'bg-emerald-100',
+      iconColor: 'text-emerald-600',
+      titleColor: 'text-emerald-700',
+      dotColor: 'bg-emerald-500',
+      icon: 'ri-check-double-line'
+    },
+    rejected: {
+      bg: 'bg-rose-50/60',
+      iconBg: 'bg-rose-100',
+      iconColor: 'text-rose-600',
+      titleColor: 'text-rose-700',
+      dotColor: 'bg-rose-500',
+      icon: 'ri-close-circle-line'
+    },
+    warning: {
+      bg: 'bg-orange-50/60',
+      iconBg: 'bg-orange-100',
+      iconColor: 'text-orange-600',
+      titleColor: 'text-orange-700',
+      dotColor: 'bg-orange-500',
+      icon: 'ri-alert-line'
+    },
+    default: {
+      bg: 'bg-slate-50',
+      iconBg: 'bg-slate-100',
+      iconColor: 'text-slate-600',
+      titleColor: 'text-slate-700',
+      dotColor: 'bg-slate-400',
+      icon: 'ri-notification-3-line'
+    }
+  }
+  return config[type] || config.default
+}
+
+// 获取通知标题
+const getNotificationTitle = (type) => {
+  const titles = {
+    system: '系统通知',
+    review: '待审核提醒',
+    approved: '审核通过',
+    rejected: '审核退回',
+    warning: '重要提醒'
+  }
+  return titles[type] || '消息通知'
+}
+
+// 判断是否为未读
+const isUnread = (item) => {
+  if (!item.time) return false
+  return /刚刚|分钟前|小时前/.test(item.time)
+}
+
+// 带类型的通知列表
+const recentActivitiesWithType = computed(() => {
+  return recentActivities.value.map(item => ({
+    ...item,
+    type: detectNotificationType(item)
+  }))
+})
 
 // 加载最近操作记录
 const loadRecentActivities = async () => {

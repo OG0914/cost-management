@@ -6,7 +6,14 @@
       "Bash(git -C e:desktopcost-management log --oneline -10)",
       "Bash(git -C:*)",
       "Bash(npx skills find:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(python scripts/search.py:*)",
+      "Bash(python:*)",
+      "WebFetch(domain:skills.sh)",
+      "Bash(npx skills add:*)",
+      "Bash(wc -l:*)",
+      "Bash(grep:*)"
     ]
   }
 }

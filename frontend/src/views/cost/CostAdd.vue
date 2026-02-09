@@ -1,7 +1,6 @@
 <template>
   <div class="cost-page-wrapper">
     <!-- 顶部导航栏 -->
-    <!-- 顶部导航栏 -->
     <CostPageHeader :title="pageTitle" :show-back="true" @back="goBack">
       <template #after-title>
         <el-tag v-if="isEditMode" type="warning" size="small">编辑中</el-tag>
@@ -492,7 +491,6 @@ const sliderPrice = computed(() => {
   const basePrice = form.sales_type === 'domestic' ? calculation.value.domesticPrice : calculation.value.insurancePrice
   return basePrice / (1 - sliderProfitRate.value / 100)
 })
-const updateSliderPrice = () => {} 
 const setSliderFromTier = (tier) => {
   const rate = parseInt(tier.profitPercentage) || 0
   sliderProfitRate.value = rate
