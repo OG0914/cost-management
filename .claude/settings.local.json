@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(git -C e:desktopcost-management log --oneline -10)",
+      "Bash(git -C:*)",
+      "Bash(npx skills find:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

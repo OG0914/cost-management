@@ -149,194 +149,28 @@
         </div>
 
         <!-- 外销运费明细 -->
-        <div v-if="form.sales_type === 'export'" class="export-freight-section">
-          <div class="freight-panel">
-            <div class="freight-panel-header">外销运费明细</div>
-            <div class="freight-panel-body">
-              <el-row :gutter="24">
-                <el-col :span="24">
-                  <div class="freight-field">
-                    <span class="freight-label">货柜类型:</span>
-                    <div class="container-type-btns">
-                      <el-button :type="form.shipping_method === 'fcl_20' ? 'primary' : 'default'" @click="form.shipping_method = 'fcl_20'; handleShippingMethodChange()">20GP 小柜</el-button>
-                      <el-button :type="form.shipping_method === 'fcl_40' ? 'primary' : 'default'" @click="form.shipping_method = 'fcl_40'; handleShippingMethodChange()">40GP 大柜</el-button>
-                      <el-button :type="form.shipping_method === 'lcl' ? 'primary' : 'default'" @click="form.shipping_method = 'lcl'; handleShippingMethodChange()">LCL 散货</el-button>
-                      <el-button :type="form.shipping_method === 'cif_lcl' ? 'primary' : 'default'" @click="form.shipping_method = 'cif_lcl'; handleShippingMethodChange()">CIF 深圳</el-button>
-                    </div>
-                  </div>
-                </el-col>
-              </el-row>
-
-              <el-row :gutter="24" v-if="form.shipping_method && form.shipping_method !== 'cif_lcl'">
-                <el-col :span="12">
-                  <div class="freight-field">
-                    <span class="freight-label">起运港口:</span>
-                    <el-radio-group v-model="form.port_type" @change="handlePortTypeChange">
-                      <el-radio value="fob_shenzhen">FOB 深圳</el-radio>
-                      <el-radio value="other">其他港口</el-radio>
-                    </el-radio-group>
-                  </div>
-                </el-col>
-                <el-col :span="12" v-if="form.port_type === 'other'">
-                  <el-form-item label="港口名称" prop="port" :rules="[{ required: true, message: '请输入港口名称', trigger: 'blur' }]">
-                    <el-input v-model="form.port" placeholder="请输入港口名称" style="width: 200px" />
-                  </el-form-item>
-                </el-col>
-              </el-row>
-
-              <!-- 散货 (LCL) 数量输入区域 (仿内销布局) -->
-              <div v-if="form.shipping_method === 'lcl' || form.shipping_method === 'cif_lcl'" class="lcl-quantity-section mt-4">
-                <el-row :gutter="24">
-                  <el-col :span="12">
-                    <el-form-item label="数量单位">
-                      <el-radio-group v-model="quantityUnit" @change="handleQuantityUnitChange" :disabled="!shippingInfo.pcsPerCarton">
-                        <el-radio value="pcs">按片</el-radio>
-                        <el-radio value="carton">按箱</el-radio>
-                      </el-radio-group>
-                    </el-form-item>
-                  </el-col>
-                  <el-col :span="12">
-                    <el-form-item :label="quantityUnit === 'pcs' ? '订购数量(片)' : '订购数量(箱)'" prop="quantity" class="compact-required-label">
-                      <el-input-number v-model="quantityInput" :min="1" :precision="0" :controls="false" @change="handleQuantityInputChange" style="width: 100%" />
-                      <div v-if="quantityUnit === 'carton' && shippingInfo.pcsPerCarton" class="quantity-hint">= {{ form.quantity }} 片（{{ quantityInput }}箱 × {{ shippingInfo.pcsPerCarton }}片/箱）</div>
-                    </el-form-item>
-                  </el-col>
-                </el-row>
-
-                <el-row :gutter="24" v-if="shippingInfo.cartons !== null || shippingInfo.cbm !== null">
-                  <el-col :span="12">
-                    <el-form-item label="总箱数">
-                      <div class="readonly-value-box">{{ shippingInfo.cartons || '-' }}</div>
-                    </el-form-item>
-                  </el-col>
-                  <el-col :span="12">
-                    <el-form-item label="总体积(CBM)">
-                      <div class="readonly-value-box">{{ shippingInfo.cbm || '-' }}</div>
-                    </el-form-item>
-                  </el-col>
-                </el-row>
-
-                <!-- 智能装箱建议 (仅在按片且除不尽时显示) -->
-                <div v-if="quantityUnit === 'pcs' && form.quantity && shippingInfo.pcsPerCarton && (form.quantity % shippingInfo.pcsPerCarton !== 0)" class="smart-packing-tip domestic">
-                  <el-icon><InfoFilled /></el-icon>
-                  <div class="tip-content">
-                    <div class="tip-title">智能装箱建议:</div>
-                    <div>当前数量: {{ form.quantity }} pcs ({{ (form.quantity / shippingInfo.pcsPerCarton).toFixed(1) }}箱)</div>
-                    <div>建议数量: <strong>{{ Math.ceil(form.quantity / shippingInfo.pcsPerCarton) * shippingInfo.pcsPerCarton }} pcs</strong> ({{ Math.ceil(form.quantity / shippingInfo.pcsPerCarton) }}箱) 以达到整数箱</div>
-                  </div>
-                </div>
-
-                <!-- CBM过大提示 (仅在散货且CBM>15时显示) -->
-                <div v-if="shippingInfo.cbm && parseFloat(shippingInfo.cbm) > 15" class="smart-packing-tip warning">
-                  <el-icon><WarningFilled /></el-icon>
-                  <div class="tip-content">
-                    <div class="tip-title">运输建议:</div>
-                    <div>当前CBM为 <strong>{{ shippingInfo.cbm }}</strong> (超过15)，建议选择整柜运输或联系物流单独确认运费。</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- FOB深圳运费计算明细 - 整柜 (FCL) 卡片 -->
-              <FreightCardFCL v-if="form.port_type === 'fob_shenzhen' && freightCalculation && (form.shipping_method === 'fcl_20' || form.shipping_method === 'fcl_40')" :freight-calculation="freightCalculation" :shipping-method="form.shipping_method" :cbm="shippingInfo.cbm" :quantity="form.quantity" />
-
-              <!-- 散货 (LCL) 卡片 -->
-              <FreightCardLCL v-else-if="form.port_type === 'fob_shenzhen' && freightCalculation && form.shipping_method === 'lcl'" :freight-calculation="freightCalculation" />
-
-              <!-- CIF 深圳运费详情卡片 -->
-              <FreightCardCIF v-else-if="form.port_type === 'cif_shenzhen' && freightCalculation" :freight-calculation="freightCalculation" />
-
-              <!-- 运费总价（非FOB深圳/CIF深圳时手动输入） -->
-              <el-row :gutter="24" v-if="form.port_type !== 'fob_shenzhen' && form.port_type !== 'cif_shenzhen'">
-                <el-col :span="12">
-                  <el-form-item label="运费总价" prop="freight_total" :rules="[{ required: true, message: '请输入运费总价', trigger: 'blur' }]">
-                    <el-input-number v-model="form.freight_total" :min="0" :precision="4" :controls="false" @change="handleCalculateCost" style="width: 200px" />
-                    <span class="freight-unit">CNY</span>
-                  </el-form-item>
-                </el-col>
-              </el-row>
-
-              <el-row :gutter="24">
-                <el-col :span="24">
-                  <div class="freight-field freight-field-wide">
-                    <el-form-item label="运费计入成本" required class="wide-label-item mb-0">
-                      <el-radio-group v-model="form.include_freight_in_base" @change="handleCalculateCost">
-                        <el-radio :value="true">是</el-radio>
-                        <el-radio :value="false">否（运费在管销价基础上单独计算）</el-radio>
-                      </el-radio-group>
-                    </el-form-item>
-                  </div>
-                </el-col>
-              </el-row>
-            </div>
-          </div>
-        </div>
+        <ExportFreightSection
+          v-if="form.sales_type === 'export'"
+          :shipping-info="shippingInfo"
+          :freight-calculation="freightCalculation"
+          :pcs-per-carton="shippingInfo.pcsPerCarton"
+          @shipping-method-change="handleShippingMethodChange"
+          @port-type-change="handlePortTypeChange"
+          @quantity-unit-change="handleQuantityUnitChange"
+          @quantity-input-change="handleQuantityInputChange"
+          @calculate="handleCalculateCost"
+        />
 
         <!-- 内销数量输入 -->
-        <div v-if="form.sales_type === 'domestic'" class="domestic-quantity-section">
-          <el-row :gutter="24">
-            <el-col :span="12">
-              <el-form-item label="数量单位">
-                <el-radio-group v-model="quantityUnit" @change="handleQuantityUnitChange" :disabled="!shippingInfo.pcsPerCarton">
-                  <el-radio value="pcs">按片</el-radio>
-                  <el-radio value="carton">按箱</el-radio>
-                </el-radio-group>
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item :label="quantityUnit === 'pcs' ? '购买数量(片)' : '购买数量(箱)'" prop="quantity" class="compact-required-label">
-                <el-input-number v-model="quantityInput" :min="1" :precision="0" :controls="false" @change="handleQuantityInputChange" style="width: 100%" />
-                <div v-if="quantityUnit === 'carton' && shippingInfo.pcsPerCarton" class="quantity-hint">= {{ form.quantity }} 片（{{ quantityInput }}箱 × {{ shippingInfo.pcsPerCarton }}片/箱）</div>
-              </el-form-item>
-            </el-col>
-          </el-row>
-          
-          <el-row :gutter="24" v-if="shippingInfo.cartons !== null || shippingInfo.cbm !== null">
-            <el-col :span="12">
-              <el-form-item label="箱数">
-                <div class="readonly-value-box">{{ shippingInfo.cartons || '-' }}</div>
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="CBM">
-                <div class="readonly-value-box">{{ shippingInfo.cbm || '-' }}</div>
-              </el-form-item>
-            </el-col>
-          </el-row>
-
-          <div v-if="quantityUnit === 'pcs' && form.quantity && shippingInfo.pcsPerCarton && (form.quantity % shippingInfo.pcsPerCarton !== 0)" class="smart-packing-tip domestic">
-            <el-icon><InfoFilled /></el-icon>
-            <div class="tip-content">
-              <div class="tip-title">智能装箱建议:</div>
-              <div>当前数量: {{ form.quantity }} pcs ({{ (form.quantity / shippingInfo.pcsPerCarton).toFixed(1) }}箱)</div>
-              <div>建议数量: <strong>{{ Math.ceil(form.quantity / shippingInfo.pcsPerCarton) * shippingInfo.pcsPerCarton }} pcs</strong> ({{ Math.ceil(form.quantity / shippingInfo.pcsPerCarton) }}箱) 以达到整数箱</div>
-            </div>
-          </div>
-
-          <el-row :gutter="24" class="domestic-freight-row">
-            <el-col :span="12">
-              <el-form-item label="每CBM单价">
-                <el-input-number v-model="domesticCbmPrice" :min="0" :precision="2" :controls="false" @change="handleDomesticCbmPriceChange" style="width: 100%" placeholder="0" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="运费总价" prop="freight_total" class="compact-required-label">
-                <el-input-number v-model="form.freight_total" :min="0" :precision="2" :controls="false" @change="handleCalculateCost" style="width: 100%" />
-                <div v-if="domesticCbmPrice && shippingInfo.cbm" class="freight-hint">= {{ domesticCbmPrice }} × {{ Math.ceil(parseFloat(shippingInfo.cbm)) }} CBM</div>
-              </el-form-item>
-            </el-col>
-          </el-row>
-          
-          <el-row :gutter="24">
-            <el-col :span="24">
-              <el-form-item label="运费计入成本" required class="wide-label-item">
-                <el-radio-group v-model="form.include_freight_in_base" @change="handleCalculateCost">
-                  <el-radio :value="true">是</el-radio>
-                  <el-radio :value="false">否</el-radio>
-                </el-radio-group>
-              </el-form-item>
-            </el-col>
-          </el-row>
-        </div>
+        <DomesticSection
+          v-if="form.sales_type === 'domestic'"
+          :shipping-info="shippingInfo"
+          :pcs-per-carton="shippingInfo.pcsPerCarton"
+          @quantity-unit-change="handleQuantityUnitChange"
+          @quantity-input-change="handleQuantityInputChange"
+          @cbm-price-change="handleDomesticCbmPriceChange"
+          @calculate="handleCalculateCost"
+        />
         </div>
       </div>
 
@@ -428,21 +262,20 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { InfoFilled, WarningFilled, Document, FolderAdd, Promotion, Delete } from '@element-plus/icons-vue'
 import CostPageHeader from '@/components/cost/CostPageHeader.vue'
-import FreightCardFCL from './components/FreightCardFCL.vue'
-import FreightCardLCL from './components/FreightCardLCL.vue'
-import FreightCardCIF from './components/FreightCardCIF.vue'
 import CostPreviewPanel from './components/CostPreviewPanel.vue'
 import CostDetailTabs from './components/CostDetailTabs.vue'
+import ExportFreightSection from './components/ExportFreightSection.vue'
+import DomesticSection from './components/DomesticSection.vue'
 import { formatNumber } from '@/utils/format'
 import { useConfigStore } from '@/store/config'
-import logger from '@/utils/logger'
 import { useFreightCalculation, useCostCalculation, useQuotationData, useCustomerSearch, useMaterialSearch, useCustomFees, useQuotationDraft } from '@/composables'
 import { AUTO_SAVE_INTERVAL, COMMON_REGIONS } from './config/costAddConfig'
 import { useDetailRows, useRegionSuggestion } from './composables/useDetailRows'
+import { useCostFormStore } from '@/store/costForm'
 
 // New Composables
 import { useCostForm } from './composables/useCostForm'
@@ -458,21 +291,27 @@ defineOptions({ name: 'CostAdd' })
 const router = useRouter()
 const route = useRoute()
 const configStore = useConfigStore()
+const costFormStore = useCostFormStore()
 const activeDetailTab = ref('materials')
 
 // 1. 基础表单逻辑
-const { 
-  form, formRef, rules, editMode, currentModelCategory, regulations, packagingConfigs, 
-  isEditMode, vatRateOptions, resetForm: resetFormBase, validateForm 
+const {
+  formRef, rules, editMode, currentModelCategory, regulations, packagingConfigs,
+  isEditMode, vatRateOptions, resetForm: resetFormBase, validateForm
 } = useCostForm()
 
+// 使用 store 的 form 作为源，父子组件共享同一状态
+const form = costFormStore.form
+
 // 2. 通用业务逻辑 Hooks
-const { 
-  freightCalculation, systemConfig, shippingInfo, quantityUnit, quantityInput, domesticCbmPrice, 
-  currentFactory, loadSystemConfig, setShippingInfoFromConfig, calculateShippingInfo, 
-  calculateFOBFreight, calculateCIFShenzhen, onQuantityUnitChange, onQuantityInputChange, 
-  onDomesticCbmPriceChange, onShippingMethodChange, onPortTypeChange, resetShippingInfo 
+const {
+  freightCalculation, systemConfig, shippingInfo, domesticCbmPrice,
+  currentFactory, loadSystemConfig, setShippingInfoFromConfig, calculateShippingInfo,
+  resetShippingInfo
 } = useFreightCalculation()
+
+// 使用 store 的 quantityUnit 和 quantityInput，确保父子组件同步（使用 storeToRefs 保持响应式）
+const { quantityUnit, quantityInput } = storeToRefs(costFormStore)
 
 const { 
   calculation, customProfitTiers, modelCategory: costModelCategory, materialCoefficient, 
@@ -572,11 +411,46 @@ const { formatDraftTime, getFormDataForDraft, restoreDraft, checkAndRestoreDraft
 })
 
 // Wrappers for Template Events
-const handleQuantityUnitChange = () => onQuantityUnitChange(form, handleCalculateCost)
-const handleQuantityInputChange = () => onQuantityInputChange(form, handleCalculateCost)
-const handleDomesticCbmPriceChange = () => onDomesticCbmPriceChange(form, handleCalculateCost)
-const handleShippingMethodChange = () => onShippingMethodChange(form, handleCalculateCost)
-const handlePortTypeChange = () => onPortTypeChange(form, handleCalculateCost)
+const handleQuantityUnitChange = () => {
+  // 更新 form.quantity
+  if (quantityUnit.value === 'carton' && shippingInfo.pcsPerCarton) {
+    form.quantity = quantityInput.value * shippingInfo.pcsPerCarton
+  } else {
+    form.quantity = quantityInput.value
+  }
+  calculateShippingInfo(form, handleCalculateCost)
+  handleCalculateCost()
+}
+const handleQuantityInputChange = () => {
+  // 更新 form.quantity
+  if (quantityUnit.value === 'carton' && shippingInfo.pcsPerCarton) {
+    form.quantity = quantityInput.value * shippingInfo.pcsPerCarton
+  } else {
+    form.quantity = quantityInput.value
+  }
+  calculateShippingInfo(form, handleCalculateCost)
+  handleCalculateCost()
+}
+const handleDomesticCbmPriceChange = () => {
+  if (domesticCbmPrice.value > 0 && shippingInfo.cbm) {
+    const ceiledCbm = Math.ceil(parseFloat(shippingInfo.cbm))
+    form.freight_total = Math.round(domesticCbmPrice.value * ceiledCbm * 100) / 100
+  }
+  handleCalculateCost()
+}
+const handleShippingMethodChange = () => {
+  form.port = ''
+  freightCalculation.value = null
+  calculateShippingInfo(form, handleCalculateCost)
+  handleCalculateCost()
+}
+const handlePortTypeChange = () => {
+  if (form.port_type === 'fob_shenzhen') {
+    form.port = ''
+  }
+  calculateShippingInfo(form, handleCalculateCost)
+  handleCalculateCost()
+}
 
 const handleMaterialSelectHelper = (row, index) => { onMaterialSelect(row, materialCoefficient.value, (r) => { calculateItemSubtotal(r); handleCalculateCost() }) }
 const handlePackagingMaterialSelectHelper = (row, index) => { onPackagingMaterialSelect(row, (r) => { calculateItemSubtotal(r); handleCalculateCost() }) }
@@ -731,7 +605,7 @@ watch(currentModelCategory, (val) => {
 })
 
 watch(() => route.query.mode, async (newMode, oldMode) => {
-  if (route.path !== '/cost/add' || route.params.id) return
+  if (route.path !== '/cost/add' || route.params.id || route.query.copyFromStandardCost) return
   resetForm()
   referenceStandardCostId.value = null
   referenceStandardCosts.value = []
@@ -840,9 +714,6 @@ onBeforeRouteLeave(async (to, from, next) => {
   .cost-form .el-form-item__label { float: none; text-align: left; padding: 0 0 4px 0; }
   .sales-type-group { flex-direction: column; }
   .sales-type-card { flex: none; }
-  .container-type-btns { flex-wrap: wrap; }
-  .freight-field { flex-wrap: wrap; }
-  .freight-label { width: 100%; margin-bottom: 4px; }
 }
 
 /* ========== 原有样式保留 ========== */
@@ -860,23 +731,6 @@ onBeforeRouteLeave(async (to, from, next) => {
 .no-reference-tip { color: #909399; font-size: 12px; margin-top: 4px; }
 .customer-region { float: right; color: #8492a6; font-size: 12px; }
 .vat-rate-section { margin-top: 16px; padding-top: 16px; border-top: 1px dashed #e4e7ed; }
-.export-freight-section { margin-top: 20px; }
-.freight-panel { border: 1px solid #e4e7ed; border-radius: 8px; overflow: hidden; }
-.freight-panel-header { background: #f5f7fa; padding: 12px 16px; font-weight: 600; color: #303133; border-bottom: 1px solid #e4e7ed; }
-.freight-panel-body { padding: 16px; }
-.freight-field { display: flex; align-items: center; margin-bottom: 12px; }
-.freight-label { width: 80px; color: #606266; font-size: 14px; flex-shrink: 0; }
-.freight-unit { margin-left: 8px; color: #909399; }
-.freight-value { font-weight: 600; color: #303133; }
-.container-type-btns { display: flex; gap: 10px; }
-.smart-packing-tip { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; background: #e6f7ff; border: 1px solid #91d5ff; border-radius: 6px; margin: 16px 0; }
-.smart-packing-tip .el-icon { color: #1890ff; font-size: 18px; margin-top: 2px; }
-.tip-content { flex: 1; }
-.tip-title { font-weight: 600; color: #1890ff; margin-bottom: 4px; }
-.tip-content div { color: #606266; font-size: 13px; line-height: 1.6; }
-.domestic-quantity-section { margin-top: 20px; padding-top: 16px; border-top: 1px dashed #e4e7ed; }
-.quantity-hint { color: #67c23a; font-size: 12px; margin-top: 4px; }
-.freight-hint { color: #909399; font-size: 12px; margin-top: 4px; }
 .subtotal-row { display: flex; justify-content: flex-end; gap: 24px; padding: 8px 0; font-size: 14px; color: #606266; }
 .subtotal-row strong { color: #409eff; }
 .subtotal-row .after-overhead strong { color: #e6a23c; }
@@ -929,62 +783,6 @@ onBeforeRouteLeave(async (to, from, next) => {
   line-height: 32px;
   color: #606266;
   width: 100%;
-}
-
-.freight-input-group {
-  display: flex;
-  align-items: center;
-  background-color: #f8fafc;
-  padding: 16px;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  margin-bottom: 24px;
-  gap: 32px;
-  flex-wrap: nowrap;
-}
-
-.freight-input-group .input-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-}
-
-.freight-input-group .input-item.primary {
-  flex: 0 0 auto;
-}
-
-.freight-input-group .input-label {
-  font-size: 14px;
-  color: #64748b;
-  font-weight: 500;
-}
-
-.freight-input-group .quantity-input {
-  width: 120px;
-}
-
-.info-divider {
-  width: 1px;
-  height: 20px;
-  background-color: #e2e8f0;
-}
-
-.freight-input-group .info-value {
-  color: #0f172a;
-  font-weight: 600;
-  font-size: 15px;
-}
-
-.freight-input-group .info-value.big {
-  color: #2563eb;
-  font-weight: 700;
-}
-
-.freight-input-group .unit-text {
-  font-size: 12px;
-  color: #94a3b8;
-  margin-left: 2px;
 }
 
 .mb-0 { margin-bottom: 0 !important; }
