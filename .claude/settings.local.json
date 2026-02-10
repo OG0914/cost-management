@@ -13,7 +13,14 @@
       "WebFetch(domain:skills.sh)",
       "Bash(npx skills add:*)",
       "Bash(wc -l:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git push:*)",
+      "Bash(find:*)",
+      "Bash(node:*)",
+      "Bash(node -c:*)",
+      "Bash(npm run build)",
+      "Bash(npm run build:*)",
+      "Bash(cd:*)"
     ]
   }
 }

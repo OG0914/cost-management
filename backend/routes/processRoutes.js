@@ -45,7 +45,7 @@ router.get('/packaging-configs/:id', processController.getPackagingConfigDetail)
 router.get('/packaging-configs/:id/full', processController.getPackagingConfigFullDetail);
 router.post('/packaging-configs', checkRole('admin', 'producer'), processController.createPackagingConfig);
 router.post('/packaging-configs/batch-delete', checkRole('admin', 'producer'), processController.batchDeletePackagingConfigs);
-router.put('/packaging-configs/:id', checkRole('admin', 'producer'), processController.updatePackagingConfig);
+router.put('/packaging-configs/:id', checkRole('admin', 'producer', 'purchaser'), processController.updatePackagingConfig);
 router.delete('/packaging-configs/:id', checkRole('admin', 'producer'), processController.deletePackagingConfig);
 
 // 工序配置路由

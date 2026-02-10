@@ -171,22 +171,56 @@ exports.createPackagingConfig = async (req, res) => {
 exports.updatePackagingConfig = async (req, res) => {
   try {
     const { id } = req.params;
+    const userRole = req.user?.role;
     const {
       config_name, packaging_type, layer1_qty, layer2_qty, layer3_qty,
       pc_per_bag, bags_per_box, boxes_per_carton, // 兼容旧字段
       is_active, processes, materials, factory
     } = req.body;
 
-    if (packaging_type !== undefined && !isValidPackagingType(packaging_type)) {
+    // 先计算包装数量值（后续权限检查需要用到）
+    const l1 = layer1_qty !== undefined ? layer1_qty : pc_per_bag;
+    const l2 = layer2_qty !== undefined ? layer2_qty : bags_per_box;
+    const l3 = layer3_qty !== undefined ? layer3_qty : boxes_per_carton;
+
+    // 权限控制：明确各角色可编辑范围
+    const isAdmin = userRole === 'admin';
+    const isProducer = userRole === 'producer';
+    const isPurchaser = userRole === 'purchaser';
+    const canEditConfig = isAdmin || isProducer;  // 可编辑配置信息
+    const canEditProcess = isAdmin || isProducer; // 可编辑工序
+    const canEditMaterial = isAdmin || isPurchaser; // 可编辑包材
+
+    // 生产不能修改包材
+    if (isProducer && materials) {
+      return res.status(403).json({
+        success: false,
+        message: '您没有权限修改包材，请联系采购人员'
+      });
+    }
+
+    // 采购不能修改工序
+    if (isPurchaser && processes) {
+      return res.status(403).json({
+        success: false,
+        message: '您没有权限修改工序，请联系生产人员'
+      });
+    }
+
+    // 采购不能修改配置基本信息
+    if (isPurchaser && (config_name !== undefined || packaging_type !== undefined || l1 !== undefined || l2 !== undefined)) {
+      return res.status(403).json({
+        success: false,
+        message: '您没有权限修改包装配置信息，请联系生产人员'
+      });
+    }
+
+    if (!isPurchaser && packaging_type !== undefined && !isValidPackagingType(packaging_type)) {
       return res.status(400).json({
         success: false,
         message: `无效的包装类型: ${packaging_type}。有效值: ${VALID_PACKAGING_TYPE_KEYS.join(', ')}`
       });
     }
-
-    const l1 = layer1_qty !== undefined ? layer1_qty : pc_per_bag;
-    const l2 = layer2_qty !== undefined ? layer2_qty : bags_per_box;
-    const l3 = layer3_qty !== undefined ? layer3_qty : boxes_per_carton;
 
     // 处理 is_active 转换为布尔值 (前端可能传 1/0)
     let activeState = true;
@@ -194,16 +228,22 @@ exports.updatePackagingConfig = async (req, res) => {
       activeState = (is_active === 1 || is_active === '1' || is_active === true || is_active === 'true');
     }
 
-    await PackagingConfig.update(id, {
-      config_name, packaging_type, layer1_qty: l1, layer2_qty: l2, layer3_qty: l3,
-      is_active: activeState, factory
-    });
+    // 只有生产/管理员可修改配置基本信息
+    if (canEditConfig) {
+      await PackagingConfig.update(id, {
+        config_name, packaging_type, layer1_qty: l1, layer2_qty: l2, layer3_qty: l3,
+        is_active: activeState, factory
+      });
+    }
 
-    if (processes) {
+    // 只有生产/管理员可修改工序
+    if (processes && canEditProcess) {
       await ProcessConfig.deleteByPackagingConfigId(id);
       if (processes.length > 0) await ProcessConfig.createBatch(id, processes);
     }
-    if (materials) {
+
+    // 只有采购/管理员可修改包材
+    if (materials && canEditMaterial) {
       await PackagingMaterial.deleteByPackagingConfigId(id);
       if (materials.length > 0) await PackagingMaterial.createBatch(id, materials);
     }
