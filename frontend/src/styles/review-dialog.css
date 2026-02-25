@@ -1,0 +1,814 @@
+/**
+ * 审核详情弹窗共享样式
+ * 风格：Swiss Modernism 2.0 - 清爽、专业、无渐变
+ * 配色：纯白背景、浅灰卡片、单一强调色
+ */
+
+/* ========== 基础变量 ========== */
+:root {
+  --review-bg-primary: #ffffff;
+  --review-bg-secondary: #f8fafc;
+  --review-bg-tertiary: #f1f5f9;
+  --review-border: #e2e8f0;
+  --review-border-light: #f1f5f9;
+  --review-text-primary: #0f172a;
+  --review-text-secondary: #475569;
+  --review-text-tertiary: #94a3b8;
+  --review-accent-blue: #3b82f6;
+  --review-accent-green: #22c55e;
+  --review-accent-orange: #f97316;
+  --review-accent-red: #ef4444;
+  --review-accent-amber: #f59e0b;
+  --review-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --review-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --review-radius-sm: 4px;
+  --review-radius: 6px;
+  --review-radius-lg: 8px;
+  --review-transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========== 弹窗内容区 ========== */
+.review-detail-content {
+  max-height: 58vh;
+  overflow-y: auto;
+  padding: 0 4px 16px 0;
+}
+
+/* 自定义滚动条 */
+.review-detail-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.review-detail-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.review-detail-content::-webkit-scrollbar-thumb {
+  background: var(--review-border);
+  border-radius: 3px;
+}
+
+.review-detail-content::-webkit-scrollbar-thumb:hover {
+  background: var(--review-text-tertiary);
+}
+
+/* ========== 顶部标题区 ========== */
+.review-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 0 16px 0;
+  border-bottom: 1px solid var(--review-border-light);
+  margin-bottom: 20px;
+}
+
+.review-quotation-no {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--review-text-primary);
+  letter-spacing: -0.3px;
+}
+
+/* 状态标签和销售类型标签已由 StatusBadge 通用组件处理 */
+
+/* ========== 信息网格卡片 ========== */
+.review-info-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.review-info-card {
+  background: var(--review-bg-secondary);
+  border: 1px solid var(--review-border-light);
+  border-radius: var(--review-radius);
+  padding: 12px 14px;
+  transition: all var(--review-transition);
+}
+
+.review-info-card:hover {
+  border-color: var(--review-border);
+  background: var(--review-bg-primary);
+  box-shadow: var(--review-shadow-sm);
+}
+
+.review-info-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--review-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.review-info-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--review-text-primary);
+  line-height: 1.4;
+}
+
+.review-info-sub {
+  font-size: 11px;
+  color: var(--review-text-secondary);
+  margin-top: 2px;
+}
+
+/* ========== 区块标题 ========== */
+.review-section {
+  margin-bottom: 20px;
+}
+
+.review-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--review-text-primary);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.review-section-title::before {
+  content: '';
+  width: 3px;
+  height: 14px;
+  background: var(--review-accent-blue);
+  border-radius: 2px;
+}
+
+/* ========== 表格样式 ========== */
+.review-table-container {
+  border: 1px solid var(--review-border);
+  border-radius: var(--review-radius);
+  overflow: hidden;
+}
+
+.review-subtotal-bar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 14px;
+  background: var(--review-bg-secondary);
+  border-top: 1px solid var(--review-border-light);
+  font-size: 12px;
+  color: var(--review-text-secondary);
+}
+
+.review-subtotal-bar .highlight {
+  font-weight: 600;
+  color: var(--review-text-primary);
+}
+
+/* ========== 差异状态标签 ========== */
+.review-diff-status {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: var(--review-radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.review-diff-status::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.review-diff-unchanged {
+  color: var(--review-accent-green);
+  background: #f0fdf4;
+}
+
+.review-diff-unchanged::before {
+  background: var(--review-accent-green);
+}
+
+.review-diff-modified {
+  color: var(--review-accent-amber);
+  background: #fffbeb;
+}
+
+.review-diff-modified::before {
+  background: var(--review-accent-amber);
+}
+
+.review-diff-added {
+  color: var(--review-accent-blue);
+  background: #eff6ff;
+}
+
+.review-diff-added::before {
+  background: var(--review-accent-blue);
+}
+
+.review-diff-deleted {
+  color: var(--review-accent-red);
+  background: #fef2f2;
+}
+
+.review-diff-deleted::before {
+  background: var(--review-accent-red);
+}
+
+/* ========== 运费卡片网格 ========== */
+.review-freight-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.review-freight-card {
+  background: var(--review-bg-primary);
+  border: 1px solid var(--review-border);
+  border-radius: var(--review-radius);
+  padding: 14px;
+  transition: all var(--review-transition);
+}
+
+.review-freight-card:hover {
+  border-color: var(--review-accent-blue);
+  box-shadow: var(--review-shadow-sm);
+}
+
+.review-freight-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--review-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.review-freight-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--review-text-primary);
+}
+
+.review-freight-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--review-text-secondary);
+  margin-top: 6px;
+}
+
+.review-freight-row:first-child {
+  margin-top: 0;
+}
+
+/* ========== 财务数据区 ========== */
+.review-financial-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.review-financial-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.review-financial-card {
+  background: var(--review-bg-primary);
+  border: 1px solid var(--review-border);
+  border-radius: var(--review-radius-lg);
+  padding: 16px;
+  transition: all var(--review-transition);
+}
+
+.review-financial-card:hover {
+  border-color: var(--review-border);
+  box-shadow: var(--review-shadow);
+}
+
+.review-financial-card.price-card {
+  background: var(--review-bg-secondary);
+  border-color: var(--review-accent-blue);
+}
+
+.review-financial-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--review-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.review-cost-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--review-border-light);
+}
+
+.review-cost-item:last-child {
+  border-bottom: none;
+}
+
+.review-cost-label {
+  font-size: 12px;
+  color: var(--review-text-secondary);
+}
+
+.review-cost-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--review-text-primary);
+}
+
+.review-price-display {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.review-price-currency {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--review-text-secondary);
+}
+
+.review-price-amount {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--review-accent-blue);
+  letter-spacing: -0.5px;
+}
+
+/* ========== 物流信息面板 ========== */
+.review-logistics-panel {
+  background: var(--review-bg-primary);
+  border: 1px solid var(--review-border);
+  border-radius: var(--review-radius);
+  padding: 16px;
+}
+
+/* 物流信息区块与上方成本明细拉开间距 */
+.logistics-section {
+  margin-top: 24px;
+}
+
+/* 3x3 网格布局 */
+.review-logistics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.review-logistics-item {
+  min-width: 0;
+}
+
+.review-logistics-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--review-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.review-logistics-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--review-text-primary);
+  display: flex;
+  align-items: center;
+}
+
+.review-logistics-value.price {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--review-accent-blue);
+}
+
+.review-logistics-value.highlight {
+  font-weight: 600;
+  color: var(--review-accent-green);
+}
+
+/* 总运费底部 */
+.review-logistics-footer {
+  padding-top: 12px;
+  border-top: 1px dashed var(--review-border-light);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.review-logistics-total {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--review-bg-secondary);
+  border-radius: var(--review-radius);
+}
+
+.review-logistics-total-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--review-text-secondary);
+}
+
+.review-logistics-total-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--review-accent-blue);
+}
+
+/* ========== 价格汇总面板 ========== */
+.review-pricing-panel {
+  background: var(--review-bg-primary);
+  border: 1px solid var(--review-border);
+  border-radius: var(--review-radius);
+  overflow: hidden;
+}
+
+.review-pricing-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 20px;
+  background: var(--review-bg-secondary);
+  border-bottom: 1px solid var(--review-border-light);
+}
+
+.review-pricing-info {
+  flex: 1;
+  text-align: center;
+}
+
+.review-pricing-info.final {
+  flex: 1.5;
+}
+
+.review-pricing-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--review-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.review-pricing-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--review-text-primary);
+}
+
+.review-pricing-divider {
+  width: 1px;
+  height: 40px;
+  background: var(--review-border);
+}
+
+.review-pricing-final {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+}
+
+.review-pricing-final .currency {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--review-text-secondary);
+}
+
+.review-pricing-final .amount {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--review-accent-blue);
+  letter-spacing: -0.5px;
+}
+
+/* ========== 利润区间表格 ========== */
+.review-profit-section {
+  padding: 16px 20px;
+}
+
+.review-profit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.review-profit-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--review-text-primary);
+}
+
+.review-profit-subtitle {
+  font-size: 11px;
+  color: var(--review-text-tertiary);
+}
+
+.review-profit-table-wrapper {
+  overflow-x: auto;
+  margin: 0 -20px;
+  padding: 0 20px;
+}
+
+.review-profit-table-wrapper::-webkit-scrollbar {
+  height: 4px;
+}
+
+.review-profit-table-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.review-profit-table-wrapper::-webkit-scrollbar-thumb {
+  background: var(--review-border);
+  border-radius: 2px;
+}
+
+.review-profit-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+}
+
+.review-profit-table th {
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--review-bg-secondary);
+  border-bottom: 1px solid var(--review-border);
+  font-weight: 600;
+  color: var(--review-text-secondary);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.review-profit-table th:first-child {
+  border-radius: var(--review-radius-sm) 0 0 0;
+  padding-left: 16px;
+}
+
+.review-profit-table th:last-child {
+  border-radius: 0 var(--review-radius-sm) 0 0;
+  padding-right: 16px;
+}
+
+.review-profit-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--review-border-light);
+  white-space: nowrap;
+}
+
+.review-profit-table td:first-child {
+  padding-left: 16px;
+}
+
+.review-profit-table td:last-child {
+  padding-right: 16px;
+}
+
+.review-profit-table tr:last-child td {
+  border-bottom: none;
+}
+
+.review-profit-table tr.custom-tier {
+  background: #fff7ed;
+}
+
+.review-profit-table tr.custom-tier td {
+  border-bottom-color: #fed7aa;
+}
+
+.review-profit-table .col-rate {
+  width: 100px;
+}
+
+.review-profit-table .col-price {
+  width: auto;
+}
+
+.rate-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--review-bg-primary);
+  border: 1px solid var(--review-border);
+  border-radius: var(--review-radius-sm);
+  font-weight: 600;
+  color: var(--review-text-secondary);
+}
+
+.rate-badge.custom {
+  background: #fff7ed;
+  border-color: var(--review-accent-orange);
+  color: var(--review-accent-orange);
+}
+
+.price-value {
+  font-weight: 600;
+  color: var(--review-text-primary);
+}
+
+.price-unit {
+  margin-left: 4px;
+  color: var(--review-text-tertiary);
+  font-size: 11px;
+}
+
+/* ========== 审核意见区 ========== */
+.review-feedback-section {
+  padding: 16px 20px;
+  background: var(--review-bg-secondary);
+  border-top: 1px solid var(--review-border-light);
+  margin: 0 -20px -20px;
+}
+
+.review-feedback-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--review-text-primary);
+  margin-bottom: 10px;
+}
+
+.review-feedback-hint {
+  font-weight: 400;
+  color: var(--review-text-tertiary);
+  font-size: 11px;
+}
+
+.review-feedback-input {
+  width: 100%;
+}
+
+.review-feedback-input :deep(.el-textarea__inner) {
+  background: var(--review-bg-primary);
+  border-color: var(--review-border);
+  border-radius: var(--review-radius);
+  font-size: 13px;
+  resize: none;
+  transition: all var(--review-transition);
+}
+
+.review-feedback-input :deep(.el-textarea__inner:focus) {
+  border-color: var(--review-accent-blue);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+}
+
+/* ========== 底部按钮区 ========== */
+.review-dialog-footer {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px 20px 20px;
+}
+
+.review-self-warning {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* ========== 响应式适配 ========== */
+@media (max-width: 768px) {
+  .review-info-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .review-logistics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .review-pricing-header {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .review-pricing-info,
+  .review-pricing-info.final {
+    flex: 0 0 100%;
+    text-align: left;
+  }
+
+  .review-pricing-divider {
+    display: none;
+  }
+
+  .review-profit-table .col-rate,
+  .review-profit-table .col-price {
+    width: auto;
+  }
+}
+
+/* ========== 覆盖Element Plus样式 ========== */
+:deep(.el-dialog__body) {
+  padding: 20px;
+}
+
+:deep(.el-dialog__footer) {
+  padding: 0;
+  border-top: none;
+}
+
+:deep(.el-tabs__header) {
+  margin-bottom: 12px;
+}
+
+:deep(.el-tabs__nav-wrap::after) {
+  height: 1px;
+  background: var(--review-border-light);
+}
+
+:deep(.el-tabs__item) {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--review-text-secondary);
+  transition: all var(--review-transition);
+}
+
+:deep(.el-tabs__item.is-active) {
+  color: var(--review-accent-blue);
+  font-weight: 600;
+}
+
+:deep(.el-tabs__active-bar) {
+  background: var(--review-accent-blue);
+  height: 2px;
+}
+
+:deep(.el-table) {
+  --el-table-header-bg-color: var(--review-bg-secondary);
+  --el-table-border-color: var(--review-border-light);
+  --el-table-row-hover-bg-color: var(--review-bg-secondary);
+  font-size: 12px;
+}
+
+:deep(.el-table th) {
+  font-weight: 600;
+  color: var(--review-text-secondary);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+:deep(.el-table td) {
+  color: var(--review-text-primary);
+}
+
+:deep(.el-button) {
+  font-weight: 500;
+  transition: all var(--review-transition);
+}
+
+:deep(.el-button--primary) {
+  background: var(--review-accent-blue);
+  border-color: var(--review-accent-blue);
+}
+
+:deep(.el-button--primary:hover) {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+:deep(.el-button--danger) {
+  background: var(--review-accent-red);
+  border-color: var(--review-accent-red);
+}
+
+:deep(.el-button--danger:hover) {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+:deep(.el-button--success) {
+  background: var(--review-accent-green);
+  border-color: var(--review-accent-green);
+}
+
+:deep(.el-button--success:hover) {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+
+:deep(.el-tag) {
+  font-weight: 500;
+  border-radius: var(--review-radius-sm);
+}

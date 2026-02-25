@@ -38,7 +38,7 @@
       <div id="header-portal-right" class="flex items-center"></div>
 
       <!-- 分割线 (仅在有门户内容时显示) -->
-      <div v-if="layoutStore.isHeaderPortalActive" class="h-6 w-px bg-slate-300 mx-4"></div>
+      <div v-if="layoutStore.isHeaderPortalActive" class="h-6 w-px bg-transparent mx-4"></div>
 
       <div class="flex items-center space-x-2 mr-4">
         <!-- 通知下拉 -->

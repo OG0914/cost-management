@@ -1,17 +1,16 @@
 <template>
-  <div class="bg-gray-50 min-h-screen">
-    <div v-loading="loading">
-      <!-- Global Dynamic Header -->
-      <CostPageHeader :title="`报价单详情 ${quotation.quotation_no ? '- ' + quotation.quotation_no : ''}`" :show-back="true" @back="$router.back()">
-        <template #after-title>
-           <el-tag :type="getStatusType(quotation.status)" size="default" effect="plain" round class="ml-2 font-medium">
-             {{ getStatusText(quotation.status) }}
-           </el-tag>
-        </template>
-        <template #actions>
-          <ActionButton type="export" @click="handleExport" :disabled="exporting">导出 Excel</ActionButton>
-          <ActionButton type="profit" @click="profitDialogVisible = true">利润分析</ActionButton>
-          <ActionButton 
+  <div class="cost-detail-page review-detail-content"> <!-- 应用审核详情样式容器 -->
+    <CostPageHeader :title="`报价单详情 ${quotation.quotation_no ? '- ' + quotation.quotation_no : ''}`" :show-back="true" @back="$router.back()">
+      <template #after-title>
+         <div class="flex items-center gap-2 ml-4">
+           <StatusBadge type="status" :value="quotation.status" />
+           <StatusBadge type="sales_type" :value="quotation.sales_type" />
+         </div>
+      </template>
+      <template #actions>
+        <ActionButton type="export" @click="handleExport" :disabled="exporting">导出 Excel</ActionButton>
+        <ActionButton type="profit" @click="profitDialogVisible = true">利润分析</ActionButton>
+        <ActionButton 
             v-if="canSetStandard" 
             type="default" 
             @click="setAsStandardCost"
@@ -19,11 +18,12 @@
           >
             设为标准成本
           </ActionButton>
-          <ActionButton type="edit" @click="goToEdit" v-if="canEdit">编辑</ActionButton>
-        </template>
-      </CostPageHeader>
-      
-      <!-- Content Grid -->
+        <ActionButton type="edit" @click="goToEdit" v-if="canEdit">编辑</ActionButton>
+      </template>
+    </CostPageHeader>
+    
+    <div class="mt-6" v-loading="loading">
+      <!-- Main Content Layout -->
       <div class="max-w-[1600px] mx-auto px-6 py-6" v-if="quotation && quotation.id">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
@@ -42,10 +42,10 @@
                  CostDetailTabs computes subtotals internally based on these arrays.
                -->
                <CostDetailTabs 
-                 :materials="items.material.items"
-                 :processes="items.process.items"
-                 :packaging="items.packaging.items"
-                 :process-coefficient="configStore.config.process_coefficient || 1.56"
+                 :materials="items.materials"
+                 :processes="items.processes"
+                 :packaging="items.packaging"
+                 :process-coefficient="quotation.process_coefficient"
                  :read-only="true"
                />
             </div>
@@ -54,12 +54,8 @@
           <!-- Right Column (Sticky Summary + Sales Info) -->
           <div class="lg:col-span-4 sticky top-24">
             <CostSummaryPanel 
-              :quotation="quotation"
-              :shipping-info="shippingInfo"
-              :exchange-rate="calculation?.exchangeRate"
-              :overhead-rate="quotation.overhead_rate || calculation?.overheadRate"
-              :profit-tiers="allProfitTiers"
-              @view-all-profit="profitDialogVisible = true"
+              :quotation="quotation" 
+              :items="items"
             />
           </div>
         </div>
@@ -81,6 +77,7 @@ import { onMounted, computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useConfigStore } from '@/store/config'
 import ActionButton from '@/components/common/ActionButton.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
 import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import { useQuotationDetail } from './composables/useQuotationDetail'
 import QuotationInfoCard from './components/Detail/QuotationInfoCard.vue'
@@ -88,6 +85,7 @@ import FreightInfoCard from './components/Detail/FreightInfoCard.vue'
 import CostSummaryPanel from './components/Detail/CostSummaryPanel.vue'
 import CostDetailTabs from './components/CostDetailTabs.vue'
 import ProfitCalculatorDialog from '@/components/ProfitCalculatorDialog.vue'
+import '@/styles/review-dialog.css'
 
 defineOptions({ name: 'CostDetail' })
 
@@ -129,16 +127,6 @@ const allProfitTiers = computed(() => {
 
 const goToEdit = () => {
   router.push(`/cost/edit/${route.params.id}`)
-}
-
-const getStatusType = (status) => {
-  const map = { draft: 'info', submitted: 'warning', approved: 'success', rejected: 'danger' }
-  return map[status] || 'info'
-}
-
-const getStatusText = (status) => {
-  const map = { draft: '草稿', submitted: '已提交', approved: '已审核', rejected: '已退回' }
-  return map[status] || status
 }
 
 onMounted(async () => {

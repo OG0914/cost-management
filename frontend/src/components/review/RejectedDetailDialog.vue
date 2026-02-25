@@ -40,11 +40,11 @@
             <div class="info-row">
               <div class="info-item">
                 <span class="label">审核状态:</span>
-                <el-tag type="danger">已退回</el-tag>
+                <StatusBadge type="status" :value="quotationDetail.status" />
               </div>
               <div class="info-item">
                 <span class="label">销售类型:</span>
-                <span class="value">{{ getSalesTypeName(quotationDetail.sales_type) }}</span>
+                <StatusBadge type="sales_type" :value="quotationDetail.sales_type" />
               </div>
             </div>
             <div class="info-row">
@@ -122,12 +122,12 @@ import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { useReviewStore } from '@/store/review'
 import {
-  getSalesTypeName,
   formatDateTime,
   formatQuantity,
   calculateProfitPricing,
   getReviewActionName
 } from '@/utils/review'
+import StatusBadge from '@/components/common/StatusBadge.vue'
 import ResubmitConfirmDialog from './ResubmitConfirmDialog.vue'
 
 const props = defineProps({
