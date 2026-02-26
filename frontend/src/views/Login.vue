@@ -73,116 +73,15 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { TrendCharts, User, Lock, View, Hide } from '@element-plus/icons-vue'
-import { useAuthStore } from '../store/auth'
 import logoImage from '../images/logo.png'
+import { useLoginParticles } from '../composables/useLoginParticles'
+import { useAuthFlow } from '../composables/useAuthFlow'
 
 defineOptions({ name: 'LoginPage' })
 
-const router = useRouter()
-const authStore = useAuthStore()
-const particleCanvas = ref(null)
-
-const loading = ref(false)
-const showPassword = ref(false)
-const loginForm = reactive({ username: '', password: '' })
-
-let animationId = null
-
-const handleLogin = async () => { // 登录处理
-  if (!loginForm.username) return ElMessage.warning('请输入用户名')
-  if (!loginForm.password) return ElMessage.warning('请输入密码')
-  if (loginForm.password.length < 6) return ElMessage.warning('密码长度不能少于6位')
-
-  loading.value = true
-  try {
-    await authStore.login(loginForm.username, loginForm.password)
-    ElMessage.success('登录成功')
-    router.push('/dashboard')
-  } catch (error) {
-    ElMessage.error(error.message || '登录失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-const initParticles = () => { // 初始化粒子动画
-  const canvas = particleCanvas.value
-  if (!canvas) return
-  
-  const ctx = canvas.getContext('2d')
-  const particles = []
-  const PARTICLE_COUNT = 60
-  const CONNECTION_DISTANCE = 100
-  
-  const resize = () => {
-    canvas.width = canvas.offsetWidth * window.devicePixelRatio
-    canvas.height = canvas.offsetHeight * window.devicePixelRatio
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
-  }
-  
-  resize()
-  window.addEventListener('resize', resize)
-  
-  class Particle { // 粒子类
-    constructor() { this.reset() }
-    reset() {
-      this.x = Math.random() * canvas.offsetWidth
-      this.y = Math.random() * canvas.offsetHeight
-      this.vx = (Math.random() - 0.5) * 0.4
-      this.vy = (Math.random() - 0.5) * 0.4
-      this.radius = Math.random() * 2 + 1
-      this.opacity = Math.random() * 0.4 + 0.2
-    }
-    update() {
-      this.x += this.vx
-      this.y += this.vy
-      if (this.x < 0 || this.x > canvas.offsetWidth) this.vx *= -1
-      if (this.y < 0 || this.y > canvas.offsetHeight) this.vy *= -1
-    }
-    draw() {
-      ctx.beginPath()
-      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2)
-      ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`
-      ctx.fill()
-    }
-  }
-  
-  for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle())
-  
-  const drawConnections = () => { // 绘制连接线
-    for (let i = 0; i < particles.length; i++) {
-      for (let j = i + 1; j < particles.length; j++) {
-        const dx = particles[i].x - particles[j].x
-        const dy = particles[i].y - particles[j].y
-        const distance = Math.sqrt(dx * dx + dy * dy)
-        if (distance < CONNECTION_DISTANCE) {
-          ctx.beginPath()
-          ctx.moveTo(particles[i].x, particles[i].y)
-          ctx.lineTo(particles[j].x, particles[j].y)
-          ctx.strokeStyle = `rgba(255, 255, 255, ${0.12 * (1 - distance / CONNECTION_DISTANCE)})`
-          ctx.lineWidth = 1
-          ctx.stroke()
-        }
-      }
-    }
-  }
-  
-  const animate = () => { // 动画循环
-    ctx.clearRect(0, 0, canvas.offsetWidth, canvas.offsetHeight)
-    particles.forEach(p => { p.update(); p.draw() })
-    drawConnections()
-    animationId = requestAnimationFrame(animate)
-  }
-  
-  animate()
-}
-
-onMounted(() => initParticles())
-onUnmounted(() => { if (animationId) cancelAnimationFrame(animationId) })
+const { particleCanvas } = useLoginParticles()
+const { loading, showPassword, loginForm, handleLogin } = useAuthFlow()
 </script>
 
 <style scoped>

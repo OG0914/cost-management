@@ -334,7 +334,34 @@ npm run dev
 - **用量管理**：记录标准用量
 - **排序支持**：自定义显示顺序
 
-## 九、待开发功能
+## 九、数据备份与恢复
+
+系统提供完整的数据库备份、恢复方案，适配 Windows 10 + Docker Desktop 环境。详细文档见 [`docs/backup-plan.md`](docs/backup-plan.md)。
+
+### 快速命令（PowerShell）
+
+```powershell
+# 手动备份
+powershell -ExecutionPolicy Bypass -File "scripts\backup\backup.ps1"
+
+# 注册每日自动备份（管理员权限运行，只需一次）
+powershell -ExecutionPolicy Bypass -File "scripts\backup\setup-schedule.ps1"
+
+# 从备份恢复
+powershell -ExecutionPolicy Bypass -File "scripts\backup\restore.ps1" -BackupFile "G:\cost_backup\备份文件.dump"
+```
+
+### 脚本清单
+
+| 脚本 | 功能 |
+|------|------|
+| `scripts/backup/backup.ps1` | 数据库自动备份，自动清理过期备份 |
+| `scripts/backup/restore.ps1` | 从备份恢复数据，恢复前自动保存安全备份 |
+| `scripts/backup/setup-schedule.ps1` | 一键注册 Windows 定时任务 |
+
+---
+
+## 十、待开发功能
 
 - [ ] 报表导出页面（ReportExport.vue）
 - [ ] PDF 导出支持

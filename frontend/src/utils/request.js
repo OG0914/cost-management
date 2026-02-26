@@ -1,5 +1,5 @@
 /**
- * Axios 请求封装
+ * Axios 请求封装 - 带有请求去重与重试机制 (Production Grade)
  */
 
 import axios from 'axios'
@@ -18,10 +18,53 @@ const request = axios.create({
   timeout: DEFAULT_TIMEOUT
 })
 
+// === 请求去重机制 ===
+const pendingRequests = new Map()
+
+const safeStringify = (obj) => {
+  if (!obj) return ''
+  if (typeof obj === 'string') return obj
+  try {
+    return JSON.stringify(obj)
+  } catch (e) {
+    return 'circular-or-unserializable-object'
+  }
+}
+
+const generateRequestKey = (config) => {
+  const { method, url, params, data } = config
+  // 对于含有FormData的请求，不去重
+  if (data instanceof FormData) return null
+  return [method, url, safeStringify(params), safeStringify(data)].join('&')
+}
+
+const addPendingRequest = (config) => {
+  const requestKey = generateRequestKey(config)
+  if (!requestKey) return
+  config.cancelToken = config.cancelToken || new axios.CancelToken((cancel) => {
+    if (!pendingRequests.has(requestKey)) {
+      pendingRequests.set(requestKey, cancel)
+    }
+  })
+}
+
+const removePendingRequest = (config) => {
+  const requestKey = generateRequestKey(config)
+  if (requestKey && pendingRequests.has(requestKey)) {
+    const cancel = pendingRequests.get(requestKey)
+    cancel(requestKey)
+    pendingRequests.delete(requestKey)
+  }
+}
+
 // 请求拦截器
 request.interceptors.request.use(
   config => {
-    // 从 localStorage 获取 token
+    // 移除之前的同名请求
+    removePendingRequest(config)
+    addPendingRequest(config)
+
+    // 从 localStorage/sessionStorage 获取 token
     const token = getToken()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
@@ -43,10 +86,45 @@ request.interceptors.request.use(
 // 响应拦截器
 request.interceptors.response.use(
   response => {
+    removePendingRequest(response.config)
     // 直接返回响应数据
     return response.data
   },
-  error => {
+  async error => {
+    if (axios.isCancel(error)) {
+      logger.info('请求被取消去重:', error.message)
+      return Promise.reject(error)
+    }
+
+    if (error.config) {
+      removePendingRequest(error.config)
+    }
+
+    const { config } = error
+
+    // === 指数退避重试机制 ===
+    // 只重试暂时的网络错误或特定服务器错误(502,503,504)
+    const shouldRetry = (!error.response && error.code !== 'ECONNABORTED') ||
+      (error.response && [502, 503, 504].includes(error.response.status))
+
+    if (config && shouldRetry && !config.url?.includes('/auth/login')) {
+      config.__retryCount = config.__retryCount || 0
+      const maxRetries = 3
+
+      if (config.__retryCount < maxRetries) {
+        config.__retryCount += 1
+        const backoff = new Promise((resolve) => {
+          setTimeout(() => {
+            resolve()
+          }, parseInt(Math.pow(2, config.__retryCount) * 500)) // 1s, 2s, 4s 退避
+        })
+
+        await backoff
+        logger.warn(`请求超时或网关不可用，正在进行第 ${config.__retryCount} 次重试: ${config.url}`)
+        return request(config)
+      }
+    }
+
     logger.error('响应错误:', error)
 
     // 超时错误特殊处理
@@ -85,11 +163,16 @@ request.interceptors.response.use(
         case 500:
           ElMessage.error('服务器错误，请稍后重试')
           break
+        case 502:
+        case 503:
+        case 504:
+          ElMessage.error('网关或服务暂时不可用，请联系管理员')
+          break
         default:
-          ElMessage.error(data.message || '请求失败')
+          ElMessage.error(data?.message || '请求失败')
       }
     } else if (error.request) {
-      ElMessage.error('无法连接到服务器，请检查后端服务是否启动')
+      ElMessage.error('无法连接到服务器，请检查网络或后端服务是否启动')
     } else {
       ElMessage.error('请求配置错误')
     }

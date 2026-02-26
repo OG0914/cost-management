@@ -12,6 +12,13 @@ import './styles/dialog.css'
 import './styles/cost-form.css'
 import './styles/message-overrides.css'
 
+// 全局拦截 axios 请求取消引发的未捕获错误，防止控制台飙红
+window.addEventListener('unhandledrejection', event => {
+    if (event.reason && event.reason.name === 'CanceledError') {
+        event.preventDefault()
+    }
+})
+
 const app = createApp(App)
 const pinia = createPinia()
 
