@@ -129,6 +129,12 @@ const routes = [
         path: 'customers',
         name: 'CustomerManage',
         component: () => import('../views/customer/CustomerManage.vue')
+      },
+      {
+        path: 'help/:pathMatch(.*)*',
+        name: 'Help',
+        component: () => import('../views/help/HelpView.vue'),
+        meta: { requiresAuth: true }
       }
     ]
   }
