@@ -82,13 +82,13 @@ const getModelById = async (req, res, next) => {
 // 创建型号
 const createModel = async (req, res, next) => {
   try {
-    const { regulation_id, model_name, model_category, model_series } = req.body;
+    const { regulation_id, model_name, model_category, model_series, calculation_type } = req.body;
 
     if (!regulation_id || !model_name) {
       return res.status(400).json(error('法规类别和型号名称不能为空', 400));
     }
 
-    const id = await Model.create({ regulation_id, model_name, model_category, model_series });
+    const id = await Model.create({ regulation_id, model_name, model_category, model_series, calculation_type });
     res.status(201).json(success({ id }, '创建成功'));
   } catch (err) {
     next(err);
@@ -99,7 +99,7 @@ const createModel = async (req, res, next) => {
 const updateModel = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { regulation_id, model_name, model_category, model_series, is_active } = req.body;
+    const { regulation_id, model_name, model_category, model_series, calculation_type, is_active } = req.body;
 
     const model = await Model.findById(id);
     if (!model) {
@@ -110,7 +110,7 @@ const updateModel = async (req, res, next) => {
       return res.status(400).json(error('法规类别和型号名称不能为空', 400));
     }
 
-    await Model.update(id, { regulation_id, model_name, model_category, model_series, is_active: is_active !== undefined ? is_active : 1 });
+    await Model.update(id, { regulation_id, model_name, model_category, model_series, calculation_type, is_active: is_active !== undefined ? is_active : 1 });
     res.json(success(null, '更新成功'));
   } catch (err) {
     next(err);
@@ -181,6 +181,7 @@ const importModels = async (req, res, next) => {
             model_name: modelData.model_name,
             model_category: modelData.model_category || existing.model_category,
             model_series: modelData.model_series || existing.model_series,
+            calculation_type: modelData.calculation_type || existing.calculation_type,
             is_active: 1
           });
           updated++;
@@ -190,7 +191,8 @@ const importModels = async (req, res, next) => {
             regulation_id: regulation.id,
             model_name: modelData.model_name,
             model_category: modelData.model_category || '',
-            model_series: modelData.model_series || ''
+            model_series: modelData.model_series || '',
+            calculation_type: modelData.calculation_type || ''
           });
           created++;
         }

@@ -28,60 +28,77 @@ const validateQuotationData = (data) => {
  * @param {Array} items - 明细数组
  * @param {number} materialCoefficient - 原料系数
  * @param {string} modelCategory - 产品分类
+ * @param {string} calculationType - 计算类型（主体/配件/滤毒盒/滤棉/滤饼）
+ * @param {Object} calculationRules - 计算规则配置
  * @returns {Object} { materialTotal, afterOverheadMaterialTotal, processTotal, packagingTotal }
  */
-const calculateItemTotals = (items, materialCoefficient, modelCategory) => {
+const calculateItemTotals = (items, materialCoefficient, modelCategory, calculationType = '', calculationRules = {}) => {
+    // 获取当前型号和计算类型对应的规则
+    const getRulesForItem = (itemCategory) => {
+        if (modelCategory && calculationType && calculationRules[modelCategory]) {
+            const typeRules = calculationRules[modelCategory][calculationType];
+            if (typeRules && typeRules[itemCategory]) {
+                return typeRules[itemCategory];
+            }
+        }
+        // 默认规则
+        return { formula: 'divide', coefficient: materialCoefficient };
+    };
+
     // 计算单项原料小计的辅助函数
-    const calcMaterialSubtotal = (item) => {
+    const calcMaterialSubtotal = (item, itemCategory) => {
         if (item.coefficient_applied) {
             return parseFloat(item.subtotal || 0);
         }
+        const rules = getRulesForItem(itemCategory);
         return CostCalculator.calculateMaterialSubtotal(
             parseFloat(item.usage_amount || 0),
             parseFloat(item.unit_price || 0),
-            materialCoefficient,
-            modelCategory
+            rules,
+            itemCategory
         );
     };
 
     // 原料总计：不包含管销后算的原料
     const materialTotal = items
         .filter(item => item.category === 'material' && !item.after_overhead)
-        .reduce((sum, item) => sum + calcMaterialSubtotal(item), 0);
+        .reduce((sum, item) => sum + calcMaterialSubtotal(item, 'material'), 0);
 
     // 管销后算的原料总计
     const afterOverheadMaterialTotal = items
         .filter(item => item.category === 'material' && item.after_overhead)
-        .reduce((sum, item) => sum + calcMaterialSubtotal(item), 0);
+        .reduce((sum, item) => sum + calcMaterialSubtotal(item, 'material'), 0);
 
-    // 工序和包材直接累加subtotal
+    // 工序直接累加subtotal
     const processTotal = items
         .filter(item => item.category === 'process')
         .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
 
+    // 包材使用对应规则计算
     const packagingTotal = items
         .filter(item => item.category === 'packaging')
-        .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
+        .reduce((sum, item) => sum + calcMaterialSubtotal(item, 'packaging'), 0);
 
     return { materialTotal, afterOverheadMaterialTotal, processTotal, packagingTotal };
 };
 
 /**
- * 获取原料系数和分类
+ * 获取原料系数、分类和计算类型
  * @param {number} modelId - 型号ID
- * @returns {Promise<{coefficient: number, category: string}>} 原料系数和分类
+ * @returns {Promise<{coefficient: number, category: string, calculationType: string}>} 原料系数、分类和计算类型
  */
 const getModelCostParams = async (modelId) => {
-    if (!modelId) return { coefficient: 1, category: '' };
+    if (!modelId) return { coefficient: 1, category: '', calculationType: '' };
     const model = await Model.findById(modelId);
     if (model && model.model_category) {
         const coefficients = await SystemConfig.getValue('material_coefficients') || {};
         return {
             coefficient: CostCalculator.getMaterialCoefficient(model.model_category, coefficients),
-            category: model.model_category
+            category: model.model_category,
+            calculationType: model.calculation_type || ''
         };
     }
-    return { coefficient: 1, category: '' };
+    return { coefficient: 1, category: '', calculationType: '' };
 };
 
 /**

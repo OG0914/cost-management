@@ -143,6 +143,15 @@
             <el-option label="PPE产品" value="PPE产品" />
           </el-select>
         </el-form-item>
+        <el-form-item label="计算类型" prop="calculation_type" v-if="form.model_category === '半面罩'">
+          <el-select v-model="form.calculation_type" placeholder="请选择计算类型" clearable style="width: 100%">
+            <el-option label="主体" value="主体" />
+            <el-option label="配件" value="配件" />
+            <el-option label="滤毒盒" value="滤毒盒" />
+            <el-option label="滤棉" value="滤棉" />
+            <el-option label="滤饼" value="滤饼" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="状态" v-if="isEdit">
           <StatusSwitch v-model="form.is_active" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="禁用" />
         </el-form-item>
@@ -232,7 +241,7 @@ const paginatedModels = computed(() => {
 
 watch(viewMode, (newMode) => { if (newMode === 'card') selectedModels.value = [] })
 
-let form = reactive({ id: null, regulation_id: null, model_name: '', model_category: '', model_series: '', is_active: 1 })
+let form = reactive({ id: null, regulation_id: null, model_name: '', model_category: '', model_series: '', calculation_type: '', is_active: 1 })
 const formRules = {
   regulation_id: [{ required: true, message: '请选择法规类别', trigger: 'change' }],
   model_name: [{ required: true, message: '请输入型号名称', trigger: 'blur' }],
@@ -285,13 +294,13 @@ const doSearch = () => {
 
 const handleAdd = () => {
   isEdit.value = false; dialogTitle.value = '新增型号'
-  form.id = null; form.regulation_id = null; form.model_name = ''; form.model_category = ''; form.model_series = ''; form.is_active = 1
+  form.id = null; form.regulation_id = null; form.model_name = ''; form.model_category = ''; form.model_series = ''; form.calculation_type = ''; form.is_active = 1
   dialogVisible.value = true
 }
 
 const handleEdit = async (row) => {
   isEdit.value = true; dialogTitle.value = '编辑型号'
-  form.id = row.id; form.regulation_id = row.regulation_id; form.model_name = row.model_name; form.model_category = row.model_category; form.model_series = row.model_series || ''; form.is_active = row.is_active ? 1 : 0
+  form.id = row.id; form.regulation_id = row.regulation_id; form.model_name = row.model_name; form.model_category = row.model_category; form.model_series = row.model_series || ''; form.calculation_type = row.calculation_type || ''; form.is_active = row.is_active ? 1 : 0
   imageList.value = []
   await fetchModelImages(row.id)
   dialogVisible.value = true

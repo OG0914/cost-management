@@ -59,7 +59,7 @@ const getModelStandardData = async (req, res) => {
 const getPackagingConfigs = async (req, res) => {
   try {
     const result = await dbManager.query(`
-            SELECT 
+            SELECT
                 pc.id,
                 pc.model_id,
                 pc.config_name,
@@ -73,6 +73,7 @@ const getPackagingConfigs = async (req, res) => {
                 pc.is_active,
                 m.model_name,
                 m.model_category,
+                m.calculation_type,
                 m.regulation_id,
                 r.name as regulation_name
             FROM packaging_configs pc
@@ -104,9 +105,11 @@ const getPackagingConfigDetails = async (req, res) => {
 
     // 获取配置基本信息
     const configResult = await dbManager.query(
-      `SELECT 
+      `SELECT
                 pc.*,
                 m.model_name,
+                m.model_category,
+                m.calculation_type,
                 m.regulation_id,
                 r.name as regulation_name
             FROM packaging_configs pc
@@ -179,9 +182,24 @@ const getMaterialCoefficients = async (req, res) => {
   }
 };
 
+/**
+ * 获取计算规则配置
+ * GET /api/cost/calculation-rules
+ */
+const getCalculationRules = async (req, res) => {
+  try {
+    const rules = await SystemConfig.getValue('calculation_rules');
+    res.json(success(rules || SystemConfig.getDefaultCalculationRules()));
+  } catch (err) {
+    logger.error('获取计算规则配置失败:', err.message);
+    res.status(500).json(error('获取计算规则配置失败: ' + err.message, 500));
+  }
+};
+
 module.exports = {
   getModelStandardData,
   getPackagingConfigs,
   getPackagingConfigDetails,
-  getMaterialCoefficients
+  getMaterialCoefficients,
+  getCalculationRules
 };

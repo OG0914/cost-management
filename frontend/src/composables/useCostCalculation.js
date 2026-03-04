@@ -12,8 +12,10 @@ export function useCostCalculation() {
   const customProfitTiers = ref([])
   const materialCoefficient = ref(1)
   const materialCoefficientsCache = ref({})
+  const calculationType = ref('')
+  const calculationRules = ref({})
 
-  const loadMaterialCoefficients = async (currentModelCategory) => {
+  const loadMaterialCoefficients = async (currentModelCategory, currentCalculationType) => {
     try {
       const res = await request.get('/cost/material-coefficients')
       if (res.success && res.data) {
@@ -24,6 +26,13 @@ export function useCostCalculation() {
           materialCoefficient.value = 1
         }
       }
+      const rulesRes = await request.get('/cost/calculation-rules')
+      if (rulesRes.success && rulesRes.data) {
+        calculationRules.value = rulesRes.data
+      }
+      if (currentCalculationType) {
+        calculationType.value = currentCalculationType
+      }
     } catch (error) {
       logger.error('加载原料系数配置失败:', error)
       materialCoefficient.value = 1
@@ -32,8 +41,33 @@ export function useCostCalculation() {
 
   const modelCategory = ref('')
 
+  const getCalculationRule = (category) => {
+    if (!modelCategory.value || !calculationType.value) return null
+    const categoryRules = calculationRules.value[modelCategory.value]
+    if (!categoryRules) return null
+    const typeRules = categoryRules[calculationType.value]
+    if (!typeRules) return null
+    return typeRules[category] || null
+  }
+
   const calculateItemSubtotal = (row) => {
-    if (row.category === 'packaging') {
+    const rule = getCalculationRule(row.category)
+    if (rule) {
+      const usage = row.usage_amount || 0
+      const price = row.unit_price || 0
+      const coefficient = rule.coefficient !== undefined ? rule.coefficient : 1
+      const safeCoefficient = coefficient !== 0 ? coefficient : 1
+
+      if (rule.formula === 'multiply') {
+        row.subtotal = (usage * price) / safeCoefficient
+      } else if (rule.formula === 'divide') {
+        row.subtotal = usage !== 0 ? (price / usage) / safeCoefficient : 0
+      } else {
+        row.subtotal = usage * price
+      }
+      row.subtotal = Math.round(row.subtotal * 10000) / 10000
+      row.coefficient_applied = true
+    } else if (row.category === 'packaging') {
       row.subtotal = (row.usage_amount && row.usage_amount !== 0)
         ? (row.unit_price || 0) / row.usage_amount
         : 0
@@ -44,8 +78,6 @@ export function useCostCalculation() {
         row.subtotal = coefficient !== 0 ? rawSubtotal / coefficient : rawSubtotal
       } else {
         if (row.usage_amount && row.usage_amount !== 0) {
-          // 修改为：单价 / 用量 / 系数
-          // 确保系数也不为0（虽然默认为1）
           const safeCoefficient = coefficient !== 0 ? coefficient : 1
           row.subtotal = (row.unit_price || 0) / row.usage_amount / safeCoefficient
         } else {
@@ -166,6 +198,7 @@ export function useCostCalculation() {
     calculation,
     customProfitTiers,
     modelCategory,
+    calculationType,
     materialCoefficient,
     materialCoefficientsCache,
     loadMaterialCoefficients,

@@ -1,0 +1,48 @@
+#!/bin/bash
+# 自动记录提交到工作日志
+
+WORKLOG_DIR="tasks/worklog"
+TODAY=$(date +%Y-%m-%d)
+TIME=$(date +%H:%M)
+LOG_FILE="$WORKLOG_DIR/$TODAY.md"
+
+# 获取提交信息
+COMMIT_MSG=$(git log -1 --pretty=format:"%s")
+COMMIT_HASH=$(git log -1 --pretty=format:"%h")
+COMMIT_DETAIL=$(git log -1 --pretty=format:"%b")
+AUTHOR=$(git log -1 --pretty=format:"%an")
+
+# 计算今日第几次提交
+mkdir -p "$WORKLOG_DIR"
+COUNT=$(grep -c "^## 第.*次提交" "$LOG_FILE" 2>/dev/null || echo "0")
+COUNT=$((COUNT + 1))
+
+# 如果是第一次提交，添加标题
+if [ "$COUNT" -eq 1 ]; then
+  {
+    echo "# 工作日志 - $TODAY"
+    echo ""
+    echo "**记录人**: $AUTHOR"
+    echo ""
+    echo "---"
+  } >> "$LOG_FILE"
+fi
+
+# 写入日志
+{
+  echo ""
+  echo "## 第${COUNT}次提交 (${TIME})"
+  echo ""
+  echo "- **Hash**: \`$COMMIT_HASH\`"
+  echo "- **Message**: $COMMIT_MSG"
+  if [ -n "$COMMIT_DETAIL" ]; then
+    echo "- **详情**:"
+    echo "\`\`\`"
+    echo "$COMMIT_DETAIL"
+    echo "\`\`\`"
+  fi
+  echo ""
+  echo "---"
+} >> "$LOG_FILE"
+
+echo "✅ 已记录到 $LOG_FILE (第${COUNT}次)"

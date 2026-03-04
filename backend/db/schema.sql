@@ -397,7 +397,8 @@ INSERT INTO system_config (config_key, config_value, description) VALUES
 ('lcl_handling_charge', '500', '散货操作费（Handling charge）（人民币）'),
 ('lcl_cfs_per_cbm', '170', '散货拼箱费（CFS）每CBM单价（人民币）'),
 ('lcl_document_fee', '500', '散货文件费（人民币）'),
-('material_coefficients', '{"口罩": 0.97, "半面罩": 0.99}', '原料系数配置，按型号分类映射')
+('material_coefficients', '{"口罩": 0.97, "半面罩": 0.99}', '原料系数配置，按型号分类映射'),
+('calculation_rules', '{"半面罩":{"主体":{"material":{"formula":"multiply","coefficient":0.99},"packaging":{"formula":"divide","coefficient":1}},"配件":{"material":{"formula":"multiply","coefficient":0.99},"packaging":{"formula":"divide","coefficient":1}},"滤毒盒":{"material":{"formula":"multiply","coefficient":0.95},"packaging":{"formula":"divide","coefficient":0.97}},"滤棉":{"material":{"formula":"divide","coefficient":0.97},"packaging":{"formula":"divide","coefficient":1}},"滤饼":{"material":{"formula":"divide","coefficient":0.97},"packaging":{"formula":"divide","coefficient":1}}}}', '半面罩产品计算规则配置，支持动态修改计算公式和系数')
 ON CONFLICT (config_key) DO NOTHING;
 
 -- ============================================

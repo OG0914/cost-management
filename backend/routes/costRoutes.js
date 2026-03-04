@@ -72,4 +72,8 @@ router.post('/calculate', costController.calculateQuotation);
 // 权限：所有登录用户
 router.get('/material-coefficients', costController.getMaterialCoefficients);
 
+// 获取计算规则配置
+// 权限：所有登录用户
+router.get('/calculation-rules', costController.getCalculationRules);
+
 module.exports = router;
