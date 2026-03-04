@@ -224,7 +224,10 @@ const isActive = (menuId) => {
     if (currentPath === item.route) {
       return !currentQuery.mode // 只有没有mode参数时才匹配普通新增成本分析
     }
-    return currentPath.startsWith(item.route + '/')
+    // 只有子菜单的父菜单才用 startsWith 匹配，避免同级路由误判
+    if (item.children && currentPath.startsWith(item.route + '/')) {
+      return true
+    }
   }
   return false
 }

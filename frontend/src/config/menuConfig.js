@@ -52,7 +52,8 @@ export const menuConfig = [
   { id: 'config', label: '系统配置', icon: 'ri-equalizer-line', route: '/config' },
   { id: 'permission', label: '权限管理', icon: 'ri-shield-keyhole-line', route: '/config/permissions', roles: ['admin'] },
   { id: 'profile', label: '个人设置', icon: 'ri-user-line', route: '/profile', roles: ['purchaser', 'producer', 'reviewer', 'salesperson', 'readonly'] },
-  { id: 'user', label: '用户管理', icon: 'ri-user-settings-line', route: '/users', roles: ['admin'] }
+  { id: 'user', label: '用户管理', icon: 'ri-user-settings-line', route: '/users', roles: ['admin'] },
+  { id: 'help', label: '帮助中心', icon: 'ri-book-open-line', route: '/help' }
 ]
 
 export function filterMenuByRole(menuItems, userRole) {

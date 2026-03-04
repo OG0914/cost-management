@@ -32,12 +32,16 @@
       </div>
       
       <!-- 主内容区域 -->
-      <main class="flex-1 flex flex-col min-w-0 pt-14 lg:pt-0 h-full">
-        <!-- 内容滚动区 -->
-        <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-50">
+      <main class="flex-1 flex flex-col min-w-0 pt-14 lg:pt-0 h-full relative">
+        <!-- 内容滚动区 - 普通页面 -->
+        <div v-if="!isHelpRoute" class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-50">
           <div class="w-full animate-fade-in pb-10">
             <router-view />
           </div>
+        </div>
+        <!-- 帮助页面 - 全屏显示 -->
+        <div v-else class="flex-1 overflow-hidden p-4 sm:p-6 lg:p-8 bg-slate-50">
+          <router-view />
         </div>
       </main>
     </div>
@@ -54,6 +58,9 @@ import { useAuthStore } from '@/store/auth'
 const route = useRoute()
 const authStore = useAuthStore()
 const sidebarOpen = ref(false)
+
+// 是否是帮助页面路由
+const isHelpRoute = computed(() => route.path.startsWith('/help'))
 
 // 侧边栏折叠状态
 const isSidebarCollapsed = ref(false)
