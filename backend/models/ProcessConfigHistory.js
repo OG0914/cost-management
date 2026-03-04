@@ -6,6 +6,14 @@
 
 const dbManager = require('../db/database');
 
+function parseJson(row) {
+  return {
+    ...row,
+    old_data: row.old_data ? JSON.parse(row.old_data) : null,
+    new_data: row.new_data ? JSON.parse(row.new_data) : null
+  };
+}
+
 class ProcessConfigHistory {
   /**
    * 创建历史记录
@@ -103,11 +111,7 @@ class ProcessConfigHistory {
       [packagingConfigId, limit, offset]
     );
 
-    return result.rows.map(row => ({
-      ...row,
-      old_data: row.old_data ? JSON.parse(row.old_data) : null,
-      new_data: row.new_data ? JSON.parse(row.new_data) : null
-    }));
+    return result.rows.map(parseJson);
   }
 
   /**
@@ -126,16 +130,7 @@ class ProcessConfigHistory {
       [packagingConfigId]
     );
 
-    if (!result.rows[0]) {
-      return null;
-    }
-
-    const row = result.rows[0];
-    return {
-      ...row,
-      old_data: row.old_data ? JSON.parse(row.old_data) : null,
-      new_data: row.new_data ? JSON.parse(row.new_data) : null
-    };
+    return result.rows[0] ? parseJson(result.rows[0]) : null;
   }
 }
 
