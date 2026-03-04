@@ -65,7 +65,7 @@ export function useQuotationData() {
             from_bom: true,
             from_standard: true,
             after_overhead: false,
-            coefficient_applied: true
+            coefficient_applied: false
           }
         })
       }
