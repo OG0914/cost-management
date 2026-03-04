@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { getToken, isTokenExpired, clearAuth } from '../utils/auth'
-import { helpMenuConfig, filterMenuByRole, findDocByPath } from '../utils/helpConfig'
+import { helpMenuConfig, filterMenuByPermissions, findDocByPath } from '../utils/helpConfig'
 
 const routes = [
   {
@@ -139,8 +139,7 @@ const routes = [
         beforeEnter: async (to, from, next) => {
           const { useAuthStore } = await import('../store/auth')
           const authStore = useAuthStore()
-          const userRole = authStore.user?.role || 'readonly'
-          const menu = filterMenuByRole(helpMenuConfig, userRole)
+          const menu = filterMenuByPermissions(helpMenuConfig, authStore)
 
           // 如果访问 /help 根路径，重定向到第一个可见文档
           if (to.path === '/help') {
@@ -216,9 +215,7 @@ router.beforeEach(async (to, from, next) => {
 
       // 检查权限码
       if (requiredPermission) {
-        const hasPerm = authStore.hasPermission?.(requiredPermission) ??
-          authStore.permissions?.includes(requiredPermission) ??
-          authStore.user?.role === 'admin'
+        const hasPerm = authStore.hasPermission?.(requiredPermission) ?? false
 
         if (!hasPerm) {
           next('/dashboard')

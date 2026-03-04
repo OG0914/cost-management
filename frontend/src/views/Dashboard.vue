@@ -219,7 +219,7 @@ const reviewStore = useReviewStore()
 const pendingCount = ref(0)
 
 // 权限检查
-const isAdmin = computed(() => authStore.hasPermission?.('system:admin') ?? authStore.user?.role === 'admin')
+const isAdmin = computed(() => authStore.hasPermission('system:admin'))
 const canReview = computed(() => authStore.hasPermission('review:approve'))
 const canCreateCost = computed(() => authStore.hasPermission('cost:create'))
 
