@@ -344,7 +344,7 @@ class PackagingConfig {
 
     // 获取工序列表
     const processResult = await dbManager.query(
-      `SELECT * FROM process_configs
+      `SELECT id, packaging_config_id, process_name, unit_price, sort_order, is_active, created_at, updated_at FROM process_configs
        WHERE packaging_config_id = $1 AND is_active = true
        ORDER BY sort_order, id`,
       [id]
@@ -366,7 +366,7 @@ class PackagingConfig {
 
     // 获取工序列表
     const processResult = await dbManager.query(
-      `SELECT * FROM process_configs
+      `SELECT id, packaging_config_id, process_name, unit_price, sort_order, is_active, created_at, updated_at FROM process_configs
        WHERE packaging_config_id = $1 AND is_active = true
        ORDER BY sort_order, id`,
       [id]
@@ -375,7 +375,7 @@ class PackagingConfig {
 
     // 获取包材列表
     const materialResult = await dbManager.query(
-      `SELECT * FROM packaging_materials
+      `SELECT id, packaging_config_id, material_name, basic_usage, unit_price, carton_volume, sort_order, is_active, created_at, updated_at FROM packaging_materials
        WHERE packaging_config_id = $1 AND is_active = true
        ORDER BY sort_order, id`,
       [id]

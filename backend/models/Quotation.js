@@ -94,7 +94,7 @@ class Quotation {
    */
   static async findByQuotationNo(quotationNo) {
     const result = await dbManager.query(
-      'SELECT * FROM quotations WHERE quotation_no = $1',
+      `SELECT id, quotation_no, customer_name, customer_region, model_id, regulation_id, quantity, freight_total, freight_per_unit, sales_type, shipping_method, port, base_cost, overhead_price, final_price, currency, status, created_by, reviewed_by, packaging_config_id, customer_id, include_freight_in_base, custom_profit_tiers, vat_rate, created_at, updated_at, submitted_at, reviewed_at FROM quotations WHERE quotation_no = $1`,
       [quotationNo]
     );
     return result.rows[0] || null;

@@ -64,7 +64,7 @@ class QuotationCustomFee {
    */
   static async findById(id) {
     const result = await dbManager.query(
-      'SELECT * FROM quotation_custom_fees WHERE id = $1',
+      'SELECT id, quotation_id, fee_name, fee_rate, sort_order, created_at, updated_at FROM quotation_custom_fees WHERE id = $1',
       [id]
     );
     return result.rows[0] || null;
@@ -77,8 +77,8 @@ class QuotationCustomFee {
    */
   static async findByQuotationId(quotationId) {
     const result = await dbManager.query(
-      `SELECT * FROM quotation_custom_fees 
-       WHERE quotation_id = $1 
+      `SELECT id, quotation_id, fee_name, fee_rate, sort_order, created_at, updated_at FROM quotation_custom_fees
+       WHERE quotation_id = $1
        ORDER BY sort_order, id`,
       [quotationId]
     );

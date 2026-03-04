@@ -19,7 +19,7 @@ class ModelBom {
   /** 根据ID查找BOM记录 */
   static async findById(id) {
     const result = await dbManager.query(
-      'SELECT * FROM model_bom_materials WHERE id = $1',
+      'SELECT id, model_id, material_id, usage_amount, sort_order, is_active, created_at, updated_at FROM model_bom_materials WHERE id = $1',
       [id]
     );
     return result.rows[0] || null;

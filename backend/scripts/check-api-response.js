@@ -2,6 +2,7 @@
  * 检查 API 响应数据
  */
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+const logger = require('../utils/logger');
 const db = require('../db/database');
 const Quotation = require('../models/Quotation');
 const QuotationItem = require('../models/QuotationItem');
@@ -22,7 +23,7 @@ async function checkApiResponse() {
     );
     
     if (result.rows.length === 0) {
-      console.log('报价单不存在');
+      logger.info('报价单不存在');
       return;
     }
     
@@ -78,23 +79,23 @@ async function checkApiResponse() {
       calculation
     };
     
-    console.log('\n=== 模拟 API 响应 (JSON) ===');
+    logger.info('\n=== 模拟 API 响应 (JSON) ===');
     const jsonResponse = JSON.stringify(response, null, 2);
-    console.log(jsonResponse);
-    
+    logger.info(jsonResponse);
+
     // 解析 JSON 后检查
     const parsed = JSON.parse(jsonResponse);
-    console.log('\n=== 解析后的 profitTiers ===');
+    logger.info('\n=== 解析后的 profitTiers ===');
     if (parsed.calculation && parsed.calculation.profitTiers) {
       parsed.calculation.profitTiers.forEach((tier, index) => {
-        console.log(`Tier ${index}:`, tier);
-        console.log(`  price type: ${typeof tier.price}`);
-        console.log(`  price value: ${tier.price}`);
+        logger.info(`Tier ${index}:`, tier);
+        logger.info(`  price type: ${typeof tier.price}`);
+        logger.info(`  price value: ${tier.price}`);
       });
     }
-    
+
   } catch (err) {
-    console.error('检查失败:', err);
+    logger.error('检查失败:', err);
   } finally {
     await db.close();
   }

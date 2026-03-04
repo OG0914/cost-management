@@ -2,6 +2,7 @@
  * 检查数据库中包装配置的 packaging_type 字段
  */
 require('dotenv').config();
+const logger = require('../utils/logger');
 const dbManager = require('../db/database');
 
 async function checkPackagingTypes() {
@@ -15,12 +16,12 @@ async function checkPackagingTypes() {
       ORDER BY id
     `);
     
-    console.log('包装配置数据:');
-    console.log(JSON.stringify(result.rows, null, 2));
-    
+    logger.info('包装配置数据:');
+    logger.info(JSON.stringify(result.rows, null, 2));
+
     process.exit(0);
   } catch (error) {
-    console.error('查询失败:', error);
+    logger.error('查询失败:', error);
     process.exit(1);
   }
 }

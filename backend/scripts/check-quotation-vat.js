@@ -1,4 +1,5 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+const logger = require('../utils/logger');
 const db = require('../db/database');
 
 (async () => {
@@ -9,19 +10,19 @@ const db = require('../db/database');
   
   if (result.rows.length > 0) {
     const q = result.rows[0];
-    console.log('报价单:', q.quotation_no);
-    console.log('vat_rate:', q.vat_rate);
-    console.log('vat_rate type:', typeof q.vat_rate);
-    
+    logger.info('报价单:', q.quotation_no);
+    logger.info('vat_rate:', q.vat_rate);
+    logger.info('vat_rate type:', typeof q.vat_rate);
+
     // 测试 parseFloat
     const parsed = parseFloat(q.vat_rate);
-    console.log('parseFloat(vat_rate):', parsed);
-    
+    logger.info('parseFloat(vat_rate):', parsed);
+
     // 测试计算
     const priceBase = 17.2364;
-    console.log('\n计算测试:');
-    console.log('priceBase * (1 + vat_rate):', priceBase * (1 + q.vat_rate));
-    console.log('priceBase * (1 + parseFloat(vat_rate)):', priceBase * (1 + parsed));
+    logger.info('\n计算测试:');
+    logger.info('priceBase * (1 + vat_rate):', priceBase * (1 + q.vat_rate));
+    logger.info('priceBase * (1 + parseFloat(vat_rate)):', priceBase * (1 + parsed));
   }
   
   await db.close();

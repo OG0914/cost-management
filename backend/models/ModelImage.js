@@ -5,7 +5,7 @@ class ModelImage {
   /** 根据型号ID获取所有图片 */
   static async findByModelId(modelId) {
     const result = await dbManager.query(
-      `SELECT * FROM model_images WHERE model_id = $1 ORDER BY is_primary DESC, sort_order ASC, created_at ASC`,
+      `SELECT id, model_id, file_name, file_path, file_size, is_primary, sort_order, created_at FROM model_images WHERE model_id = $1 ORDER BY is_primary DESC, sort_order ASC, created_at ASC`,
       [modelId]
     );
     return result.rows;
@@ -14,7 +14,7 @@ class ModelImage {
   /** 获取型号主图 */
   static async findPrimaryByModelId(modelId) {
     const result = await dbManager.query(
-      `SELECT * FROM model_images WHERE model_id = $1 AND is_primary = true LIMIT 1`,
+      `SELECT id, model_id, file_name, file_path, file_size, is_primary, sort_order, created_at FROM model_images WHERE model_id = $1 AND is_primary = true LIMIT 1`,
       [modelId]
     );
     return result.rows[0] || null;
@@ -22,7 +22,10 @@ class ModelImage {
 
   /** 根据ID查找图片 */
   static async findById(id) {
-    const result = await dbManager.query(`SELECT * FROM model_images WHERE id = $1`, [id]);
+    const result = await dbManager.query(
+      `SELECT id, model_id, file_name, file_path, file_size, is_primary, sort_order, created_at FROM model_images WHERE id = $1`,
+      [id]
+    );
     return result.rows[0] || null;
   }
 

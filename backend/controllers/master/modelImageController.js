@@ -107,7 +107,7 @@ exports.deleteImage = async (req, res) => {
     try {
       await fs.unlink(fullPath);
     } catch (e) {
-      console.warn('删除文件失败:', e.message);
+      logger.warn('删除文件失败:', e.message);
     }
 
     await ModelImage.delete(parseInt(imageId));

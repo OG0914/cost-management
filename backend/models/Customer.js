@@ -41,12 +41,12 @@ class Customer {
     }
 
     static async findById(id) {
-        const result = await dbManager.query('SELECT * FROM customers WHERE id = $1', [id]);
+        const result = await dbManager.query('SELECT id, vc_code, name, region, remark, user_id, created_at, updated_at FROM customers WHERE id = $1', [id]);
         return result.rows[0] || null;
     }
 
     static async findByVcCode(vcCode) {
-        const result = await dbManager.query('SELECT * FROM customers WHERE vc_code = $1', [vcCode]);
+        const result = await dbManager.query('SELECT id, vc_code, name, region, remark, user_id, created_at, updated_at FROM customers WHERE vc_code = $1', [vcCode]);
         return result.rows[0] || null;
     }
 

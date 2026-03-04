@@ -12,7 +12,7 @@ class Material {
    */
   static async findAll() {
     const result = await dbManager.query(`
-      SELECT * FROM materials
+      SELECT id, item_no, name, unit, price, currency, manufacturer, usage_amount, created_at, updated_at FROM materials
       ORDER BY created_at DESC
     `);
     return result.rows;
@@ -25,7 +25,7 @@ class Material {
    */
   static async findByManufacturer(manufacturer) {
     const result = await dbManager.query(
-      `SELECT * FROM materials
+      `SELECT id, item_no, name, unit, price, currency, manufacturer, usage_amount, created_at, updated_at FROM materials
        WHERE manufacturer = $1
        ORDER BY created_at DESC`,
       [manufacturer]
@@ -40,7 +40,7 @@ class Material {
    */
   static async findById(id) {
     const result = await dbManager.query(
-      'SELECT * FROM materials WHERE id = $1',
+      'SELECT id, item_no, name, unit, price, currency, manufacturer, usage_amount, created_at, updated_at FROM materials WHERE id = $1',
       [id]
     );
     return result.rows[0] || null;
@@ -130,7 +130,7 @@ class Material {
    */
   static async findByItemNo(itemNo) {
     const result = await dbManager.query(
-      'SELECT * FROM materials WHERE item_no = $1',
+      'SELECT id, item_no, name, unit, price, currency, manufacturer, usage_amount, created_at, updated_at FROM materials WHERE item_no = $1',
       [itemNo]
     );
     return result.rows[0] || null;
@@ -144,7 +144,7 @@ class Material {
   static async findByItemNos(itemNos) {
     if (!itemNos || itemNos.length === 0) return [];
     const placeholders = itemNos.map((_, i) => `$${i + 1}`).join(',');
-    const result = await dbManager.query(`SELECT * FROM materials WHERE item_no IN (${placeholders})`, itemNos);
+    const result = await dbManager.query(`SELECT id, item_no, name, unit, price, currency, manufacturer, usage_amount, created_at, updated_at FROM materials WHERE item_no IN (${placeholders})`, itemNos);
     return result.rows;
   }
 
@@ -155,7 +155,7 @@ class Material {
    */
   static async findByName(name) {
     const result = await dbManager.query(
-      'SELECT * FROM materials WHERE name = $1',
+      'SELECT id, item_no, name, unit, price, currency, manufacturer, usage_amount, created_at, updated_at FROM materials WHERE name = $1',
       [name]
     );
     return result.rows[0] || null;
@@ -184,7 +184,7 @@ class Material {
    */
   static async getPriceHistory(materialId) {
     const result = await dbManager.query(
-      `SELECT * FROM price_history
+      `SELECT id, item_type, item_id, old_price, new_price, changed_by, changed_at FROM price_history
        WHERE item_type = 'material' AND item_id = $1
        ORDER BY changed_at DESC`,
       [materialId]

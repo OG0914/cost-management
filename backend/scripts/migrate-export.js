@@ -8,6 +8,7 @@
  * 如需运行，请先安装：npm install better-sqlite3
  */
 
+const logger = require('../utils/logger');
 const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
@@ -38,12 +39,12 @@ const TABLE_ORDER = [
 ];
 
 function exportData() {
-  console.log('开始导出 SQLite 数据...');
-  console.log(`数据库路径: ${DB_PATH}`);
-  
+  logger.info('开始导出 SQLite 数据...');
+  logger.info(`数据库路径: ${DB_PATH}`);
+
   // 检查数据库文件是否存在
   if (!fs.existsSync(DB_PATH)) {
-    console.error('错误: SQLite 数据库文件不存在');
+    logger.error('错误: SQLite 数据库文件不存在');
     process.exit(1);
   }
 
@@ -60,12 +61,12 @@ function exportData() {
       WHERE type='table' AND name NOT LIKE 'sqlite_%'
     `).all().map(t => t.name);
 
-    console.log(`发现 ${existingTables.length} 张表: ${existingTables.join(', ')}`);
+    logger.info(`发现 ${existingTables.length} 张表: ${existingTables.join(', ')}`);
 
     // 按依赖顺序导出表
     for (const tableName of TABLE_ORDER) {
       if (!existingTables.includes(tableName)) {
-        console.log(`跳过不存在的表: ${tableName}`);
+        logger.info(`跳过不存在的表: ${tableName}`);
         continue;
       }
 
@@ -75,16 +76,16 @@ function exportData() {
           count: rows.length,
           data: rows
         };
-        console.log(`导出表 ${tableName}: ${rows.length} 条记录`);
+        logger.info(`导出表 ${tableName}: ${rows.length} 条记录`);
       } catch (err) {
-        console.error(`导出表 ${tableName} 失败:`, err.message);
+        logger.error(`导出表 ${tableName} 失败:`, err.message);
       }
     }
 
     // 检查是否有未在 TABLE_ORDER 中的表
     const unexportedTables = existingTables.filter(t => !TABLE_ORDER.includes(t));
     if (unexportedTables.length > 0) {
-      console.log(`\n警告: 以下表未在导出顺序中定义: ${unexportedTables.join(', ')}`);
+      logger.info(`\n警告: 以下表未在导出顺序中定义: ${unexportedTables.join(', ')}`);
       for (const tableName of unexportedTables) {
         try {
           const rows = db.prepare(`SELECT * FROM ${tableName}`).all();
@@ -92,9 +93,9 @@ function exportData() {
             count: rows.length,
             data: rows
           };
-          console.log(`额外导出表 ${tableName}: ${rows.length} 条记录`);
+          logger.info(`额外导出表 ${tableName}: ${rows.length} 条记录`);
         } catch (err) {
-          console.error(`导出表 ${tableName} 失败:`, err.message);
+          logger.error(`导出表 ${tableName} 失败:`, err.message);
         }
       }
     }
@@ -107,22 +108,22 @@ function exportData() {
 
     // 写入 JSON 文件
     fs.writeFileSync(EXPORT_PATH, JSON.stringify(exportData, null, 2), 'utf8');
-    
-    console.log(`\n导出完成!`);
-    console.log(`导出文件: ${EXPORT_PATH}`);
-    console.log(`总计导出 ${Object.keys(exportData.tables).length} 张表`);
-    
+
+    logger.info(`\n导出完成!`);
+    logger.info(`导出文件: ${EXPORT_PATH}`);
+    logger.info(`总计导出 ${Object.keys(exportData.tables).length} 张表`);
+
     // 打印统计信息
-    console.log('\n数据统计:');
+    logger.info('\n数据统计:');
     let totalRecords = 0;
     for (const [table, info] of Object.entries(exportData.tables)) {
-      console.log(`  ${table}: ${info.count} 条`);
+      logger.info(`  ${table}: ${info.count} 条`);
       totalRecords += info.count;
     }
-    console.log(`  总计: ${totalRecords} 条记录`);
+    logger.info(`  总计: ${totalRecords} 条记录`);
 
   } catch (error) {
-    console.error('导出失败:', error);
+    logger.error('导出失败:', error);
     process.exit(1);
   } finally {
     db.close();

@@ -67,11 +67,24 @@ import { formatNumber } from '@/utils/format' // 数字格式化
 import { formatPackagingMethodFromConfig, calculateTotalFromConfig } from '@/config/packagingTypes' // 包装计算工具
 import StatusBadge from '@/components/common/StatusBadge.vue' // 状态标签组件
 
+// 管理配置接口
+interface ManagementConfig {
+  id: number
+  model_name: string
+  config_name: string
+  factory: 'dongguan_xunan' | 'hubei_zhiteng' | string
+  regulation_name?: string
+  packaging_type?: string
+  is_active: boolean | number
+  material_total_price?: number
+  process_total_price?: number
+}
+
 interface Props {
-  config: any // 配置对象
-  type: 'packaging' | 'process' // 业务类型
-  canEdit?: boolean // 是否可编辑
-  canDelete?: boolean // 是否可删除
+  config: ManagementConfig
+  type: 'packaging' | 'process'
+  canEdit?: boolean
+  canDelete?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -80,9 +93,9 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  view: [config: any]
-  edit: [config: any]
-  delete: [config: any]
+  view: [config: ManagementConfig]
+  edit: [config: ManagementConfig]
+  delete: [config: ManagementConfig]
 }>()
 
 // 映射工厂名称

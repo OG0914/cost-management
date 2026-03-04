@@ -4,6 +4,7 @@
  */
 
 require('dotenv').config();
+const logger = require('../utils/logger');
 const bcrypt = require('bcrypt');
 const path = require('path');
 const dbManager = require('../db/database');
@@ -17,13 +18,13 @@ async function createAdmin() {
 
     // 检查管理员是否已存在
     if (User.exists('admin')) {
-      console.log('管理员账号已存在');
+      logger.info('管理员账号已存在');
       process.exit(0);
     }
 
     // 创建管理员账号
     const hashedPassword = await bcrypt.hash('admin123', 10);
-    
+
     const adminId = User.create({
       username: 'admin',
       password: hashedPassword,
@@ -32,20 +33,20 @@ async function createAdmin() {
       email: 'admin@example.com'
     });
 
-    console.log('========================================');
-    console.log('管理员账号创建成功！');
-    console.log('用户名: admin');
-    console.log('密码: admin123');
-    console.log('角色: 管理员');
-    console.log('ID:', adminId);
-    console.log('========================================');
-    console.log('请在生产环境中立即修改密码！');
-    
+    logger.info('========================================');
+    logger.info('管理员账号创建成功！');
+    logger.info('用户名: admin');
+    logger.info('密码: admin123');
+    logger.info('角色: 管理员');
+    logger.info('ID:', adminId);
+    logger.info('========================================');
+    logger.info('请在生产环境中立即修改密码！');
+
     dbManager.close();
     process.exit(0);
 
   } catch (error) {
-    console.error('创建管理员账号失败:', error);
+    logger.error('创建管理员账号失败:', error);
     process.exit(1);
   }
 }

@@ -4,6 +4,7 @@
  * 处理外键依赖顺序和序列值重置
  */
 
+const logger = require('../utils/logger');
 const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
@@ -94,17 +95,17 @@ async function resetSequence(client, tableName) {
     // 获取表的最大 ID
     const result = await client.query(`SELECT MAX(id) as max_id FROM ${tableName}`);
     const maxId = result.rows[0].max_id || 0;
-    
+
     if (maxId > 0) {
       // 重置序列到最大 ID + 1
       const sequenceName = `${tableName}_id_seq`;
       await client.query(`SELECT setval('${sequenceName}', $1, true)`, [maxId]);
-      console.log(`  重置序列 ${sequenceName} 到 ${maxId}`);
+      logger.info(`  重置序列 ${sequenceName} 到 ${maxId}`);
     }
   } catch (err) {
     // 某些表可能没有序列，忽略错误
     if (!err.message.includes('does not exist')) {
-      console.warn(`  警告: 重置序列失败 - ${err.message}`);
+      logger.warn(`  警告: 重置序列失败 - ${err.message}`);
     }
   }
 }
@@ -116,7 +117,7 @@ async function importTable(client, tableName, tableData) {
   const { count, data } = tableData;
   
   if (!data || data.length === 0) {
-    console.log(`  ${tableName}: 无数据，跳过`);
+    logger.info(`  ${tableName}: 无数据，跳过`);
     return 0;
   }
 
@@ -140,12 +141,12 @@ async function importTable(client, tableName, tableData) {
         skipped++;
       }
     } catch (err) {
-      console.error(`  导入记录失败 (${tableName}):`, err.message);
+      logger.error(`  导入记录失败 (${tableName}):`, err.message);
       skipped++;
     }
   }
 
-  console.log(`  ${tableName}: 导入 ${imported} 条，跳过 ${skipped} 条（共 ${count} 条）`);
+  logger.info(`  ${tableName}: 导入 ${imported} 条，跳过 ${skipped} 条（共 ${count} 条）`);
   return imported;
 }
 
@@ -155,12 +156,12 @@ async function importTable(client, tableName, tableData) {
 async function truncateTables(client) {
   // 反向顺序删除数据
   const reverseOrder = [...TABLE_ORDER].reverse();
-  
-  console.log('清空现有数据...');
+
+  logger.info('清空现有数据...');
   for (const tableName of reverseOrder) {
     try {
       await client.query(`DELETE FROM ${tableName}`);
-      console.log(`  清空表 ${tableName}`);
+      logger.info(`  清空表 ${tableName}`);
     } catch (err) {
       // 表可能不存在，忽略
     }
@@ -171,19 +172,19 @@ async function truncateTables(client) {
  * 主导入函数
  */
 async function importData() {
-  console.log('开始导入数据到 PostgreSQL...');
-  
+  logger.info('开始导入数据到 PostgreSQL...');
+
   // 检查导入文件是否存在
   if (!fs.existsSync(IMPORT_PATH)) {
-    console.error(`错误: 导入文件不存在: ${IMPORT_PATH}`);
-    console.error('请先运行 migrate-export.js 导出数据');
+    logger.error(`错误: 导入文件不存在: ${IMPORT_PATH}`);
+    logger.error('请先运行 migrate-export.js 导出数据');
     process.exit(1);
   }
 
   // 读取导出数据
   const exportData = JSON.parse(fs.readFileSync(IMPORT_PATH, 'utf8'));
-  console.log(`导出时间: ${exportData.exportedAt}`);
-  console.log(`包含 ${Object.keys(exportData.tables).length} 张表\n`);
+  logger.info(`导出时间: ${exportData.exportedAt}`);
+  logger.info(`包含 ${Object.keys(exportData.tables).length} 张表\n`);
 
   const pool = createPool();
   const client = await pool.connect();
@@ -201,7 +202,7 @@ async function importData() {
     let totalImported = 0;
 
     // 按依赖顺序导入表
-    console.log('按依赖顺序导入表:');
+    logger.info('按依赖顺序导入表:');
     for (const tableName of TABLE_ORDER) {
       if (exportData.tables[tableName]) {
         const imported = await importTable(client, tableName, exportData.tables[tableName]);
@@ -212,18 +213,18 @@ async function importData() {
     // 导入未在 TABLE_ORDER 中的表
     const extraTables = Object.keys(exportData.tables).filter(t => !TABLE_ORDER.includes(t));
     if (extraTables.length > 0) {
-      console.log('\n导入额外的表:');
+      logger.info('\n导入额外的表:');
       for (const tableName of extraTables) {
         // 跳过迁移记录表
         if (tableName === 'migrations') continue;
-        
+
         const imported = await importTable(client, tableName, exportData.tables[tableName]);
         totalImported += imported;
       }
     }
 
     // 重置所有序列
-    console.log('\n重置序列值:');
+    logger.info('\n重置序列值:');
     for (const tableName of [...TABLE_ORDER, ...extraTables]) {
       if (exportData.tables[tableName] && tableName !== 'migrations') {
         await resetSequence(client, tableName);
@@ -232,16 +233,16 @@ async function importData() {
 
     // 恢复外键约束检查
     await client.query('SET session_replication_role = DEFAULT');
-    
+
     // 提交事务
     await client.query('COMMIT');
-    
-    console.log(`\n导入完成! 总计导入 ${totalImported} 条记录`);
+
+    logger.info(`\n导入完成! 总计导入 ${totalImported} 条记录`);
 
   } catch (error) {
     // 回滚事务
     await client.query('ROLLBACK');
-    console.error('\n导入失败，已回滚:', error);
+    logger.error('\n导入失败，已回滚:', error);
     process.exit(1);
   } finally {
     client.release();
@@ -251,6 +252,6 @@ async function importData() {
 
 // 执行导入
 importData().catch(err => {
-  console.error('导入过程出错:', err);
+  logger.error('导入过程出错:', err);
   process.exit(1);
 });

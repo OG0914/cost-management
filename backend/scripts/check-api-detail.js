@@ -2,6 +2,7 @@
  * 检查报价单详情API返回的数据
  */
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+const logger = require('../utils/logger');
 const db = require('../db/database');
 const QuotationItem = require('../models/QuotationItem');
 const Quotation = require('../models/Quotation');
@@ -21,21 +22,21 @@ async function checkApiDetail() {
     );
     
     if (result.rows.length === 0) {
-      console.log('报价单不存在:', quotationNo);
+      logger.info('报价单不存在:', quotationNo);
       return;
     }
     
     const quotation = result.rows[0];
-    console.log('\n=== 报价单基本信息 ===');
-    console.log('ID:', quotation.id);
-    console.log('最终价格 (final_price):', quotation.final_price);
+    logger.info('\n=== 报价单基本信息 ===');
+    logger.info('ID:', quotation.id);
+    logger.info('最终价格 (final_price):', quotation.final_price);
     
     // 模拟 getQuotationDetail 的逻辑
     const items = await QuotationItem.getGroupedByCategory(quotation.id);
     
-    console.log('\n=== items.process ===');
-    console.log('total:', items.process.total, typeof items.process.total);
-    console.log('items count:', items.process.items.length);
+    logger.info('\n=== items.process ===');
+    logger.info('total:', items.process.total, typeof items.process.total);
+    logger.info('items count:', items.process.items.length);
     
     // 计算原料总计
     const materialTotal = items.material.items
@@ -46,17 +47,17 @@ async function checkApiDetail() {
       .filter(item => item.after_overhead)
       .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
     
-    console.log('\n=== 计算参数 ===');
-    console.log('materialTotal:', materialTotal);
-    console.log('processTotal:', parseFloat(items.process.total || 0));
-    console.log('packagingTotal:', parseFloat(items.packaging.total || 0));
-    console.log('freightTotal:', parseFloat(quotation.freight_total || 0));
-    console.log('quantity:', parseFloat(quotation.quantity || 1));
+    logger.info('\n=== 计算参数 ===');
+    logger.info('materialTotal:', materialTotal);
+    logger.info('processTotal:', parseFloat(items.process.total || 0));
+    logger.info('packagingTotal:', parseFloat(items.packaging.total || 0));
+    logger.info('freightTotal:', parseFloat(quotation.freight_total || 0));
+    logger.info('quantity:', parseFloat(quotation.quantity || 1));
     
     // 获取系统配置
     const calculatorConfig = await SystemConfig.getCalculatorConfig();
-    console.log('\n=== 系统配置 ===');
-    console.log('processCoefficient:', calculatorConfig.processCoefficient);
+    logger.info('\n=== 系统配置 ===');
+    logger.info('processCoefficient:', calculatorConfig.processCoefficient);
     
     const calculator = new CostCalculator(calculatorConfig);
     
@@ -71,14 +72,14 @@ async function checkApiDetail() {
       afterOverheadMaterialTotal
     });
     
-    console.log('\n=== 计算结果 ===');
-    console.log('baseCost:', calculation.baseCost);
-    console.log('overheadPrice:', calculation.overheadPrice);
-    console.log('domesticPrice:', calculation.domesticPrice);
-    console.log('profitTiers[0] (5%):', calculation.profitTiers[0]);
+    logger.info('\n=== 计算结果 ===');
+    logger.info('baseCost:', calculation.baseCost);
+    logger.info('overheadPrice:', calculation.overheadPrice);
+    logger.info('domesticPrice:', calculation.domesticPrice);
+    logger.info('profitTiers[0] (5%):', calculation.profitTiers[0]);
     
   } catch (err) {
-    console.error('检查失败:', err);
+    logger.error('检查失败:', err);
   } finally {
     await db.close();
   }

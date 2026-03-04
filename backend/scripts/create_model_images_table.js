@@ -1,4 +1,5 @@
 /** 创建 model_images 表 */
+const logger = require('../utils/logger');
 const { Client } = require('pg');
 
 const sql = `
@@ -22,9 +23,9 @@ async function main() {
   try {
     await client.connect();
     await client.query(sql);
-    console.log('model_images 表创建成功');
+    logger.info('model_images 表创建成功');
   } catch (e) {
-    console.error('创建失败:', e.message);
+    logger.error('创建失败:', e.message);
   } finally {
     await client.end();
   }

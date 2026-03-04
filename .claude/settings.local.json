@@ -44,7 +44,14 @@
       "mcp__Filesystem__edit_file",
       "mcp__Filesystem__read_text_file",
       "Bash(git check-ignore:*)",
-      "mcp__Filesystem__create_directory"
+      "mcp__Filesystem__create_directory",
+      "Bash(git stash:*)",
+      "Bash(npm run:*)",
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)",
+      "Bash(git merge:*)",
+      "Bash(ls .env*:*)",
+      "Bash(ls:*)"
     ]
   }
 }

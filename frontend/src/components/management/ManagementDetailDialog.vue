@@ -156,11 +156,46 @@ import { Box, Money, Operation } from '@element-plus/icons-vue'
 
 const configStore = useConfigStore()
 
+// 管理配置接口
+interface ManagementConfig {
+  id: number
+  model_name: string
+  config_name: string
+  factory: 'dongguan_xunan' | 'hubei_zhiteng' | string
+  regulation_name?: string
+  packaging_type?: string
+  is_active: boolean | number
+  material_total_price?: number
+  process_total_price?: number
+}
+
+// 包材明细项接口
+interface PackagingItem {
+  material_name: string
+  basic_usage: number
+  unit_price: number
+}
+
+// 工序明细项接口
+interface ProcessItem {
+  process_name: string
+  unit_price: number
+}
+
+// 明细项联合类型
+type ManagementItem = PackagingItem | ProcessItem
+
+// ElTable 合计行参数接口
+interface SummaryMethodParam {
+  columns: Array<{ property: string; label: string }>
+  data: any[]
+}
+
 interface Props {
   modelValue: boolean
-  config: any
+  config: ManagementConfig
   type: 'packaging' | 'process'
-  items: any[]
+  items: ManagementItem[]
 }
 
 const props = defineProps<Props>()
@@ -180,7 +215,7 @@ const getFactoryName = (factory: string) => {
 }
 
 // 计算单行数值
-const calculateRowTotal = (row: any) => {
+const calculateRowTotal = (row: ManagementItem) => {
   if (props.type === 'packaging') {
     return row.basic_usage !== 0 ? (row.unit_price || 0) / row.basic_usage : 0
   } else {
@@ -194,10 +229,10 @@ const totalAmount = computed(() => {
 })
 
 // 表格合计行
-const getSummaries = (param: any) => {
+const getSummaries = (param: SummaryMethodParam) => {
   const { columns } = param
   const sums: string[] = []
-  columns.forEach((column: any, index: number) => {
+  columns.forEach((column, index: number) => {
     if (index === 0) {
       sums[index] = '合计'
       return

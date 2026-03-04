@@ -4,6 +4,7 @@
  */
 
 require('dotenv').config();
+const logger = require('../utils/logger');
 const bcrypt = require('bcrypt');
 const { Pool } = require('pg');
 
@@ -25,20 +26,20 @@ async function resetAdmin() {
       RETURNING id
     `, ['admin', hashedPassword, 'admin', '系统管理员', 'admin@example.com', true]);
 
-    console.log('========================================');
-    console.log('管理员账号重置成功！');
-    console.log('用户名: admin');
-    console.log('密码: admin123');
-    console.log('角色: 管理员');
-    console.log('ID:', result.rows[0].id);
-    console.log('========================================');
-    console.log('请在生产环境中立即修改密码！');
-    
+    logger.info('========================================');
+    logger.info('管理员账号重置成功！');
+    logger.info('用户名: admin');
+    logger.info('密码: admin123');
+    logger.info('角色: 管理员');
+    logger.info('ID:', result.rows[0].id);
+    logger.info('========================================');
+    logger.info('请在生产环境中立即修改密码！');
+
     await pool.end();
     process.exit(0);
 
   } catch (error) {
-    console.error('重置管理员账号失败:', error);
+    logger.error('重置管理员账号失败:', error);
     await pool.end();
     process.exit(1);
   }

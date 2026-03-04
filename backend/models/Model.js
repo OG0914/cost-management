@@ -61,7 +61,7 @@ class Model {
    */
   static async findByRegulationId(regulationId) {
     const result = await dbManager.query(
-      `SELECT * FROM models
+      `SELECT id, regulation_id, model_name, model_category, model_series, is_active, created_at, updated_at FROM models
        WHERE regulation_id = $1 AND is_active = true
        ORDER BY created_at DESC`,
       [regulationId]

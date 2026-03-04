@@ -8,6 +8,7 @@
  * 如需运行，请先安装：npm install better-sqlite3
  */
 
+const logger = require('../utils/logger');
 const Database = require('better-sqlite3');
 const { Pool } = require('pg');
 const fs = require('fs');
@@ -82,7 +83,7 @@ async function getPgCount(pool, tableName) {
  * 验证关键数据一致性
  */
 async function verifyKeyData(sqliteDb, pgPool) {
-  console.log('\n验证关键数据一致性:');
+  logger.info('\n验证关键数据一致性:');
   const issues = [];
 
   // 验证用户数据
@@ -99,7 +100,7 @@ async function verifyKeyData(sqliteDb, pgPool) {
           issues.push(`用户 ID ${sqliteUsers[i].id} 用户名不一致`);
         }
       }
-      console.log(`  ✓ 用户数据一致 (${sqliteUsers.length} 条)`);
+      logger.info(`  ✓ 用户数据一致 (${sqliteUsers.length} 条)`);
     }
   } catch (err) {
     issues.push(`验证用户数据失败: ${err.message}`);
@@ -114,7 +115,7 @@ async function verifyKeyData(sqliteDb, pgPool) {
     if (sqliteRegs.length !== pgRegs.length) {
       issues.push(`法规数量不一致: SQLite=${sqliteRegs.length}, PostgreSQL=${pgRegs.length}`);
     } else {
-      console.log(`  ✓ 法规数据一致 (${sqliteRegs.length} 条)`);
+      logger.info(`  ✓ 法规数据一致 (${sqliteRegs.length} 条)`);
     }
   } catch (err) {
     issues.push(`验证法规数据失败: ${err.message}`);
@@ -129,7 +130,7 @@ async function verifyKeyData(sqliteDb, pgPool) {
     if (sqliteModels.length !== pgModels.length) {
       issues.push(`型号数量不一致: SQLite=${sqliteModels.length}, PostgreSQL=${pgModels.length}`);
     } else {
-      console.log(`  ✓ 型号数据一致 (${sqliteModels.length} 条)`);
+      logger.info(`  ✓ 型号数据一致 (${sqliteModels.length} 条)`);
     }
   } catch (err) {
     issues.push(`验证型号数据失败: ${err.message}`);
@@ -144,7 +145,7 @@ async function verifyKeyData(sqliteDb, pgPool) {
     if (sqliteQuotes.length !== pgQuotes.length) {
       issues.push(`报价单数量不一致: SQLite=${sqliteQuotes.length}, PostgreSQL=${pgQuotes.length}`);
     } else {
-      console.log(`  ✓ 报价单数据一致 (${sqliteQuotes.length} 条)`);
+      logger.info(`  ✓ 报价单数据一致 (${sqliteQuotes.length} 条)`);
     }
   } catch (err) {
     issues.push(`验证报价单数据失败: ${err.message}`);
@@ -157,12 +158,12 @@ async function verifyKeyData(sqliteDb, pgPool) {
  * 主验证函数
  */
 async function verifyMigration() {
-  console.log('开始验证数据迁移...\n');
+  logger.info('开始验证数据迁移...\n');
 
   // 检查 SQLite 数据库是否存在
   if (!fs.existsSync(SQLITE_PATH)) {
-    console.error('错误: SQLite 数据库文件不存在');
-    console.log('如果已完成迁移并删除了 SQLite 文件，可以跳过此验证');
+    logger.error('错误: SQLite 数据库文件不存在');
+    logger.info('如果已完成迁移并删除了 SQLite 文件，可以跳过此验证');
     process.exit(1);
   }
 
@@ -172,13 +173,13 @@ async function verifyMigration() {
   try {
     // 测试 PostgreSQL 连接
     await pgPool.query('SELECT 1');
-    console.log('PostgreSQL 连接成功\n');
+    logger.info('PostgreSQL 连接成功\n');
 
     // 比对记录数
-    console.log('比对各表记录数:');
-    console.log('─'.repeat(50));
-    console.log('表名'.padEnd(25) + 'SQLite'.padEnd(10) + 'PostgreSQL'.padEnd(10) + '状态');
-    console.log('─'.repeat(50));
+    logger.info('比对各表记录数:');
+    logger.info('─'.repeat(50));
+    logger.info('表名'.padEnd(25) + 'SQLite'.padEnd(10) + 'PostgreSQL'.padEnd(10) + '状态');
+    logger.info('─'.repeat(50));
 
     let allMatch = true;
     const results = [];
@@ -204,44 +205,44 @@ async function verifyMigration() {
 
       const sqliteStr = sqliteCount === -1 ? 'N/A' : sqliteCount.toString();
       const pgStr = pgCount === -1 ? 'N/A' : pgCount.toString();
-      
-      console.log(
-        tableName.padEnd(25) + 
-        sqliteStr.padEnd(10) + 
-        pgStr.padEnd(10) + 
+
+      logger.info(
+        tableName.padEnd(25) +
+        sqliteStr.padEnd(10) +
+        pgStr.padEnd(10) +
         status
       );
 
       results.push({ tableName, sqliteCount, pgCount, status });
     }
 
-    console.log('─'.repeat(50));
+    logger.info('─'.repeat(50));
 
     // 验证关键数据
     const issues = await verifyKeyData(sqliteDb, pgPool);
 
     // 输出总结
-    console.log('\n' + '='.repeat(50));
+    logger.info('\n' + '='.repeat(50));
     if (allMatch && issues.length === 0) {
-      console.log('✓ 验证通过! 所有表的记录数一致，关键数据正确');
+      logger.info('✓ 验证通过! 所有表的记录数一致，关键数据正确');
     } else {
-      console.log('✗ 验证发现问题:');
+      logger.info('✗ 验证发现问题:');
       if (!allMatch) {
-        console.log('  - 部分表的记录数不一致');
+        logger.info('  - 部分表的记录数不一致');
       }
       if (issues.length > 0) {
         for (const issue of issues) {
-          console.log(`  - ${issue}`);
+          logger.info(`  - ${issue}`);
         }
       }
     }
-    console.log('='.repeat(50));
+    logger.info('='.repeat(50));
 
     // 返回验证结果
     return allMatch && issues.length === 0;
 
   } catch (error) {
-    console.error('\n验证过程出错:', error);
+    logger.error('\n验证过程出错:', error);
     return false;
   } finally {
     sqliteDb.close();
@@ -255,6 +256,6 @@ verifyMigration()
     process.exit(success ? 0 : 1);
   })
   .catch(err => {
-    console.error('验证失败:', err);
+    logger.error('验证失败:', err);
     process.exit(1);
   });

@@ -13,7 +13,7 @@ class PackagingMaterial {
    */
   static async findByPackagingConfigId(packagingConfigId) {
     const result = await dbManager.query(
-      `SELECT * FROM packaging_materials
+      `SELECT id, packaging_config_id, material_name, basic_usage, unit_price, carton_volume, sort_order, is_active, created_at, updated_at FROM packaging_materials
        WHERE packaging_config_id = $1 AND is_active = true
        ORDER BY sort_order, id`,
       [packagingConfigId]
@@ -28,7 +28,7 @@ class PackagingMaterial {
    */
   static async findById(id) {
     const result = await dbManager.query(
-      'SELECT * FROM packaging_materials WHERE id = $1',
+      'SELECT id, packaging_config_id, material_name, basic_usage, unit_price, carton_volume, sort_order, is_active, created_at, updated_at FROM packaging_materials WHERE id = $1',
       [id]
     );
     return result.rows[0] || null;

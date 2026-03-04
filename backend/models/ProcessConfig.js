@@ -29,7 +29,7 @@ class ProcessConfig {
    */
   static async findByPackagingConfigId(packagingConfigId) {
     const result = await dbManager.query(
-      `SELECT * FROM process_configs
+      `SELECT id, packaging_config_id, process_name, unit_price, sort_order, is_active, created_at, updated_at FROM process_configs
        WHERE packaging_config_id = $1 AND is_active = true
        ORDER BY sort_order, id`,
       [packagingConfigId]

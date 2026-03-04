@@ -6,6 +6,7 @@
 
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
+const logger = require('../utils/logger');
 
 // 导入数据库和模型
 const dbManager = require('../db/database');
@@ -71,177 +72,177 @@ function validateRecordBooleans(record, tableName) {
  * 主验证函数
  */
 async function verifyApiCompatibility() {
-  console.log('开始验证 API 兼容性...\n');
-  
+  logger.info('开始验证 API 兼容性...\n');
+
   let allPassed = true;
   const issues = [];
 
   try {
     // 初始化数据库
     await dbManager.initialize();
-    console.log('数据库连接成功\n');
+    logger.info('数据库连接成功\n');
 
     // 1. 验证 Users 表布尔字段
-    console.log('1. 验证 Users 表...');
+    logger.info('1. 验证 Users 表...');
     const users = await User.findAll();
     for (const user of users) {
       const results = validateRecordBooleans(user, 'users');
       for (const r of results) {
-        console.log(`   ${r.message}`);
+        logger.info(`   ${r.message}`);
         if (!r.valid) {
           allPassed = false;
           issues.push(r.message);
         }
       }
     }
-    console.log(`   共 ${users.length} 条记录\n`);
+    logger.info(`   共 ${users.length} 条记录\n`);
 
     // 2. 验证 Regulations 表布尔字段
-    console.log('2. 验证 Regulations 表...');
+    logger.info('2. 验证 Regulations 表...');
     const regulations = await Regulation.findAll();
     for (const reg of regulations) {
       const results = validateRecordBooleans(reg, 'regulations');
       for (const r of results) {
-        console.log(`   ${r.message}`);
+        logger.info(`   ${r.message}`);
         if (!r.valid) {
           allPassed = false;
           issues.push(r.message);
         }
       }
     }
-    console.log(`   共 ${regulations.length} 条记录\n`);
+    logger.info(`   共 ${regulations.length} 条记录\n`);
 
     // 3. 验证 Models 表布尔字段
-    console.log('3. 验证 Models 表...');
+    logger.info('3. 验证 Models 表...');
     const models = await Model.findAll();
     for (const model of models.slice(0, 3)) { // 只检查前3条
       const results = validateRecordBooleans(model, 'models');
       for (const r of results) {
-        console.log(`   ${r.message}`);
+        logger.info(`   ${r.message}`);
         if (!r.valid) {
           allPassed = false;
           issues.push(r.message);
         }
       }
     }
-    console.log(`   共 ${models.length} 条记录（显示前3条）\n`);
+    logger.info(`   共 ${models.length} 条记录（显示前3条）\n`);
 
     // 4. 验证 PackagingConfigs 表布尔字段
-    console.log('4. 验证 PackagingConfigs 表...');
+    logger.info('4. 验证 PackagingConfigs 表...');
     const configs = await PackagingConfig.findAll();
     for (const config of configs) {
       const results = validateRecordBooleans(config, 'packaging_configs');
       for (const r of results) {
-        console.log(`   ${r.message}`);
+        logger.info(`   ${r.message}`);
         if (!r.valid) {
           allPassed = false;
           issues.push(r.message);
         }
       }
     }
-    console.log(`   共 ${configs.length} 条记录\n`);
+    logger.info(`   共 ${configs.length} 条记录\n`);
 
     // 5. 验证 ProcessConfigs 表布尔字段
-    console.log('5. 验证 ProcessConfigs 表...');
+    logger.info('5. 验证 ProcessConfigs 表...');
     const processConfigs = await ProcessConfig.findAll();
     for (const pc of processConfigs.slice(0, 3)) {
       const results = validateRecordBooleans(pc, 'process_configs');
       for (const r of results) {
-        console.log(`   ${r.message}`);
+        logger.info(`   ${r.message}`);
         if (!r.valid) {
           allPassed = false;
           issues.push(r.message);
         }
       }
     }
-    console.log(`   共 ${processConfigs.length} 条记录（显示前3条）\n`);
+    logger.info(`   共 ${processConfigs.length} 条记录（显示前3条）\n`);
 
     // 6. 验证 PackagingMaterials 表布尔字段
-    console.log('6. 验证 PackagingMaterials 表...');
+    logger.info('6. 验证 PackagingMaterials 表...');
     if (configs.length > 0) {
       const packagingMaterials = await PackagingMaterial.findByPackagingConfigId(configs[0].id);
       for (const pm of packagingMaterials.slice(0, 3)) {
         const results = validateRecordBooleans(pm, 'packaging_materials');
         for (const r of results) {
-          console.log(`   ${r.message}`);
+          logger.info(`   ${r.message}`);
           if (!r.valid) {
             allPassed = false;
             issues.push(r.message);
           }
         }
       }
-      console.log(`   共 ${packagingMaterials.length} 条记录（显示前3条）\n`);
+      logger.info(`   共 ${packagingMaterials.length} 条记录（显示前3条）\n`);
     } else {
-      console.log('   无包装配置数据\n');
+      logger.info('   无包装配置数据\n');
     }
 
     // 7. 验证 Quotations 表布尔字段
-    console.log('7. 验证 Quotations 表...');
+    logger.info('7. 验证 Quotations 表...');
     const quotationsResult = await Quotation.findAll();
     const quotations = quotationsResult.data || [];
     for (const q of quotations) {
       const results = validateRecordBooleans(q, 'quotations');
       for (const r of results) {
-        console.log(`   ${r.message}`);
+        logger.info(`   ${r.message}`);
         if (!r.valid) {
           allPassed = false;
           issues.push(r.message);
         }
       }
     }
-    console.log(`   共 ${quotations.length} 条记录\n`);
+    logger.info(`   共 ${quotations.length} 条记录\n`);
 
     // 8. 验证 QuotationItems 表布尔字段
-    console.log('8. 验证 QuotationItems 表...');
+    logger.info('8. 验证 QuotationItems 表...');
     if (quotations.length > 0) {
       const items = await QuotationItem.findByQuotationId(quotations[0].id);
       for (const item of items.slice(0, 3)) {
         const results = validateRecordBooleans(item, 'quotation_items');
         for (const r of results) {
-          console.log(`   ${r.message}`);
+          logger.info(`   ${r.message}`);
           if (!r.valid) {
             allPassed = false;
             issues.push(r.message);
           }
         }
       }
-      console.log(`   共 ${items.length} 条记录（显示前3条）\n`);
+      logger.info(`   共 ${items.length} 条记录（显示前3条）\n`);
     } else {
-      console.log('   无报价单数据\n');
+      logger.info('   无报价单数据\n');
     }
 
     // 9. 验证 StandardCosts 表布尔字段
-    console.log('9. 验证 StandardCosts 表...');
+    logger.info('9. 验证 StandardCosts 表...');
     const standardCostsResult = await StandardCost.findAllCurrent();
     const standardCosts = standardCostsResult.data || [];
     for (const sc of standardCosts) {
       const results = validateRecordBooleans(sc, 'standard_costs');
       for (const r of results) {
-        console.log(`   ${r.message}`);
+        logger.info(`   ${r.message}`);
         if (!r.valid) {
           allPassed = false;
           issues.push(r.message);
         }
       }
     }
-    console.log(`   共 ${standardCosts.length} 条记录\n`);
+    logger.info(`   共 ${standardCosts.length} 条记录\n`);
 
     // 输出总结
-    console.log('='.repeat(50));
+    logger.info('='.repeat(50));
     if (allPassed) {
-      console.log('✓ API 兼容性验证通过！所有布尔字段正确序列化为 JSON 布尔值');
+      logger.info('✓ API 兼容性验证通过！所有布尔字段正确序列化为 JSON 布尔值');
     } else {
-      console.log('✗ API 兼容性验证失败！发现以下问题:');
+      logger.info('✗ API 兼容性验证失败！发现以下问题:');
       for (const issue of issues) {
-        console.log(`  - ${issue}`);
+        logger.info(`  - ${issue}`);
       }
     }
-    console.log('='.repeat(50));
+    logger.info('='.repeat(50));
 
     return allPassed;
 
   } catch (error) {
-    console.error('验证过程出错:', error);
+    logger.error('验证过程出错:', error);
     return false;
   } finally {
     await dbManager.close();
@@ -254,6 +255,6 @@ verifyApiCompatibility()
     process.exit(success ? 0 : 1);
   })
   .catch(err => {
-    console.error('验证失败:', err);
+    logger.error('验证失败:', err);
     process.exit(1);
   });
