@@ -95,6 +95,7 @@ import { Delete, Search, EditPen, CaretLeft, CaretRight } from '@element-plus/ic
 import request from '@/utils/request'
 import { useAuthStore } from '@/store/auth'
 import { formatDateTime, downloadBlob } from '@/utils/format'
+import logger from '@/utils/logger'
 import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import { usePagination } from '@/composables/usePagination'
 import CommonPagination from '@/components/common/CommonPagination.vue'

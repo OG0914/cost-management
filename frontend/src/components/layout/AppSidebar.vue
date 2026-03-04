@@ -198,8 +198,8 @@ watch(() => route.path, () => {
 const userName = computed(() => authStore.realName || authStore.username || '未知用户')
 const roleName = computed(() => getRoleName(authStore.userRole))
 
-// 使用后端返回的动态菜单
-const visibleMenuItems = menu
+// 使用后端返回的动态菜单（保持响应性）
+const visibleMenuItems = computed(() => menu.value)
 
 // 切换折叠状态
 const toggleCollapse = () => {
