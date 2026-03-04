@@ -157,7 +157,7 @@ class SystemConfig {
   static async getCalculatorConfig() {
     // 一次性获取所有配置，避免多次数据库查询
     const allConfigs = await this.getAllAsObject();
-    
+
     return {
       overheadRate: parseFloat(allConfigs['overhead_rate']) || 0.2,
       vatRate: parseFloat(allConfigs['vat_rate']) || 0.13,
@@ -175,7 +175,24 @@ class SystemConfig {
       lclCfsPerCbm: parseFloat(allConfigs['lcl_cfs_per_cbm']) || 170,
       lclDocumentFee: parseFloat(allConfigs['lcl_document_fee']) || 500,
       profitTiers: allConfigs['profit_tiers'] || [0.05, 0.10, 0.25, 0.50],
-      materialCoefficients: allConfigs['material_coefficients'] || {}
+      materialCoefficients: allConfigs['material_coefficients'] || {},
+      calculationRules: allConfigs['calculation_rules'] || this.getDefaultCalculationRules()
+    };
+  }
+
+  /**
+   * 获取默认计算规则配置
+   * @returns {Object} 默认计算规则
+   */
+  static getDefaultCalculationRules() {
+    return {
+      '半面罩': {
+        '主体': { material: { formula: 'multiply', coefficient: 0.99 }, packaging: { formula: 'divide', coefficient: 1 } },
+        '配件': { material: { formula: 'multiply', coefficient: 0.99 }, packaging: { formula: 'divide', coefficient: 1 } },
+        '滤毒盒': { material: { formula: 'multiply', coefficient: 0.95 }, packaging: { formula: 'divide', coefficient: 0.97 } },
+        '滤棉': { material: { formula: 'divide', coefficient: 0.97 }, packaging: { formula: 'divide', coefficient: 1 } },
+        '滤饼': { material: { formula: 'divide', coefficient: 0.97 }, packaging: { formula: 'divide', coefficient: 1 } }
+      }
     };
   }
 }

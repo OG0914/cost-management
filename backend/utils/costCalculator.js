@@ -264,32 +264,36 @@ class CostCalculator {
   }
 
   /**
-   * 计算原料小计（应用原料系数）
-   * 公式：原料小计 = 用量 × 单价 ÷ 原料系数
-   * 
+   * 计算原料小计（应用计算规则）
+   * 公式根据 rules.formula 决定：
+   * - multiply: (用量 × 单价) ÷ 系数
+   * - divide: (单价 ÷ 用量) ÷ 系数
+   *
    * @param {number} usageAmount - 用量
    * @param {number} unitPrice - 单价
-   * @param {number} materialCoefficient - 原料系数（口罩=0.97，半面罩=0.99）
-   * @returns {number} 原料小计
+   * @param {Object} rules - 计算规则 { formula: 'multiply'|'divide', coefficient: number }
+   * @param {string} itemCategory - 项目类别 'material' 或 'packaging'
+   * @returns {number} 小计金额
    */
-  static calculateMaterialSubtotal(usageAmount, unitPrice, materialCoefficient = 1, modelCategory = '') {
-    if (!materialCoefficient || materialCoefficient === 0) {
-      materialCoefficient = 1;
-    }
+  static calculateMaterialSubtotal(usageAmount, unitPrice, rules = {}, itemCategory = 'material') {
+    const { formula = 'divide', coefficient = 1 } = rules;
 
-    // 半面罩特殊逻辑：单价 * 用量 / 系数
-    if (modelCategory === '半面罩') {
-      const subtotal = (usageAmount * unitPrice) / materialCoefficient;
+    // 防止系数为0
+    const safeCoefficient = coefficient || 1;
+
+    if (formula === 'multiply') {
+      // 乘法公式：(用量 × 单价) ÷ 系数
+      const subtotal = (usageAmount * unitPrice) / safeCoefficient;
+      return Math.round(subtotal * Math.pow(10, 4)) / Math.pow(10, 4);
+    } else {
+      // 除法公式：(单价 ÷ 用量) ÷ 系数
+      // 防止除以0错误
+      if (!usageAmount || usageAmount === 0) {
+        return 0;
+      }
+      const subtotal = (unitPrice / usageAmount) / safeCoefficient;
       return Math.round(subtotal * Math.pow(10, 4)) / Math.pow(10, 4);
     }
-
-    // 其他默认逻辑：单价 / 用量 / 系数
-    // 防止除以0错误
-    if (!usageAmount || usageAmount === 0) {
-      return 0;
-    }
-    const subtotal = unitPrice / usageAmount / materialCoefficient;
-    return Math.round(subtotal * Math.pow(10, 4)) / Math.pow(10, 4);
   }
 
   /**

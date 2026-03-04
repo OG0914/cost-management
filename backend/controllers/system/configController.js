@@ -178,6 +178,48 @@ const getCalculatorConfig = async (req, res, next) => {
 };
 
 /**
+ * 验证计算规则配置
+ * @param {Object} rules - 计算规则配置
+ * @returns {string|null} 错误信息，如果验证通过返回 null
+ */
+function validateCalculationRules(rules) {
+  if (!rules || typeof rules !== 'object') {
+    return '计算规则必须是对象';
+  }
+
+  const validFormulas = ['multiply', 'divide'];
+  const validCategories = ['material', 'packaging'];
+
+  for (const [modelCategory, types] of Object.entries(rules)) {
+    if (modelCategory === 'default') continue; // default 是可选的
+
+    if (!types || typeof types !== 'object') {
+      return `${modelCategory} 下的类型配置必须是对象`;
+    }
+
+    for (const [calcType, config] of Object.entries(types)) {
+      if (!config || typeof config !== 'object') {
+        return `${modelCategory}.${calcType} 的配置必须是对象`;
+      }
+
+      for (const category of validCategories) {
+        if (config[category]) {
+          const rule = config[category];
+          if (!validFormulas.includes(rule.formula)) {
+            return `${modelCategory}.${calcType}.${category} 的 formula 必须是 multiply 或 divide`;
+          }
+          if (typeof rule.coefficient !== 'number' || rule.coefficient <= 0) {
+            return `${modelCategory}.${calcType}.${category} 的 coefficient 必须是正数`;
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * 验证配置值
  * @param {string} key - 配置键
  * @param {any} value - 配置值
@@ -221,6 +263,14 @@ function validateConfigValue(key, value) {
         if (isNaN(tierValue) || tierValue < 0) {
           return '利润区间的每个值必须是非负数';
         }
+      }
+      break;
+
+    case 'calculation_rules':
+      // 验证计算规则配置
+      const validationError = validateCalculationRules(value);
+      if (validationError) {
+        return validationError;
       }
       break;
 

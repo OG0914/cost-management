@@ -3,7 +3,7 @@ import { getPackagingTypeName, formatPackagingMethodFromConfig, calculateTotalFr
 import logger from '@/utils/logger'
 import { ElMessage } from 'element-plus'
 
-export function usePackagingLogic({ form, packagingConfigs, currentModelCategory, materialCoefficientsCache, materialCoefficient, loadMaterialCoefficients, loadPackagingConfigDetails, currentFactory, loadBomMaterials, editMode, setShippingInfoFromConfig, quantityInput, quantityUnit, calculateShippingInfo, handleCalculateCost }) {
+export function usePackagingLogic({ form, packagingConfigs, currentModelCategory, currentCalculationType, materialCoefficientsCache, materialCoefficient, loadMaterialCoefficients, loadPackagingConfigDetails, currentFactory, loadBomMaterials, editMode, setShippingInfoFromConfig, quantityInput, quantityUnit, calculateShippingInfo, handleCalculateCost, calculateItemSubtotal }) {
 
     const selectedConfigInfo = computed(() => {
         if (!form.packaging_config_id || !packagingConfigs.value.length) return ''
@@ -51,7 +51,8 @@ export function usePackagingLogic({ form, packagingConfigs, currentModelCategory
             const selectedConfig = packagingConfigs.value.find(c => c.id === form.packaging_config_id)
             if (selectedConfig?.model_category) {
                 currentModelCategory.value = selectedConfig.model_category
-                if (Object.keys(materialCoefficientsCache.value).length === 0 && loadMaterialCoefficients) await loadMaterialCoefficients(currentModelCategory.value)
+                if (currentCalculationType) currentCalculationType.value = selectedConfig.calculation_type || ''
+                if (Object.keys(materialCoefficientsCache.value).length === 0 && loadMaterialCoefficients) await loadMaterialCoefficients(currentModelCategory.value, currentCalculationType?.value)
                 else if (materialCoefficientsCache.value[selectedConfig.model_category]) materialCoefficient.value = materialCoefficientsCache.value[selectedConfig.model_category]
             }
 
@@ -66,14 +67,20 @@ export function usePackagingLogic({ form, packagingConfigs, currentModelCategory
 
             if (form.quantity) quantityInput.value = quantityUnit.value === 'carton' ? Math.ceil(form.quantity / pcsPerCarton) : form.quantity
 
-            if (loadBomMaterials) form.materials = await loadBomMaterials(config.model_id, materialCoefficient.value, currentModelCategory.value)
+            if (loadBomMaterials) form.materials = await loadBomMaterials(config.model_id, materialCoefficient.value, currentModelCategory.value, currentCalculationType?.value)
 
             editMode.materials = false
             form.processes = (processes || []).map(p => ({ category: 'process', item_name: p.process_name, usage_amount: 1, unit_price: parseFloat(p.unit_price) || 0, subtotal: parseFloat(p.unit_price) || 0, is_changed: 0, from_standard: true }))
-            form.packaging = (materials || []).map(m => ({ category: 'packaging', item_name: m.material_name, usage_amount: parseFloat(m.basic_usage) || 0, unit_price: parseFloat(m.unit_price) || 0, carton_volume: m.carton_volume ? parseFloat(m.carton_volume) : null, subtotal: (parseFloat(m.basic_usage) || 0) !== 0 ? (parseFloat(m.unit_price) || 0) / (parseFloat(m.basic_usage) || 1) : 0, is_changed: 0, from_standard: true }))
+            form.packaging = (materials || []).map(m => ({ category: 'packaging', item_name: m.material_name, usage_amount: parseFloat(m.basic_usage) || 0, unit_price: parseFloat(m.unit_price) || 0, carton_volume: m.carton_volume ? parseFloat(m.carton_volume) : null, subtotal: 0, is_changed: 0, from_standard: true, coefficient_applied: false }))
 
             editMode.processes = false
             editMode.packaging = false
+
+            // 重新计算原料和包材小计（应用新的计算规则）
+            if (calculateItemSubtotal) {
+                form.materials.forEach(row => calculateItemSubtotal(row))
+                form.packaging.forEach(row => calculateItemSubtotal(row))
+            }
 
             if (calculateShippingInfo) calculateShippingInfo(form, handleCalculateCost)
             if (handleCalculateCost) handleCalculateCost()

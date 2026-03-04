@@ -239,6 +239,57 @@
     </div>
       </el-tab-pane>
 
+      <!-- 计算规则配置 Tab -->
+      <el-tab-pane label="计算规则配置" name="calculation">
+        <section class="config-section">
+          <h2 class="config-section-title">半面罩产品计算规则</h2>
+          <p class="config-section-desc">配置半面罩各计算类型的原料/包材计算公式和系数</p>
+
+          <el-table :data="calculationRulesList" border stripe size="small" class="calculation-table">
+            <el-table-column label="计算类型" width="100" align="center">
+              <template #default="{ row }">
+                <span class="calc-type-name">{{ row.name }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="原料计算" width="280">
+              <template #default="{ row }">
+                <div class="rule-row">
+                  <el-select v-model="row.material.formula" placeholder="公式" :disabled="!authStore.isAdmin" style="width: 250px">
+                    <el-option label="乘: (用量×单价)÷系数" value="multiply" />
+                    <el-option label="除: (单价÷用量)÷系数" value="divide" />
+                  </el-select>
+                  <el-input-number v-model="row.material.coefficient" :min="0.01" :max="999" :precision="2" :step="0.01" :controls="false" :disabled="!authStore.isAdmin" style="width: 80px" />
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="包材计算" width="280">
+              <template #default="{ row }">
+                <div class="rule-row">
+                  <el-select v-model="row.packaging.formula" placeholder="公式" :disabled="!authStore.isAdmin" style="width: 250px">
+                    <el-option label="乘: (用量×单价)÷系数" value="multiply" />
+                    <el-option label="除: (单价÷用量)÷系数" value="divide" />
+                  </el-select>
+                  <el-input-number v-model="row.packaging.coefficient" :min="0.01" :max="999" :precision="2" :step="0.01" :controls="false" :disabled="!authStore.isAdmin" style="width: 80px" />
+                </div>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <div class="rule-legend">
+            <h4>公式说明：</h4>
+            <ul>
+              <li><strong>乘</strong>：(用量 × 单价) ÷ 系数 = 小计</li>
+              <li><strong>除</strong>：(单价 ÷ 用量) ÷ 系数 = 小计</li>
+            </ul>
+          </div>
+
+          <div class="config-footer">
+            <el-button type="primary" @click="saveCalculationRules" :loading="savingCalculationRules" v-if="authStore.isAdmin">保存计算规则</el-button>
+            <span class="config-footer-note">修改后立即生效，仅影响新报价单</span>
+          </div>
+        </section>
+      </el-tab-pane>
+
       <!-- 基础数据配置 Tab -->
       <el-tab-pane label="基础数据配置" name="master">
         <section class="config-section">
@@ -338,10 +389,21 @@ const savingCategories = ref(false);
 const categoryDialogVisible = ref(false);
 const newCategory = reactive({ name: '', sort: 1 });
 
+// 计算规则配置 - 简化为固定5种类型的数组
+const calculationRulesList = ref([
+  { name: '主体', material: { formula: 'multiply', coefficient: 0.99 }, packaging: { formula: 'divide', coefficient: 1 } },
+  { name: '配件', material: { formula: 'multiply', coefficient: 0.99 }, packaging: { formula: 'divide', coefficient: 1 } },
+  { name: '滤毒盒', material: { formula: 'multiply', coefficient: 0.95 }, packaging: { formula: 'divide', coefficient: 0.97 } },
+  { name: '滤棉', material: { formula: 'divide', coefficient: 0.97 }, packaging: { formula: 'divide', coefficient: 1 } },
+  { name: '滤饼', material: { formula: 'divide', coefficient: 0.97 }, packaging: { formula: 'divide', coefficient: 1 } }
+]);
+const savingCalculationRules = ref(false);
+
 // 追踪未保存修改
 const hasUnsavedChanges = ref(false);
 const originalConfig = ref(null);
 const originalCategories = ref(null);
+const originalCalculationRules = ref(null);
 
 const loadConfig = async () => {
   try {
@@ -352,6 +414,17 @@ const loadConfig = async () => {
       if (response.data.material_categories) {
         materialCategories.value = [...response.data.material_categories].sort((a, b) => a.sort - b.sort);
       }
+      // 加载计算规则
+      if (response.data.calculation_rules && response.data.calculation_rules['半面罩']) {
+        const rules = response.data.calculation_rules['半面罩'];
+        // 更新数组中的值
+        calculationRulesList.value.forEach(item => {
+          if (rules[item.name]) {
+            item.material = { ...rules[item.name].material };
+            item.packaging = { ...rules[item.name].packaging };
+          }
+        });
+      }
       const detailResponse = await request.get('/config/overhead_rate');
       if (detailResponse.success && detailResponse.data) {
         lastUpdateTime.value = formatDateTime(detailResponse.data.updated_at);
@@ -359,6 +432,7 @@ const loadConfig = async () => {
       // 保存原始值用于比较
       originalConfig.value = JSON.stringify(configForm);
       originalCategories.value = JSON.stringify(materialCategories.value);
+      originalCalculationRules.value = JSON.stringify(calculationRulesList.value);
       hasUnsavedChanges.value = false;
     }
   } catch (error) {
@@ -372,10 +446,12 @@ const checkChanges = () => {
   if (!originalConfig.value) return;
   const configChanged = JSON.stringify(configForm) !== originalConfig.value;
   const categoriesChanged = JSON.stringify(materialCategories.value) !== originalCategories.value;
-  hasUnsavedChanges.value = configChanged || categoriesChanged;
+  const rulesChanged = JSON.stringify(calculationRulesList.value) !== originalCalculationRules.value;
+  hasUnsavedChanges.value = configChanged || categoriesChanged || rulesChanged;
 };
 watch(() => configForm, checkChanges, { deep: true });
 watch(materialCategories, checkChanges, { deep: true });
+watch(calculationRulesList, checkChanges, { deep: true });
 
 const handleSave = async () => {
   if (!authStore.isAdmin) { ElMessage.warning('只有管理员可以修改配置'); return; }
@@ -465,6 +541,54 @@ const saveCategories = async () => {
   } finally { savingCategories.value = false; }
 };
 
+// 计算规则相关方法
+const saveCalculationRules = async () => {
+  savingCalculationRules.value = true;
+  try {
+    // 验证数据
+    for (const item of calculationRulesList.value) {
+      if (!['multiply', 'divide'].includes(item.material.formula)) {
+        ElMessage.error(`[${item.name}] 原料公式无效`);
+        savingCalculationRules.value = false;
+        return;
+      }
+      if (!['multiply', 'divide'].includes(item.packaging.formula)) {
+        ElMessage.error(`[${item.name}] 包材公式无效`);
+        savingCalculationRules.value = false;
+        return;
+      }
+      if (item.material.coefficient <= 0 || item.packaging.coefficient <= 0) {
+        ElMessage.error(`[${item.name}] 系数必须大于0`);
+        savingCalculationRules.value = false;
+        return;
+      }
+    }
+
+    // 转换为后端需要的格式
+    const rulesObject = {};
+    calculationRulesList.value.forEach(item => {
+      rulesObject[item.name] = {
+        material: { ...item.material },
+        packaging: { ...item.packaging }
+      };
+    });
+
+    await request.put('/config/calculation_rules', {
+      value: { '半面罩': rulesObject }
+    });
+    ElMessage.success('计算规则保存成功');
+    // 更新原始值，标记为已保存
+    originalCalculationRules.value = JSON.stringify(calculationRulesList.value);
+    hasUnsavedChanges.value = false;
+    await configStore.reloadConfig();
+  } catch (error) {
+    logger.error('保存计算规则失败:', error);
+    ElMessage.error(error.message || '保存计算规则失败');
+  } finally {
+    savingCalculationRules.value = false;
+  }
+};
+
 onMounted(() => { loadConfig(); });
 
 // 离开页面前提醒保存
@@ -545,4 +669,14 @@ onBeforeUnmount(() => { window.removeEventListener('beforeunload', handleBeforeU
 
 /* 分组描述 */
 .config-section-desc { font-size: 13px; color: #94a3b8; margin: -8px 0 16px 0; }
+
+/* 计算规则配置 */
+.calculation-table { margin-bottom: 16px; max-width: 700px; }
+.calculation-table :deep(.el-table__header th) { background: #f1f5f9; }
+.calc-type-name { font-weight: 500; color: #1e293b; }
+.rule-row { display: flex; align-items: center; gap: 8px; }
+.rule-legend { margin-top: 16px; padding: 12px 16px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0; max-width: 700px; }
+.rule-legend h4 { margin: 0 0 8px 0; font-size: 13px; color: #475569; }
+.rule-legend ul { margin: 0; padding-left: 16px; color: #64748b; font-size: 13px; }
+.rule-legend li { margin-bottom: 4px; }
 </style>

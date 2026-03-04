@@ -86,6 +86,20 @@ class Model {
   }
 
   /**
+   * 获取半面罩计算类型列表
+   * @returns {Array<{value: string, label: string}>} 计算类型列表
+   */
+  static getCalculationTypes() {
+    return [
+      { value: '主体', label: '主体' },
+      { value: '配件', label: '配件' },
+      { value: '滤毒盒', label: '滤毒盒' },
+      { value: '滤棉', label: '滤棉' },
+      { value: '滤饼', label: '滤饼' }
+    ];
+  }
+
+  /**
    * 根据型号名称查找
    * @param {string} modelName - 型号名称
    * @returns {Promise<Object|null>} 型号对象或 null
@@ -124,13 +138,13 @@ class Model {
    * @returns {Promise<number>} 新型号的 ID
    */
   static async create(data) {
-    const { regulation_id, model_name, model_category, model_series } = data;
+    const { regulation_id, model_name, model_category, model_series, calculation_type } = data;
 
     const result = await dbManager.query(
-      `INSERT INTO models (regulation_id, model_name, model_category, model_series)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO models (regulation_id, model_name, model_category, model_series, calculation_type)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING id`,
-      [regulation_id, model_name, model_category || null, model_series || null]
+      [regulation_id, model_name, model_category || null, model_series || null, calculation_type || null]
     );
 
     return result.rows[0].id;
@@ -144,13 +158,13 @@ class Model {
    * @returns {Promise<Object>} 更新结果
    */
   static async update(id, data) {
-    const { regulation_id, model_name, model_category, model_series, is_active } = data;
+    const { regulation_id, model_name, model_category, model_series, is_active, calculation_type } = data;
 
     const result = await dbManager.query(
       `UPDATE models
-       SET regulation_id = $1, model_name = $2, model_category = $3, model_series = $4, is_active = $5, updated_at = NOW()
-       WHERE id = $6`,
-      [regulation_id, model_name, model_category, model_series || null, is_active, id]
+       SET regulation_id = $1, model_name = $2, model_category = $3, model_series = $4, is_active = $5, calculation_type = $6, updated_at = NOW()
+       WHERE id = $7`,
+      [regulation_id, model_name, model_category, model_series || null, is_active, calculation_type || null, id]
     );
 
     return { rowCount: result.rowCount };

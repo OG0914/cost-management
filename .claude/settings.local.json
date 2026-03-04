@@ -44,7 +44,10 @@
       "mcp__Filesystem__edit_file",
       "mcp__Filesystem__read_text_file",
       "Bash(git check-ignore:*)",
-      "mcp__Filesystem__create_directory"
+      "mcp__Filesystem__create_directory",
+      "Bash(git config:*)",
+      "Bash(chmod +x:*)",
+      "Bash(bash:*)"
     ]
   }
 }

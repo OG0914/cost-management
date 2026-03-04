@@ -25,6 +25,7 @@ module.exports = {
     getPackagingConfigs: configController.getPackagingConfigs,
     getPackagingConfigDetails: configController.getPackagingConfigDetails,
     getMaterialCoefficients: configController.getMaterialCoefficients,
+    getCalculationRules: configController.getCalculationRules,
 
     // 导出功能
     exportQuotation: exportController.exportQuotation

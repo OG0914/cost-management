@@ -326,11 +326,11 @@ const {
 // 使用 store 的 quantityUnit 和 quantityInput，确保父子组件同步（使用 storeToRefs 保持响应式）
 const { quantityUnit, quantityInput } = storeToRefs(costFormStore)
 
-const { 
-  calculation, customProfitTiers, modelCategory: costModelCategory, materialCoefficient, 
-  materialCoefficientsCache, loadMaterialCoefficients, calculateItemSubtotal, calculateCost, 
-  addCustomProfitTier, updateCustomTierPrice, updateTierSort, removeCustomProfitTier, 
-  prepareCustomProfitTiersForSave, getAllProfitTiers 
+const {
+  calculation, customProfitTiers, modelCategory: costModelCategory, calculationType,
+  materialCoefficient, materialCoefficientsCache, loadMaterialCoefficients, calculateItemSubtotal,
+  calculateCost, addCustomProfitTier, updateCustomTierPrice, updateTierSort, removeCustomProfitTier,
+  prepareCustomProfitTiersForSave, getAllProfitTiers
 } = useCostCalculation()
 
 const { 
@@ -373,11 +373,11 @@ const fillReferenceStandardCostData = (data) => fillReferenceStandardCostDataLog
 const {
   selectedConfigInfo, selectedConfigMethod, filteredPackagingConfigs, groupedPackagingConfigs,
   formatPackagingMethodFromConfig, onPackagingConfigChange
-} = usePackagingLogic({ 
-  form, packagingConfigs, currentModelCategory, materialCoefficientsCache, materialCoefficient, 
-  loadMaterialCoefficients, loadPackagingConfigDetails, currentFactory, loadBomMaterials, 
-  editMode, setShippingInfoFromConfig, quantityInput, quantityUnit, calculateShippingInfo, 
-  handleCalculateCost 
+} = usePackagingLogic({
+  form, packagingConfigs, currentModelCategory, currentCalculationType: calculationType, materialCoefficientsCache, materialCoefficient,
+  loadMaterialCoefficients, loadPackagingConfigDetails, currentFactory, loadBomMaterials,
+  editMode, setShippingInfoFromConfig, quantityInput, quantityUnit, calculateShippingInfo,
+  handleCalculateCost, calculateItemSubtotal
 })
 
 const { 
