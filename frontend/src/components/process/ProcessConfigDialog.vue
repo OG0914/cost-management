@@ -69,7 +69,7 @@
         <!-- Section 2: Packaging Spec Configuration (Shared Component) -->
         <div class="highlight-section">
           <div class="section-title">包装规格定义</div>
-          <PackagingSpecConfigurator v-model="form" />
+          <PackagingSpecConfigurator v-model="form" :disabled="isPackagingSpecDisabled" />
         </div>
 
         <!-- Section 3: 工序列表 -->
@@ -219,6 +219,7 @@ import { useConfigStore } from '@/store/config'
 import StatusSwitch from '@/components/common/StatusSwitch.vue'
 import PackagingSpecConfigurator from '@/components/packaging/PackagingSpecConfigurator.vue' // Import Shared Component
 import { formatNumber, formatDateTime } from '@/utils/format'
+import { useAuthStore } from '@/store/auth'
 
 const props = defineProps({
   modelValue: { type: Boolean, required: true },
@@ -228,6 +229,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'saved'])
 const configStore = useConfigStore()
+const authStore = useAuthStore()
 
 const loading = ref(false)
 const apiLoading = ref(false)
@@ -263,6 +265,9 @@ const isEdit = computed(() => !!props.initialData)
 const formProcessSubtotal = computed(() => {
   return form.processes.reduce((total, p) => total + (parseFloat(p.unit_price) || 0), 0)
 })
+
+// 采购员不能编辑包装规格（只能编辑包材）
+const isPackagingSpecDisabled = computed(() => authStore.isPurchaser)
 
 const formTotalProcessPrice = computed(() => {
   const coefficient = configStore.getProcessCoefficient()
@@ -335,25 +340,39 @@ const removeProcess = (index) => {
 const submitForm = async () => {
     if (!form.model_id) return ElMessage.warning('请选择型号')
     if (!form.config_name) return ElMessage.warning('请输入配置名称')
-    
+
     // Validate Packaging Spec
     if (!form.layer1_qty) return ElMessage.warning('请填写包装规格')
     if (currentPackagingTypeConfig.value.layers >= 2 && !form.layer2_qty) return ElMessage.warning('请填写完整包装规格')
-    
+
     apiLoading.value = true
     try {
-        const payload = { ...form }
-        // Clean up unneeded layers
-        if (currentPackagingTypeConfig.value.layers < 3) payload.layer3_qty = null
-        
+        // 根据权限组装提交数据
+        let payload
+        const hasMaterialManage = authStore.hasPermission('master:material:manage')
+        const hasProcessManage = authStore.hasPermission('master:process:manage')
+
+        if (hasMaterialManage && !hasProcessManage) {
+            // 只有原料管理权限：只提交包材和基本信息
+            payload = {
+                id: form.id,
+                materials: form.materials
+            }
+        } else {
+            // 有工序管理权限：提交完整数据
+            payload = { ...form }
+            // Clean up unneeded layers
+            if (currentPackagingTypeConfig.value.layers < 3) payload.layer3_qty = null
+        }
+
         let res
         if (isEdit.value) {
             res = await request.put(`/processes/packaging-configs/${form.id}`, payload)
         } else {
             res = await request.post('/processes/packaging-configs', payload)
         }
-        
-        if (res.success || (res && !res.error)) { // Check generic success
+
+        if (res.success || (res && !res.error)) {
              ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
              emit('saved')
              handleClose()
