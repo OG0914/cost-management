@@ -55,7 +55,9 @@
       "Bash(git merge:*)",
       "Bash(ls .env*:*)",
       "Bash(ls:*)",
-      "Skill(planning-with-files)"
+      "Skill(planning-with-files)",
+      "WebFetch(domain:github.com)",
+      "mcp__Filesystem__read_multiple_files"
     ]
   }
 }
