@@ -1,10 +1,11 @@
 <template>
   <div class="permission-manage">
-    <!-- 页面头部 -->
-    <div class="page-header">
-      <h2>权限管理</h2>
-      <p class="subtitle">为不同角色配置功能访问权限</p>
-    </div>
+    <!-- 动态表头 -->
+    <CostPageHeader title="权限管理">
+      <template #after-title>
+        <span class="text-sm text-slate-400 ml-2">为不同角色配置功能访问权限</span>
+      </template>
+    </CostPageHeader>
 
     <!-- 安全提示 -->
     <el-alert
@@ -101,6 +102,7 @@ import { onMounted, ref } from 'vue'
 import { usePermissions } from '../../composables/usePermissions'
 import RoleList from '../../components/permission/RoleList.vue'
 import PermissionGroup from '../../components/permission/PermissionGroup.vue'
+import CostPageHeader from '../../components/cost/CostPageHeader.vue'
 
 const {
   saving,
@@ -161,26 +163,8 @@ onMounted(() => {
 
 <style scoped>
 .permission-manage {
-  padding: 20px;
   background-color: var(--el-bg-color-page);
   min-height: 100%;
-}
-
-.page-header {
-  margin-bottom: 20px;
-}
-
-.page-header h2 {
-  margin: 0 0 8px 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-.subtitle {
-  margin: 0;
-  color: var(--el-text-color-secondary);
-  font-size: 14px;
 }
 
 .security-alert {

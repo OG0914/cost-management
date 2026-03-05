@@ -1,7 +1,7 @@
 <template>
   <div class="h-screen overflow-hidden bg-slate-50 flex flex-col">
-    <!-- 桌面端顶部固定栏 (仪表盘除外) -->
-    <AppHeader 
+    <!-- 桌面端顶部固定栏 -->
+    <AppHeader
       class="hidden lg:flex flex-shrink-0"
       :collapsed="isSidebarCollapsed"
       @toggle-sidebar="toggleSidebar"
@@ -39,8 +39,8 @@
             <router-view />
           </div>
         </div>
-        <!-- 帮助页面 - 全屏显示 -->
-        <div v-else class="flex-1 overflow-hidden p-4 sm:p-6 lg:p-8 bg-slate-50">
+        <!-- 帮助页面 - 带padding -->
+        <div v-else class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-50">
           <router-view />
         </div>
       </main>

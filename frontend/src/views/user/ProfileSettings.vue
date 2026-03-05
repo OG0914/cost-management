@@ -1,11 +1,9 @@
 <template>
   <div class="profile-settings">
-    <el-card>
-      <template #header>
-        <span class="title">个人设置</span>
-      </template>
+    <!-- 动态表头 -->
+    <CostPageHeader title="个人设置" />
 
-      <div class="profile-content">
+    <div class="profile-content mt-6">
         <!-- 左侧：个人信息卡片 -->
         <div class="profile-card">
           <div class="card-body">
@@ -77,8 +75,7 @@
           </div>
         </div>
       </div>
-    </el-card>
-  </div>
+    </div>
 </template>
 
 <script setup>
@@ -86,6 +83,7 @@ import { ref, reactive, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import request from '../../utils/request';
 import { useAuthStore } from '../../store/auth';
+import CostPageHeader from '../../components/cost/CostPageHeader.vue';
 
 defineOptions({ name: 'ProfileSettings' })
 

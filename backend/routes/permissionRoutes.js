@@ -342,7 +342,7 @@ function buildMenuByPermissions(permissions, role) {
     });
   }
 
-  // 基础数据模块
+  // 基础数据模块 - 独立菜单项
   const masterItems = [];
   if (permissions.includes('master:regulation:view')) {
     masterItems.push({ id: 'regulation', label: '法规管理', icon: 'ri-government-line', route: '/regulations' });
@@ -351,26 +351,40 @@ function buildMenuByPermissions(permissions, role) {
     masterItems.push({ id: 'customer', label: '客户管理', icon: 'ri-user-3-line', route: '/customers' });
   }
   if (permissions.includes('master:material:view')) {
-    masterItems.push({ id: 'material_half_mask', label: '半面罩类', route: '/materials?type=half_mask', icon: 'ri-cpu-line' });
-    masterItems.push({ id: 'material_general', label: '口罩类', route: '/materials?type=general', icon: 'ri-file-list-2-line' });
-  }
-  if (permissions.includes('master:model:view')) {
-    masterItems.push({ id: 'model', label: '型号管理', route: '/models', icon: 'ri-price-tag-3-line' });
-  }
-  if (permissions.includes('master:process:view')) {
-    masterItems.push({ id: 'process', label: '工序管理', route: '/processes', icon: 'ri-settings-4-line' });
-  }
-  if (permissions.includes('master:packaging:view')) {
-    masterItems.push({ id: 'packaging', label: '包材管理', route: '/packaging', icon: 'ri-box-3-line' });
+    masterItems.push({
+      id: 'material',
+      label: '原料管理',
+      icon: 'ri-stack-line',
+      children: [
+        { id: 'material_half_mask', label: '半面罩类', route: '/materials?type=half_mask', icon: 'ri-cpu-line' },
+        { id: 'material_general', label: '口罩类', route: '/materials?type=general', icon: 'ri-file-list-2-line' }
+      ]
+    });
   }
 
   if (masterItems.length > 0) {
     menu.push({ type: 'divider', label: '基础数据' });
+    menu.push(...masterItems);
+  }
+
+  // 产品管理 - 仅包含型号、工序、包材
+  const productItems = [];
+  if (permissions.includes('master:model:view')) {
+    productItems.push({ id: 'model', label: '型号管理', route: '/models', icon: 'ri-price-tag-3-line' });
+  }
+  if (permissions.includes('master:process:view')) {
+    productItems.push({ id: 'process', label: '工序管理', route: '/processes', icon: 'ri-settings-4-line' });
+  }
+  if (permissions.includes('master:packaging:view')) {
+    productItems.push({ id: 'packaging', label: '包材管理', route: '/packaging', icon: 'ri-box-3-line' });
+  }
+
+  if (productItems.length > 0) {
     menu.push({
       id: 'product',
       label: '产品管理',
       icon: 'ri-archive-2-line',
-      children: masterItems
+      children: productItems
     });
   }
 
