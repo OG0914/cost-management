@@ -101,7 +101,11 @@
 
       <!-- 角色管理 Tab -->
       <el-tab-pane label="角色管理" name="roles">
-        <RoleManageTab />
+        <RoleManageTab
+          :roles="roles"
+          :role-permissions="rolePermissions"
+          @refresh="loadPermissions"
+        />
       </el-tab-pane>
     </el-tabs>
   </div>
@@ -122,6 +126,7 @@ const {
   modules,
   roles,
   selectedRole,
+  rolePermissions,
   groupedPermissions,
   selectedRolePermissionList,
   getRoleDescription,

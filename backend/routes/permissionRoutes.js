@@ -71,7 +71,7 @@ router.get('/roles', verifyToken, isAdmin, async (req, res) => {
 
     // 从数据库获取所有启用的角色
     const rolesResult = await dbManager.query(
-      `SELECT code, name, description, icon, is_system, sort_order
+      `SELECT code, name, description, icon, is_system, is_active, sort_order
        FROM roles
        WHERE is_active = true
        ORDER BY sort_order ASC, id ASC`
@@ -86,6 +86,7 @@ router.get('/roles', verifyToken, isAdmin, async (req, res) => {
         description: role.description,
         icon: role.icon,
         is_system: role.is_system,
+        is_active: role.is_active,
         sort_order: role.sort_order,
         permissions: rolePerms
       });

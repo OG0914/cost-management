@@ -6,7 +6,7 @@
       </el-button>
     </div>
 
-    <el-card v-loading="loading">
+    <el-card>
       <el-table :data="roles" border stripe>
         <el-table-column type="index" width="60" label="#" />
 
@@ -74,56 +74,28 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '../../utils/request'
 import RoleFormDialog from './RoleFormDialog.vue'
 
+// Props - 从父组件接收数据
+const props = defineProps({
+  roles: { type: Array, default: () => [] },
+  rolePermissions: { type: Object, default: () => ({}) }
+})
+
+// Emits
+const emit = defineEmits(['refresh'])
+
 // 状态
-const loading = ref(false)
-const roles = ref([])
-const rolePermissions = ref({})
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const currentRole = ref(null)
 
 // 获取角色权限数量
 const getRolePermissionCount = (code) => {
-  return rolePermissions.value[code]?.length || 0
-}
-
-// 加载角色列表
-const loadRoles = async () => {
-  loading.value = true
-  try {
-    const [rolesRes, permsRes] = await Promise.all([
-      request.get('/roles'),
-      request.get('/permissions/roles')
-    ])
-
-    if (rolesRes.success) {
-      roles.value = rolesRes.data
-    }
-
-    if (permsRes.success) {
-      const permsMap = {}
-      permsRes.data.roles.forEach(role => {
-        permsMap[role.code] = role.permissions
-      })
-      rolePermissions.value = permsMap
-    }
-  } catch (err) {
-    // 忽略请求被取消的错误（去重机制导致）
-    if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
-      console.log('请求被取消（去重）:', err.message)
-      return
-    }
-    const errorMsg = err.response?.data?.message || err.message || '加载角色列表失败'
-    ElMessage.error(errorMsg)
-    console.error('加载角色列表失败:', err)
-  } finally {
-    loading.value = false
-  }
+  return props.rolePermissions[code]?.length || 0
 }
 
 // 显示创建弹窗
@@ -156,7 +128,7 @@ const deleteRole = async (row) => {
     const response = await request.delete(`/roles/${row.id}`)
     if (response.success) {
       ElMessage.success('删除成功')
-      loadRoles()
+      emit('refresh')
     }
   } catch (err) {
     if (err !== 'cancel') {
@@ -192,12 +164,8 @@ const goToPermissions = (row) => {
 
 // 弹窗成功回调
 const handleDialogSuccess = () => {
-  loadRoles()
+  emit('refresh')
 }
-
-onMounted(() => {
-  loadRoles()
-})
 </script>
 
 <style scoped>
