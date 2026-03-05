@@ -219,7 +219,7 @@ router.get('/my', verifyToken, async (req, res) => {
  */
 router.get('/menu', verifyToken, async (req, res) => {
   try {
-    const { role } = req.user;
+    const { role, username } = req.user;
     const permissions = await getRolePermissionsFromDB(role);
 
     // 根据权限码生成菜单配置
@@ -259,7 +259,7 @@ function buildMenuByPermissions(permissions, role) {
     costChildren.push({ id: 'cost_records', label: '成本记录', route: '/cost/records', icon: 'ri-file-list-3-line' });
   }
 
-  if (costChildren.length > 0 && role !== 'purchaser' && role !== 'producer') {
+  if (costChildren.length > 0) {
     menu.push({
       id: 'cost',
       label: '成本管理',
