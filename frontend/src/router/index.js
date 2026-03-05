@@ -225,6 +225,9 @@ router.beforeEach(async (to, from, next) => {
         const hasPerm = authStore.hasPermission?.(requiredPermission) ?? false
 
         if (!hasPerm) {
+          // 添加权限不足提示
+          const { ElMessage } = await import('element-plus')
+          ElMessage.warning(`您没有权限访问该页面，需要权限：${requiredPermission}`)
           next('/dashboard')
           return
         }

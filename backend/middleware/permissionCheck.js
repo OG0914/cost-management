@@ -30,7 +30,7 @@ const checkPermission = (permissionCode) => {
         return next();
       }
 
-      return res.status(403).json(error('您没有权限执行此操作', 403));
+      return res.status(403).json(error(`您没有权限执行此操作，需要权限：${permissionCode}`, 403));
     } catch (err) {
       logger.error('权限检查失败:', err);
       return res.status(500).json(error('权限检查失败', 500));
@@ -64,7 +64,7 @@ const checkAnyPermission = (permissionCodes) => {
         return next();
       }
 
-      return res.status(403).json(error('您没有权限执行此操作', 403));
+      return res.status(403).json(error(`您没有权限执行此操作，需要任意权限：${permissionCodes.join(' 或 ')}`, 403));
     } catch (err) {
       logger.error('权限检查失败:', err);
       return res.status(500).json(error('权限检查失败', 500));
@@ -98,7 +98,7 @@ const checkAllPermissions = (permissionCodes) => {
         return next();
       }
 
-      return res.status(403).json(error('您没有权限执行此操作', 403));
+      return res.status(403).json(error(`您没有权限执行此操作，需要全部权限：${permissionCodes.join(', ')}`, 403));
     } catch (err) {
       logger.error('权限检查失败:', err);
       return res.status(500).json(error('权限检查失败', 500));

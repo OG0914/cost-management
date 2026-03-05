@@ -54,11 +54,11 @@
             size="default"
             class="sortable-radio-group"
           >
-            <el-radio-button label="" class="static-tab">全部</el-radio-button>
-            <el-radio-button 
-              v-for="(sub, index) in (currentType === 'half_mask' ? categoryStructure.half_mask : categoryStructure.general)" 
-              :key="sub" 
-              :label="sub"
+            <el-radio-button value="" class="static-tab">全部</el-radio-button>
+            <el-radio-button
+              v-for="(sub, index) in (currentType === 'half_mask' ? categoryStructure.half_mask : categoryStructure.general)"
+              :key="sub"
+              :value="sub"
               draggable="true"
               @dragstart="handleDragStart($event, index)"
               @dragover.prevent
