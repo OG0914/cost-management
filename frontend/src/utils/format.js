@@ -97,3 +97,53 @@ export function formatDateTime(value, format = 'datetime') {
       return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
   }
 }
+
+/**
+ * 格式化时间（相对时间或绝对时间）
+ * 用于显示通知等场景，如：刚刚、5分钟前、1小时前、昨天、2024-01-01
+ * @param {string|Date} value - 日期值
+ * @returns {string} 格式化后的时间字符串
+ */
+export function formatTime(value) {
+  if (!value) return ''
+  
+  const date = new Date(value)
+  if (isNaN(date.getTime())) return ''
+  
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const minute = 60 * 1000
+  const hour = 60 * minute
+  const day = 24 * hour
+  
+  // 刚刚（1分钟内）
+  if (diff < minute) {
+    return '刚刚'
+  }
+  
+  // 几分钟前
+  if (diff < hour) {
+    return `${Math.floor(diff / minute)}分钟前`
+  }
+  
+  // 几小时前
+  if (diff < day) {
+    return `${Math.floor(diff / hour)}小时前`
+  }
+  
+  // 昨天
+  if (diff < 2 * day) {
+    return '昨天'
+  }
+  
+  // 7天内
+  if (diff < 7 * day) {
+    return `${Math.floor(diff / day)}天前`
+  }
+  
+  // 超过7天显示具体日期
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const dayStr = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${dayStr}`
+}

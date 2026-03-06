@@ -6,6 +6,7 @@ const logger = require('../../utils/logger');
 const Material = require('../../models/Material');
 const ModelBom = require('../../models/ModelBom');
 const QuotationItem = require('../../models/QuotationItem');
+const Notification = require('../../models/Notification');
 const { success, error, paginated } = require('../../utils/response');
 const QueryBuilder = require('../../utils/queryBuilder');
 const dbManager = require('../../db/database');
@@ -79,7 +80,28 @@ const updateMaterial = async (req, res, next) => {
     if (!material) return res.status(404).json(error('原料不存在', 404));
     if (!item_no || !name || !unit || price === undefined || price === null || price === '') return res.status(400).json(error('品号、原料名称、单位和单价不能为空', 400));
 
+    const oldPrice = parseFloat(material.price);
+    const newPrice = parseFloat(price);
+    const priceChanged = oldPrice !== newPrice;
+
     await Material.update(id, { item_no, name, unit, price, currency, manufacturer, usage_amount, category, material_type, subcategory, product_desc, packaging_mode, supplier, production_date, production_cycle, moq, remark }, req.user?.id);
+
+    // 如果价格变动，生成通知
+    if (priceChanged && req.user?.id) {
+      try {
+        const notificationResult = await Notification.recordPriceChange({
+          materialId: parseInt(id),
+          oldPrice,
+          newPrice,
+          changedBy: req.user.id
+        });
+        logger.info(`物料价格变动通知已生成: ${material.item_no}, 影响型号数: ${notificationResult.affectedModelCount}`);
+      } catch (notifyErr) {
+        logger.error('生成价格变动通知失败:', notifyErr);
+        // 不影响主流程，继续返回成功
+      }
+    }
+
     res.json(success(null, '更新成功'));
   } catch (err) { next(err); }
 };

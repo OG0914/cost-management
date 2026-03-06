@@ -129,6 +129,7 @@ app.use('/api/review', require('./routes/reviewRoutes'));
 app.use('/api/bom', require('./routes/bomRoutes'));
 app.use('/api/customers', require('./routes/customerRoutes'));
 app.use('/api/permissions', require('./routes/permissionRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/roles', require('./routes/roleRoutes'));
 
 // 404 处理
