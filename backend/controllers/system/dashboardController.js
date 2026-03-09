@@ -301,7 +301,7 @@ const getRecentActivities = async (req, res) => {
     // 1. 审核员：获取待审核及已审核记录
     if (userRole === 'reviewer') {
       const quotationsResult = await dbManager.query(`
-        SELECT q.quotation_no, q.status, q.updated_at, q.customer_name, u.real_name as creator_name
+        SELECT q.id, q.quotation_no, q.status, q.updated_at, q.customer_name, u.real_name as creator_name
         FROM quotations q
         LEFT JOIN users u ON q.created_by = u.id
         WHERE q.status = 'submitted' OR q.reviewed_by = $1
@@ -326,6 +326,8 @@ const getRecentActivities = async (req, res) => {
         }
 
         activities.push({
+          id: row.id,  // 成本分析ID，用于跳转
+          type: 'quotation',  // 类型标识
           icon,
           content,
           time: formatTimeAgo(row.updated_at),
@@ -337,7 +339,7 @@ const getRecentActivities = async (req, res) => {
     // 2. 业务员/管理员：获取自己创建的报价单操作
     else if (['salesperson', 'admin'].includes(userRole)) {
       const quotationsResult = await dbManager.query(`
-        SELECT q.quotation_no, q.status, q.updated_at, q.customer_name
+        SELECT q.id, q.quotation_no, q.status, q.updated_at, q.customer_name
         FROM quotations q
         WHERE q.created_by = $1
         ORDER BY q.updated_at DESC
@@ -347,6 +349,8 @@ const getRecentActivities = async (req, res) => {
       quotationsResult.rows.forEach(row => {
         const statusMap = { draft: '创建草稿', submitted: '提交审核', approved: '审核通过', rejected: '被退回' };
         activities.push({
+          id: row.id,  // 成本分析ID，用于跳转
+          type: 'quotation',  // 类型标识
           icon: 'ri-file-list-3-line',
           content: `报价单 ${row.quotation_no}（${row.customer_name}）${statusMap[row.status] || row.status}`,
           time: formatTimeAgo(row.updated_at),
@@ -365,6 +369,7 @@ const getRecentActivities = async (req, res) => {
 
       materialsResult.rows.forEach(row => {
         activities.push({
+          type: 'material',  // 类型标识为原料
           icon: 'ri-stack-line',
           content: `原料「${row.name}」已更新`,
           time: formatTimeAgo(row.updated_at),

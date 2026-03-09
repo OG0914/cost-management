@@ -126,8 +126,9 @@
           <div
             v-for="(activity, index) in recentActivitiesWithType"
             :key="index"
-            class="flex items-start p-3 rounded-lg transition-colors"
+            class="flex items-start p-3 rounded-lg transition-colors cursor-pointer hover:shadow-sm"
             :class="getNotificationClass(activity.type).bg"
+            @click="handleActivityClick(activity)"
           >
             <div
               class="w-8 h-8 rounded-lg flex items-center justify-center mr-3 flex-shrink-0 mt-0.5"
@@ -536,9 +537,19 @@ const getNotificationTitle = (type) => {
 const recentActivitiesWithType = computed(() => {
   return recentActivities.value.map(item => ({
     ...item,
-    type: detectNotificationType(item)
+    entityType: item.type,  // 保留后端返回的类型（quotation/material）
+    type: detectNotificationType(item)  // UI展示类型
   }))
 })
+
+// 处理通知点击跳转
+const handleActivityClick = (item) => {
+  if (item.entityType === 'quotation' && item.id) {
+    router.push(`/cost/detail/${item.id}`)
+  } else if (item.entityType === 'material') {
+    router.push('/materials')
+  }
+}
 
 // 加载最近操作记录
 const loadRecentActivities = async () => {
