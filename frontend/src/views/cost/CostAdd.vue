@@ -698,6 +698,16 @@ onBeforeRouteLeave(async (to, from, next) => {
 /* 右侧预览面板 - 样式已移至 CostPreviewPanel.vue */
 .cost-preview-panel { position: relative; }
 
+/* 右侧预览面板 sticky 容器 */
+.cost-preview-sticky-container {
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  height: fit-content;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
 /* ========== 智能客户搜索 ========== */
 .customer-suggestion {
   display: flex;
