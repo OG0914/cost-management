@@ -139,9 +139,12 @@ const handleMarkAllRead = async () => {
   try {
     const response = await markAllAsRead()
     if (response.success) {
+      // 立即更新本地数据
       notifications.value.forEach(item => item.is_read = true)
       unreadCount.value = 0
       ElMessage.success('已全部标记为已读')
+      // 重新获取通知列表确保数据同步
+      await fetchNotifications()
     }
   } catch (error) {
     ElMessage.error('标记全部已读失败')
@@ -183,8 +186,7 @@ const handleNotificationClick = (item) => {
 
 // 查看全部通知
 const viewAllNotifications = () => {
-  // 可以扩展一个通知中心页面
-  ElMessage.info('通知中心功能开发中')
+  router.push('/notifications')
 }
 
 // 下拉框显示状态变化

@@ -133,6 +133,12 @@ const routes = [
         component: () => import('../views/user/ProfileSettings.vue')
       },
       {
+        path: 'notifications',
+        name: 'NotificationCenter',
+        component: () => import('../views/notification/NotificationCenter.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
         path: 'customers',
         name: 'CustomerManage',
         component: () => import('../views/customer/CustomerManage.vue'),

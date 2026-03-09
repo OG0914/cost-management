@@ -136,15 +136,27 @@ class Notification {
     const { page = 1, pageSize = 20, onlyUnread = false, type = null } = options;
     const offset = (page - 1) * pageSize;
     
+    // 验证参数
+    if (!Number.isInteger(userId) || userId <= 0) {
+      throw new Error('Invalid userId');
+    }
+    
     // 获取用户角色
     const userResult = await dbManager.query(
       'SELECT role FROM users WHERE id = $1',
       [userId]
     );
-    const userRole = userResult.rows[0]?.role;
     
-    // 构建 WHERE 子句（使用直接的 SQL，不使用参数）
+    if (userResult.rows.length === 0) {
+      throw new Error('User not found');
+    }
+    
+    const userRole = userResult.rows[0].role;
+    
+    // 构建 WHERE 子句（使用参数化查询防止 SQL 注入）
     let whereConditions = [];
+    let params = [userId]; // $1 = userId
+    let paramIndex = 2;    // 从 $2 开始
     
     // 管理员可以看到所有通知，其他用户根据权限过滤
     if (userRole === 'admin') {
@@ -152,25 +164,34 @@ class Notification {
       whereConditions.push('(1=1)'); // 永远为真，不过滤
     } else {
       // 非管理员：只能看到指定给自己的通知（user_id）或指定给角色的通知（role）
-      whereConditions.push(`(n.user_id = ${userId} OR n.user_id IS NULL)`);
+      whereConditions.push(`(n.user_id = $1 OR n.user_id IS NULL)`);
       
       // 角色过滤 - 通知的 role 为 null 表示对所有角色可见
       if (userRole) {
-        whereConditions.push(`(n.role = '${userRole}' OR n.role IS NULL)`);
+        whereConditions.push(`(n.role = $${paramIndex} OR n.role IS NULL)`);
+        params.push(userRole);
+        paramIndex++;
       } else {
-        whereConditions.push(`(n.role IS NULL)`);
+        whereConditions.push('(n.role IS NULL)');
       }
     }
     
     // 未读过滤
     if (onlyUnread) {
-      whereConditions.push(`(un.is_read = false OR un.is_read IS NULL)`);
-      whereConditions.push(`(n.is_dismissed = false OR n.is_dismissed IS NULL)`);
+      whereConditions.push('(un.is_read = false OR un.is_read IS NULL)');
+      whereConditions.push('(n.is_dismissed = false OR n.is_dismissed IS NULL)');
     }
     
     // 类型过滤
     if (type) {
-      whereConditions.push(`n.type = '${type}'`);
+      // 验证 type 是否为允许的枚举值
+      const validTypes = ['material_price_changed', 'system', 'review'];
+      if (!validTypes.includes(type)) {
+        throw new Error('Invalid notification type');
+      }
+      whereConditions.push(`n.type = $${paramIndex}`);
+      params.push(type);
+      paramIndex++;
     }
     
     const whereClause = 'WHERE ' + whereConditions.join(' AND ');
@@ -178,34 +199,42 @@ class Notification {
     // 查询总数
     const countResult = await dbManager.query(
       `SELECT COUNT(*) as total FROM notifications n
-       LEFT JOIN user_notifications un ON n.id = un.notification_id AND un.user_id = ${userId}
-       ${whereClause}`
+       LEFT JOIN user_notifications un ON n.id = un.notification_id AND un.user_id = $1
+       ${whereClause}`,
+      params
     );
     const total = parseInt(countResult.rows[0].total);
     
     // 查询未读数 - 同样根据角色过滤
     let unreadWhereConditions = [];
+    let unreadParams = [userId]; // $1 = userId
+    let unreadParamIndex = 2;
+    
     if (userRole === 'admin') {
       unreadWhereConditions.push('(1=1)');
     } else {
-      unreadWhereConditions.push(`(n.user_id = ${userId} OR n.user_id IS NULL)`);
+      unreadWhereConditions.push('(n.user_id = $1 OR n.user_id IS NULL)');
       if (userRole) {
-        unreadWhereConditions.push(`(n.role = '${userRole}' OR n.role IS NULL)`);
+        unreadWhereConditions.push(`(n.role = $${unreadParamIndex} OR n.role IS NULL)`);
+        unreadParams.push(userRole);
+        unreadParamIndex++;
       } else {
-        unreadWhereConditions.push(`(n.role IS NULL)`);
+        unreadWhereConditions.push('(n.role IS NULL)');
       }
     }
-    unreadWhereConditions.push(`(un.is_read = false OR un.is_read IS NULL)`);
-    unreadWhereConditions.push(`(n.is_dismissed = false OR n.is_dismissed IS NULL)`);
+    unreadWhereConditions.push('(un.is_read = false OR un.is_read IS NULL)');
+    unreadWhereConditions.push('(n.is_dismissed = false OR n.is_dismissed IS NULL)');
     
     const unreadResult = await dbManager.query(
       `SELECT COUNT(*) as count FROM notifications n
-       LEFT JOIN user_notifications un ON n.id = un.notification_id AND un.user_id = ${userId}
-       WHERE ${unreadWhereConditions.join(' AND ')}`
+       LEFT JOIN user_notifications un ON n.id = un.notification_id AND un.user_id = $1
+       WHERE ${unreadWhereConditions.join(' AND ')}`,
+      unreadParams
     );
     const unreadCount = parseInt(unreadResult.rows[0].count);
     
     // 查询数据
+    const dataParams = [...params, pageSize, offset];
     const dataResult = await dbManager.query(
       `SELECT n.*, 
               m.item_no as material_item_no, m.name as material_name,
@@ -217,7 +246,7 @@ class Notification {
               COALESCE(un.is_dismissed, false) as is_dismissed,
               un.read_at
        FROM notifications n
-       LEFT JOIN user_notifications un ON n.id = un.notification_id AND un.user_id = ${userId}
+       LEFT JOIN user_notifications un ON n.id = un.notification_id AND un.user_id = $1
        LEFT JOIN materials m ON n.material_id = m.id
        LEFT JOIN models model ON n.model_id = model.id
        LEFT JOIN standard_costs sc ON n.standard_cost_id = sc.id
@@ -226,7 +255,8 @@ class Notification {
        LEFT JOIN users u ON pc.changed_by = u.id
        ${whereClause}
        ORDER BY n.created_at DESC
-       LIMIT ${pageSize} OFFSET ${offset}`
+       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+      dataParams
     );
     
     return {
@@ -285,20 +315,48 @@ class Notification {
    * @returns {Promise<number>}
    */
   static async markAllAsRead(userId) {
-    // 获取该用户的所有未读通知ID
-    const unreadResult = await dbManager.query(
-      `SELECT n.id FROM notifications n
-       LEFT JOIN user_notifications un ON n.id = un.notification_id AND un.user_id = $1
-       WHERE (n.user_id = $1 OR n.user_id IS NULL)
-       AND (un.is_read = false OR un.is_read IS NULL)
-       AND (n.is_dismissed = false OR n.is_dismissed IS NULL)`,
-      [userId]
-    );
-    
-    if (unreadResult.rows.length === 0) return 0;
-    
-    const notificationIds = unreadResult.rows.map(r => r.id);
-    return await this.markAsReadBatch(notificationIds, userId);
+    // 使用事务和单个查询避免竞态条件
+    return await dbManager.transaction(async (client) => {
+      // 获取用户角色
+      const userResult = await client.query(
+        'SELECT role FROM users WHERE id = $1',
+        [userId]
+      );
+      
+      if (userResult.rows.length === 0) {
+        throw new Error('User not found');
+      }
+      
+      const userRole = userResult.rows[0].role;
+      
+      // 构建权限过滤条件
+      let permissionFilter = '';
+      if (userRole !== 'admin') {
+        permissionFilter = `AND (n.user_id = ${userId} OR n.user_id IS NULL)`;
+        if (userRole) {
+          permissionFilter += ` AND (n.role = '${userRole}' OR n.role IS NULL)`;
+        } else {
+          permissionFilter += ` AND (n.role IS NULL)`;
+        }
+      }
+      
+      // 使用 INSERT ... SELECT 在事务中直接完成操作，避免竞态条件
+      const result = await client.query(
+        `INSERT INTO user_notifications (user_id, notification_id, is_read, read_at)
+         SELECT $1, n.id, true, NOW()
+         FROM notifications n
+         LEFT JOIN user_notifications un ON n.id = un.notification_id AND un.user_id = $1
+         WHERE (un.is_read = false OR un.is_read IS NULL)
+         AND (n.is_dismissed = false OR n.is_dismissed IS NULL)
+         ${permissionFilter}
+         ON CONFLICT (user_id, notification_id) 
+         DO UPDATE SET is_read = true, read_at = NOW()
+         RETURNING id`,
+        [userId]
+      );
+      
+      return result.rowCount;
+    });
   }
   
   /**
@@ -420,10 +478,16 @@ class Notification {
    * @returns {Promise<number>} 删除的记录数
    */
   static async cleanupExpired(days = 30) {
+    // 验证 days 参数
+    const validDays = parseInt(days);
+    if (isNaN(validDays) || validDays < 1 || validDays > 365) {
+      throw new Error('Invalid days parameter: must be between 1 and 365');
+    }
+    
     const result = await dbManager.query(
       `DELETE FROM notifications 
-       WHERE created_at < NOW() - INTERVAL '${days} days'
-       AND is_dismissed = true`,
+       WHERE created_at < NOW() - INTERVAL '${validDays} days'
+       AND is_dismissed = true`
     );
     return result.rowCount;
   }

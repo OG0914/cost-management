@@ -127,5 +127,3 @@ WHERE b.is_active = true;
 COMMENT ON TABLE material_price_changes IS '物料价格变更记录表';
 COMMENT ON TABLE notifications IS '系统通知/提醒表';
 COMMENT ON TABLE user_notifications IS '用户通知状态表';
-
-PRINT '迁移完成：物料价格变更提醒系统表结构已创建';
